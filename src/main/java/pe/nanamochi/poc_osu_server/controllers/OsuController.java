@@ -86,6 +86,7 @@ public class OsuController {
             geolocation = new Geolocation();
             geolocation.setLat(0.0f);
             geolocation.setLon(0.0f);
+            geolocation.setCountryCode("kp");
         } else {
             geolocation = IPApi.fetchFromIP(ipAddress);
         }
@@ -95,6 +96,7 @@ public class OsuController {
             session.setUser(user);
             session.setUtcOffset(Integer.parseInt(loginData.getUtcOffset()));
             session.setGamemode(0);
+            session.setCountry(geolocation.getCountryCode().toLowerCase());
             session.setLatitude(geolocation.getLat());
             session.setLongitude(geolocation.getLon());
             session.setDisplayCityLocation(Boolean.parseBoolean(loginData.getDisplayCity()));

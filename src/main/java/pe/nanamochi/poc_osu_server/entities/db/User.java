@@ -9,6 +9,7 @@ import pe.nanamochi.poc_osu_server.io.data.BanchoDataWriter;
 import pe.nanamochi.poc_osu_server.io.data.IDataReader;
 import pe.nanamochi.poc_osu_server.io.data.IDataWriter;
 import pe.nanamochi.poc_osu_server.packets.Packets;
+import pe.nanamochi.poc_osu_server.entities.CountryCode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -235,7 +236,7 @@ public class User implements IBanchoIO {
         writer.writeInt32(buffer, this.id);
         writer.writeString(buffer, this.username);
         writer.writeUint8(buffer, (byte) (session.getUtcOffset() + 24));
-        writer.writeUint8(buffer, (byte) this.country);
+        writer.writeUint8(buffer, (byte) CountryCode.fromCode(session.getCountry()).id());
         writer.writeUint8(buffer, 0); // TODO: permissions
         writer.writeFloat32(buffer, session.getLatitude());
         writer.writeFloat32(buffer, session.getLongitude());

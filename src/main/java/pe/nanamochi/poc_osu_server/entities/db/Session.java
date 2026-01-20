@@ -24,6 +24,7 @@ public class Session {
     private User user;
     private int utcOffset;
     private int gamemode;
+    private String country;
     private float latitude;
     private float longitude;
     private boolean displayCityLocation;
