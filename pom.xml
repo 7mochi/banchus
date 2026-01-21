@@ -34,13 +34,6 @@
 		</developer>
 	</developers>
 
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
