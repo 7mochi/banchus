@@ -8,13 +8,17 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
+import pe.nanamochi.poc_osu_server.entities.CountryCode;
 import pe.nanamochi.poc_osu_server.entities.Geolocation;
 import pe.nanamochi.poc_osu_server.entities.LoginData;
 import pe.nanamochi.poc_osu_server.entities.db.Session;
 import pe.nanamochi.poc_osu_server.entities.db.Stat;
 import pe.nanamochi.poc_osu_server.entities.db.User;
+import pe.nanamochi.poc_osu_server.packets.Packet;
+import pe.nanamochi.poc_osu_server.packets.PacketHandler;
 import pe.nanamochi.poc_osu_server.packets.PacketReader;
 import pe.nanamochi.poc_osu_server.packets.PacketWriter;
+import pe.nanamochi.poc_osu_server.packets.server.*;
 import pe.nanamochi.poc_osu_server.services.SessionService;
 import pe.nanamochi.poc_osu_server.services.StatService;
 import pe.nanamochi.poc_osu_server.services.UserService;
@@ -43,6 +47,9 @@ public class OsuController {
 
     @Autowired
     private PacketReader packetReader;
+
+    @Autowired
+    private PacketHandler packetHandler;
 
     @Autowired
     private UserService userService;
@@ -77,8 +84,8 @@ public class OsuController {
         String choToken = "";
 
         if (!headers.containsKey("X-Real-IP")) {
-            packetWriter.writeLoginReply(stream, -1);
-            packetWriter.writeAnnouncement(stream, "Could not determine your IP address.");
+            packetWriter.writePacket(stream, new LoginReplyPacket(-1));
+            packetWriter.writePacket(stream, new AnnouncePacket("Could not determine your IP address."));
 
             responseHeaders.add("cho-token", "no");
             return ResponseEntity.ok()
@@ -133,17 +140,40 @@ public class OsuController {
 
             Stat ownStats = statService.getStats(user, 0); // Standard mode stats
 
-            packetWriter.writeProtocolNegotiation(stream);
-            packetWriter.writeLoginReply(stream, user.getId());
-            packetWriter.writeAnnouncement(stream, "Welcome to this Poc Osu! Server!");
-            packetWriter.writeUserPresence(stream, user, session);
-            packetWriter.writeUserStats(stream, session, ownStats);
-            packetWriter.writeChannelInfoComplete(stream);
+            packetWriter.writePacket(stream, new ProtocolNegotiationPacket());
+            packetWriter.writePacket(stream, new LoginReplyPacket(user.getId()));
+            packetWriter.writePacket(stream, new AnnouncePacket("Welcome to this Poc Osu! Server!"));
+            packetWriter.writePacket(stream, new UserPresencePacket(
+                    user.getId(),
+                    user.getUsername(),
+                    session.getUtcOffset(),
+                    CountryCode.fromCode(session.getCountry()).id(),
+                    0, // TODO: permissions
+                    session.getLatitude(),
+                    session.getLongitude(),
+                    727 // TODO: global rank
+            ));
+            packetWriter.writePacket(stream, new UserStatsPacket(
+                    user.getId(),
+                    session.getAction(),
+                    session.getInfoText(),
+                    session.getBeatmapMd5(),
+                    session.getMods(),
+                    session.getGamemode(),
+                    session.getBeatmapId(),
+                    ownStats.getRankedScore(),
+                    ownStats.getAccuracy(),
+                    ownStats.getPlayCount(),
+                    ownStats.getTotalScore(),
+                    727, // TODO: global rank
+                    ownStats.getPerformancePoints()
+            ));
+            packetWriter.writePacket(stream, new ChannelInfoCompletePacket());
 
             choToken = session.getId().toString();
         } else {
-            packetWriter.writeLoginReply(stream, -1);
-            packetWriter.writeAnnouncement(stream, "Invalid username or password.");
+            packetWriter.writePacket(stream, new LoginReplyPacket(-1));
+            packetWriter.writePacket(stream, new AnnouncePacket("Invalid username or password."));
 
             choToken = "no";
         }
@@ -160,9 +190,11 @@ public class OsuController {
         Session session = sessionService.getSessionByID(UUID.fromString(Objects.requireNonNull(headers.getFirst("osu-token"))));
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
+        HttpHeaders responseHeaders = new HttpHeaders();
+
         if (session == null) {
-            packetWriter.writeRestart(stream, 0);
-            packetWriter.writeAnnouncement(stream, "The server has restarted.");
+            packetWriter.writePacket(stream, new RestartPacket(0));
+            packetWriter.writePacket(stream, new AnnouncePacket("The server has restarted."));
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -170,11 +202,19 @@ public class OsuController {
         }
 
         // Read packets from request body
-        List<Object> packets = packetReader.readPackets(data);
-        for (Object packet : packets) {
-            System.out.println(packet);
+        List<Packet> packets = packetReader.readPackets(data);
+        for (Packet packet : packets) {
+            System.out.println("Received packet: " + packet.getPacketType());
+            packetHandler.handlePacket(packet, session, stream);
         }
-        return null;
+
+        responseHeaders.add("cho-token", session.getId().toString());
+
+        byte[] responseData = stream.toByteArray();
+        return ResponseEntity.ok()
+                .headers(responseHeaders)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(responseData.length > 0 ? new ByteArrayResource(responseData) : null);
     }
 
     @PostMapping(value = "/users")
