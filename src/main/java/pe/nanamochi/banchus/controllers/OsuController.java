@@ -60,8 +60,7 @@ public class OsuController {
 
   @PostMapping(value = "/", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   public ResponseEntity<Resource> banchoHandler(
-      @RequestHeader HttpHeaders headers, @RequestBody byte[] data)
-      throws IOException {
+      @RequestHeader HttpHeaders headers, @RequestBody byte[] data) throws IOException {
     ResponseEntity<Resource> response = null;
 
     if (!headers.containsHeader("osu-token")) {
@@ -317,8 +316,8 @@ public class OsuController {
         .body(new ByteArrayResource(stream.toByteArray()));
   }
 
-  private ResponseEntity<Resource> handleBanchoRequest(
-          HttpHeaders headers, byte[] data) throws IOException {
+  private ResponseEntity<Resource> handleBanchoRequest(HttpHeaders headers, byte[] data)
+      throws IOException {
     Session session =
         sessionService.getSessionByID(
             UUID.fromString(Objects.requireNonNull(headers.getFirst("osu-token"))));
