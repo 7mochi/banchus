@@ -60,11 +60,11 @@ public class OsuController {
 
   @PostMapping(value = "/", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   public ResponseEntity<Resource> banchoHandler(
-      @RequestHeader MultiValueMap<String, String> headers, @RequestBody byte[] data)
+      @RequestHeader HttpHeaders headers, @RequestBody byte[] data)
       throws IOException {
     ResponseEntity<Resource> response = null;
 
-    if (!headers.containsKey("osu-token")) {
+    if (!headers.containsHeader("osu-token")) {
       logger.debug("Handling login request");
       response = handleLogin(headers, new String(data, StandardCharsets.UTF_8));
     } else {
@@ -75,7 +75,7 @@ public class OsuController {
     return response;
   }
 
-  private ResponseEntity<Resource> handleLogin(MultiValueMap<String, String> headers, String data)
+  private ResponseEntity<Resource> handleLogin(HttpHeaders headers, String data)
       throws IOException {
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
     LoginData loginData = new LoginData(data);
@@ -84,7 +84,7 @@ public class OsuController {
     HttpHeaders responseHeaders = new HttpHeaders();
     String choToken = "";
 
-    if (!headers.containsKey("X-Real-IP")) {
+    if (!headers.containsHeader("X-Real-IP")) {
       packetWriter.writePacket(stream, new LoginReplyPacket(-1));
       packetWriter.writePacket(stream, new AnnouncePacket("Could not determine your IP address."));
 
@@ -318,7 +318,7 @@ public class OsuController {
   }
 
   private ResponseEntity<Resource> handleBanchoRequest(
-      MultiValueMap<String, String> headers, byte[] data) throws IOException {
+          HttpHeaders headers, byte[] data) throws IOException {
     Session session =
         sessionService.getSessionByID(
             UUID.fromString(Objects.requireNonNull(headers.getFirst("osu-token"))));
