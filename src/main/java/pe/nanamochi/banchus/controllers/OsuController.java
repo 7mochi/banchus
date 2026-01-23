@@ -308,7 +308,12 @@ public class OsuController {
         packetWriter.writePacket(stream, new AccountRestrictedPacket());
         packetWriter.writePacket(
             stream,
-            new MessagePacket("BanchoBot", "Your account is restricted.", user.getUsername(), 1));
+            new MessagePacket(
+                "BanchoBot",
+                "Your account is currently in restricted mode. Please visit the osu! website for"
+                    + " more information.",
+                user.getUsername(),
+                1));
       }
 
       // TODO: Send friendlist packet
