@@ -36,6 +36,7 @@ import pe.nanamochi.banchus.services.SessionService;
 import pe.nanamochi.banchus.services.StatService;
 import pe.nanamochi.banchus.services.UserService;
 import pe.nanamochi.banchus.utils.IPApi;
+import pe.nanamochi.banchus.utils.Security;
 import pe.nanamochi.banchus.utils.Validation;
 
 @RestController
@@ -251,37 +252,39 @@ public class OsuController {
                 otherStats.getPerformancePoints()));
 
         // Send our presence and stats to the other user
-        ByteArrayOutputStream otherStream = new ByteArrayOutputStream();
-        packetWriter.writePacket(
-            otherStream,
-            new UserPresencePacket(
-                user.getId(),
-                user.getUsername(),
-                ownOsuSession.getUtcOffset(),
-                CountryCode.fromCode(ownOsuSession.getCountry()).id(),
-                0, // TODO: permissions
-                ownOsuSession.getLatitude(),
-                ownOsuSession.getLongitude(),
-                727 // TODO: global rank
-                ));
-        packetWriter.writePacket(
-            otherStream,
-            new UserStatsPacket(
-                user.getId(),
-                ownOsuSession.getAction(),
-                ownOsuSession.getInfoText(),
-                ownOsuSession.getBeatmapMd5(),
-                ownOsuSession.getMods(),
-                ownOsuSession.getGamemode(),
-                ownOsuSession.getBeatmapId(),
-                ownStats.getRankedScore(),
-                ownStats.getAccuracy(),
-                ownStats.getPlayCount(),
-                ownStats.getTotalScore(),
-                727, // TODO: global rank
-                ownStats.getPerformancePoints()));
-        packetBundleService.enqueue(
-            otherOsuSession.getId(), new PacketBundle(otherStream.toByteArray()));
+        if (!user.isRestricted()) {
+          ByteArrayOutputStream otherStream = new ByteArrayOutputStream();
+          packetWriter.writePacket(
+              otherStream,
+              new UserPresencePacket(
+                  user.getId(),
+                  user.getUsername(),
+                  ownOsuSession.getUtcOffset(),
+                  CountryCode.fromCode(ownOsuSession.getCountry()).id(),
+                  0, // TODO: permissions
+                  ownOsuSession.getLatitude(),
+                  ownOsuSession.getLongitude(),
+                  727 // TODO: global rank
+                  ));
+          packetWriter.writePacket(
+              otherStream,
+              new UserStatsPacket(
+                  user.getId(),
+                  ownOsuSession.getAction(),
+                  ownOsuSession.getInfoText(),
+                  ownOsuSession.getBeatmapMd5(),
+                  ownOsuSession.getMods(),
+                  ownOsuSession.getGamemode(),
+                  ownOsuSession.getBeatmapId(),
+                  ownStats.getRankedScore(),
+                  ownStats.getAccuracy(),
+                  ownStats.getPlayCount(),
+                  ownStats.getTotalScore(),
+                  727, // TODO: global rank
+                  ownStats.getPerformancePoints()));
+          packetBundleService.enqueue(
+              otherOsuSession.getId(), new PacketBundle(otherStream.toByteArray()));
+        }
       }
 
       // Welcome notification
@@ -300,7 +303,13 @@ public class OsuController {
         }
       }
 
-      // TODO: Check privileges to see if the players is restricted and send the appropriate packet
+      // Player is restricted so notify them
+      if (user.isRestricted()) {
+        packetWriter.writePacket(stream, new AccountRestrictedPacket());
+        packetWriter.writePacket(
+            stream,
+            new MessagePacket("BanchoBot", "Your account is restricted.", user.getUsername(), 2));
+      }
 
       // TODO: Send friendlist packet
 
@@ -426,7 +435,13 @@ public class OsuController {
         return ResponseEntity.badRequest().body(responseBody.toString());
       }
 
-      User user = userService.createUser(username, passwordPlainText, email, 0);
+      User user = new User();
+      user.setUsername(username);
+      user.setEmail(email);
+      user.setPasswordMd5(Security.getMd5(passwordPlainText));
+      user.setCountry(CountryCode.KP); // Default to North Korea for now
+      user.setRestricted(false);
+      user = userService.createUser(user);
       statService.createAllGamemodes(user);
     }
 

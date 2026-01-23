@@ -3,6 +3,7 @@ package pe.nanamochi.banchus.entities.db;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
+import pe.nanamochi.banchus.entities.CountryCode;
 
 @Entity
 @Data
@@ -16,7 +17,7 @@ public class User {
   private String username;
   private String email;
   private String passwordMd5;
-  private int country;
-  private int privileges;
+  private CountryCode country;
+  private boolean restricted;
   private Instant silenceEnd;
 }
