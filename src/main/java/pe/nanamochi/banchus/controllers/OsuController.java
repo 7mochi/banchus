@@ -31,6 +31,7 @@ import pe.nanamochi.banchus.packets.PacketReader;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.server.*;
 import pe.nanamochi.banchus.services.PacketBundleService;
+import pe.nanamochi.banchus.services.RankingService;
 import pe.nanamochi.banchus.services.SessionService;
 import pe.nanamochi.banchus.services.StatService;
 import pe.nanamochi.banchus.services.UserService;
@@ -55,6 +56,8 @@ public class OsuController {
   @Autowired private SessionService sessionService;
 
   @Autowired private StatService statService;
+
+  @Autowired private RankingService rankingService;
 
   @Autowired private PacketBundleService packetBundleService;
 
@@ -179,7 +182,7 @@ public class OsuController {
               0, // TODO: permissions
               ownOsuSession.getLatitude(),
               ownOsuSession.getLongitude(),
-              727 // TODO: global rank
+              rankingService.calculateGlobalRank(user, ownOsuSession.getGamemode())
               ));
       packetWriter.writePacket(
           stream,
@@ -192,10 +195,10 @@ public class OsuController {
               ownOsuSession.getGamemode(),
               ownOsuSession.getBeatmapId(),
               ownStats.getRankedScore(),
-              ownStats.getAccuracy(),
+              ownStats.getAccuracy() * 0.01f,
               ownStats.getPlayCount(),
               ownStats.getTotalScore(),
-              727, // TODO: global rank
+              rankingService.calculateGlobalRank(user, ownOsuSession.getGamemode()),
               ownStats.getPerformancePoints()));
 
       for (Session otherOsuSession : sessionService.getAllSessions()) {
@@ -230,7 +233,7 @@ public class OsuController {
                 0, // TODO: permissions
                 otherOsuSession.getLatitude(),
                 otherOsuSession.getLongitude(),
-                727 // TODO: global rank
+                rankingService.calculateGlobalRank(otherOsuSession.getUser(), otherOsuSession.getGamemode())
                 ));
         packetWriter.writePacket(
             stream,
@@ -243,10 +246,10 @@ public class OsuController {
                 otherOsuSession.getGamemode(),
                 otherOsuSession.getBeatmapId(),
                 otherStats.getRankedScore(),
-                otherStats.getAccuracy(),
+                otherStats.getAccuracy() * 0.01f,
                 otherStats.getPlayCount(),
                 otherStats.getTotalScore(),
-                727, // TODO: global rank
+                rankingService.calculateGlobalRank(otherOsuSession.getUser(), otherOsuSession.getGamemode()),
                 otherStats.getPerformancePoints()));
 
         // Send our presence and stats to the other user
@@ -261,7 +264,7 @@ public class OsuController {
                 0, // TODO: permissions
                 ownOsuSession.getLatitude(),
                 ownOsuSession.getLongitude(),
-                727 // TODO: global rank
+                rankingService.calculateGlobalRank(user, ownOsuSession.getGamemode())
                 ));
         packetWriter.writePacket(
             otherStream,
@@ -274,10 +277,10 @@ public class OsuController {
                 ownOsuSession.getGamemode(),
                 ownOsuSession.getBeatmapId(),
                 ownStats.getRankedScore(),
-                ownStats.getAccuracy(),
+                ownStats.getAccuracy() * 0.01f,
                 ownStats.getPlayCount(),
                 ownStats.getTotalScore(),
-                727, // TODO: global rank
+                rankingService.calculateGlobalRank(user, ownOsuSession.getGamemode()),
                 ownStats.getPerformancePoints()));
         packetBundleService.enqueue(
             otherOsuSession.getId(), new PacketBundle(otherStream.toByteArray()));

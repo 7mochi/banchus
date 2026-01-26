@@ -17,6 +17,7 @@ import pe.nanamochi.banchus.packets.client.*;
 import pe.nanamochi.banchus.packets.server.UserQuitPacket;
 import pe.nanamochi.banchus.packets.server.UserStatsPacket;
 import pe.nanamochi.banchus.services.PacketBundleService;
+import pe.nanamochi.banchus.services.RankingService;
 import pe.nanamochi.banchus.services.SessionService;
 import pe.nanamochi.banchus.services.StatService;
 
@@ -27,6 +28,7 @@ public class PacketHandler {
   @Autowired private PacketWriter packetWriter;
   @Autowired private SessionService sessionService;
   @Autowired private StatService statService;
+  @Autowired private RankingService rankingService;
   @Autowired private PacketBundleService packetBundleService;
 
   public void handlePacket(Packet packet, Session session, ByteArrayOutputStream responseStream)
@@ -68,8 +70,7 @@ public class PacketHandler {
     session.setBeatmapId(packet.getBeatmapId());
     session = sessionService.updateSession(session);
 
-    // TODO: Calculate global rank
-
+    // Calculate stats including global rank (recalculated in real-time from all users)
     Stat ownStats = statService.getStats(session.getUser(), packet.getMode());
 
     // Send the stats update to all active osu sessions
@@ -86,10 +87,10 @@ public class PacketHandler {
               session.getGamemode(),
               session.getBeatmapId(),
               ownStats.getRankedScore(),
-              ownStats.getAccuracy(),
+              ownStats.getAccuracy() * 0.01f,
               ownStats.getPlayCount(),
               ownStats.getTotalScore(),
-              727, // TODO: global rank
+              rankingService.calculateGlobalRank(session.getUser(), session.getGamemode()),
               ownStats.getPerformancePoints()));
       packetBundleService.enqueue(otherSession.getId(), new PacketBundle(stream.toByteArray()));
     }

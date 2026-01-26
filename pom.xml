@@ -87,6 +87,16 @@
 			<artifactId>commons-compress</artifactId>
 			<version>1.27.1</version>
 		</dependency>
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15on</artifactId>
+			<version>1.70</version>
+		</dependency>
+		<dependency>
+			<groupId>pe.nanamochi</groupId>
+			<artifactId>rosu-pp-jar</artifactId>
+			<version>0.1.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
