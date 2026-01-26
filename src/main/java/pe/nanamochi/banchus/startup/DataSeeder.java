@@ -39,7 +39,6 @@ public class DataSeeder implements CommandLineRunner {
     user.setEmail("test@gmail.com");
     user.setPasswordMd5("098f6bcd4621d373cade4e832627b4f6"); // test
     user.setCountry(CountryCode.KP);
-    user.setPrivileges(0);
     user.setRestricted(false);
 
     userRepository.save(user);
@@ -50,7 +49,6 @@ public class DataSeeder implements CommandLineRunner {
     user2.setEmail("test2@gmail.com");
     user2.setPasswordMd5("098f6bcd4621d373cade4e832627b4f6"); // test
     user2.setCountry(CountryCode.AR);
-    user2.setPrivileges(0);
     user2.setRestricted(true);
 
     userRepository.save(user2);

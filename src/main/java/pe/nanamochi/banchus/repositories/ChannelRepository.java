@@ -8,7 +8,7 @@ import pe.nanamochi.banchus.entities.db.Channel;
 
 @Repository
 public interface ChannelRepository extends JpaRepository<Channel, UUID> {
-  List<Channel> findByAutoJoinTrue();
+  List<Channel> findByAutoJoin(boolean autoJoin);
 
   Channel findByName(String name);
 }

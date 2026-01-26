@@ -40,6 +40,7 @@ import pe.nanamochi.banchus.services.SessionService;
 import pe.nanamochi.banchus.services.StatService;
 import pe.nanamochi.banchus.services.UserService;
 import pe.nanamochi.banchus.utils.IPApi;
+import pe.nanamochi.banchus.utils.PrivilegesUtil;
 import pe.nanamochi.banchus.utils.Security;
 import pe.nanamochi.banchus.utils.Validation;
 
@@ -171,21 +172,16 @@ public class OsuController {
       // Login reply
       packetWriter.writePacket(stream, new LoginReplyPacket(user.getId()));
 
-      // TODO: Write privileges packet
-      if (!PrivilegesUtil.has(user.getPrivileges(), Privileges.VERIFIED)) {
-        user.setPrivileges(PrivilegesUtil.add(user.getPrivileges(), Privileges.VERIFIED));
-        userService.updateUser(user);
+      // User privileges
+      packetWriter.writePacket(
+          stream,
+          new LoginPermissionsPacket(
+              PrivilegesUtil.serverToClientPrivileges(user.getPrivileges())));
 
-        packetWriter.writePacket(stream, new LoginPermissionsPacket(user.getPrivileges()));
-      }
-
-      // TODO: Write osu chat channels packet
-
-      // Autojoin to channels
-      List<Channel> autoJoinChannels = channelService.findByAutoJoinTrue();
+      // Chat channels
+      List<Channel> autoJoinChannels = channelService.findByAutoJoin(true);
       for (Channel channel : autoJoinChannels) {
-        if (!channelService.canReadChannel(channel, user.getPrivileges())
-            || channel.getName().equals("#lobby")) {
+        if (channel.getName().equals("#lobby")) {
           continue;
         }
 
