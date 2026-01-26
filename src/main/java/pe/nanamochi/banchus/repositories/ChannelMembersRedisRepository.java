@@ -1,52 +1,38 @@
 package pe.nanamochi.banchus.repositories;
 
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Repository;
-
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Repository;
 
 @Repository
 public class ChannelMembersRedisRepository {
+  private final RedisTemplate<String, String> redisTemplate;
 
-    private static final String KEY_PREFIX = "server:channel-members:";
+  public ChannelMembersRedisRepository(RedisTemplate<String, String> redisTemplate) {
+    this.redisTemplate = redisTemplate;
+  }
 
-    private final StringRedisTemplate redis;
+  public UUID add(UUID channelId, UUID sessionId) {
+    redisTemplate.opsForSet().add(makeKey(channelId), sessionId.toString());
+    return sessionId;
+  }
 
-    public ChannelMembersRedisRepository(StringRedisTemplate redis) {
-        this.redis = redis;
+  public UUID remove(UUID channelId, UUID sessionId) {
+    Long removed = redisTemplate.opsForSet().remove(makeKey(channelId), sessionId.toString());
+    return (removed != null && removed == 1L) ? sessionId : null;
+  }
+
+  public Set<UUID> getMembers(UUID channelId) {
+    Set<String> raw = redisTemplate.opsForSet().members(makeKey(channelId));
+    if (raw.isEmpty()) {
+      return Set.of();
     }
+    return raw.stream().map(UUID::fromString).collect(Collectors.toUnmodifiableSet());
+  }
 
-    private String makeKey(UUID channelId) {
-        return KEY_PREFIX + channelId.toString();
-    }
-
-    private String serialize(UUID sessionId) {
-        return sessionId.toString();
-    }
-
-    private UUID deserialize(String value) {
-        return UUID.fromString(value);
-    }
-
-    public UUID add(UUID channelId, UUID sessionId) {
-        redis.opsForSet().add(makeKey(channelId), serialize(sessionId));
-        return sessionId;
-    }
-
-    public UUID remove(UUID channelId, UUID sessionId) {
-        Long removed = redis.opsForSet().remove(makeKey(channelId), serialize(sessionId));
-        return (removed != null && removed == 1L) ? sessionId : null;
-    }
-
-    public Set<UUID> members(UUID channelId) {
-        Set<String> raw = redis.opsForSet().members(makeKey(channelId));
-        if (raw.isEmpty()) {
-            return Set.of();
-        }
-        return raw.stream()
-                .map(UUID::fromString)
-                .collect(Collectors.toUnmodifiableSet());
-    }
+  private String makeKey(UUID channelId) {
+    return "server:channel-members:" + channelId.toString();
+  }
 }
