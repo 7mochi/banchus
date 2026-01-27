@@ -31,11 +31,11 @@ public class ChannelService {
     return (userPrivileges & channel.getReadPrivileges()) == 0;
   }
 
-    public boolean canWriteChannel(Channel channel, int userPrivileges) {
-        if (channel.getWritePrivileges() == 0) {
-            return true;
-        }
-
-        return (userPrivileges & channel.getWritePrivileges()) != 0;
+  public boolean canWriteChannel(Channel channel, int userPrivileges) {
+    if (channel.getWritePrivileges() == 0) {
+      return true;
     }
+
+    return (userPrivileges & channel.getWritePrivileges()) != 0;
+  }
 }

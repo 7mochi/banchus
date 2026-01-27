@@ -240,7 +240,8 @@ public class PacketHandler {
       throws IOException {
     Channel channel = channelService.findByName(packet.getName());
 
-    if (channel == null || !channelService.canReadChannel(channel, session.getUser().getPrivileges())) return;
+    if (channel == null
+        || !channelService.canReadChannel(channel, session.getUser().getPrivileges())) return;
 
     Set<UUID> currentChannelMembers = channelMembersService.getMembers(channel.getId());
 
