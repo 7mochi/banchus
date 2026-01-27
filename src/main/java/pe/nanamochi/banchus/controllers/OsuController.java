@@ -177,12 +177,13 @@ public class OsuController {
           stream,
           new LoginPermissionsPacket(
               PrivilegesUtil.serverToClientPrivileges(
-                  user.getPrivileges() | ClientPrivileges.SUPPORTER.getValue())));
+                  user.getPrivileges() | ServerPrivileges.SUPPORTER.getValue())));
 
       // Chat channels
       List<Channel> autoJoinChannels = channelService.findByAutoJoin(true);
       for (Channel channel : autoJoinChannels) {
-        if (channel.getName().equals("#lobby")) {
+        if (!channelService.canReadChannel(channel, user.getPrivileges())
+            || channel.getName().equals("#lobby")) {
           continue;
         }
 

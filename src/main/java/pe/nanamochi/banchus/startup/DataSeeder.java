@@ -63,56 +63,48 @@ public class DataSeeder implements CommandLineRunner {
     Channel osuChannel = new Channel();
     osuChannel.setName("#osu");
     osuChannel.setTopic("General discussion.");
-    osuChannel.setReadPrivileges(1);
-    osuChannel.setWritePrivileges(2);
+    osuChannel.setReadPrivileges(0);
+    osuChannel.setWritePrivileges(0);
     osuChannel.setAutoJoin(true);
     channels.add(osuChannel);
 
+    Channel lobbyChannel = new Channel();
+    lobbyChannel.setName("#lobby");
+    lobbyChannel.setTopic("General multiplayer lobby chat.");
+    lobbyChannel.setReadPrivileges(0);
+    lobbyChannel.setWritePrivileges(1 << 0);
+    lobbyChannel.setAutoJoin(true);
+    channels.add(lobbyChannel);
+
     Channel announceChannel = new Channel();
     announceChannel.setName("#announce");
-    announceChannel.setTopic("Exemplary performance and public announcements.");
-    announceChannel.setReadPrivileges(1);
-    announceChannel.setWritePrivileges(24576);
+    announceChannel.setTopic("Announcements from the server.");
+    announceChannel.setReadPrivileges(1 << 0);
+    announceChannel.setWritePrivileges(1 << 9);
     announceChannel.setAutoJoin(true);
     channels.add(announceChannel);
 
-    Channel lobbyChannel = new Channel();
-    lobbyChannel.setName("#lobby");
-    lobbyChannel.setTopic("Multiplayer lobby discussion room.");
-    lobbyChannel.setReadPrivileges(1);
-    lobbyChannel.setWritePrivileges(2);
-    lobbyChannel.setAutoJoin(false);
-    channels.add(lobbyChannel);
-
     Channel supporterChannel = new Channel();
-    supporterChannel.setName("#supporter");
-    supporterChannel.setTopic("General discussion for supporters.");
-    supporterChannel.setReadPrivileges(48);
-    supporterChannel.setWritePrivileges(48);
-    supporterChannel.setAutoJoin(false);
+    supporterChannel.setName("#help");
+    supporterChannel.setTopic("Help and support.");
+    supporterChannel.setReadPrivileges(1 << 0);
+    supporterChannel.setWritePrivileges(1 << 0);
+    supporterChannel.setAutoJoin(true);
     channels.add(supporterChannel);
 
     Channel staffChannel = new Channel();
     staffChannel.setName("#staff");
     staffChannel.setTopic("General discussion for staff members.");
-    staffChannel.setReadPrivileges(28672);
-    staffChannel.setWritePrivileges(28672);
+    staffChannel.setReadPrivileges(1 << 7 | 1 << 9 | 1 << 13 | 1 << 30);
+    staffChannel.setWritePrivileges(1 << 7 | 1 << 9 | 1 << 13 | 1 << 30);
     staffChannel.setAutoJoin(true);
     channels.add(staffChannel);
-
-    Channel adminChannel = new Channel();
-    adminChannel.setName("#admin");
-    adminChannel.setTopic("General discussion for administrators.");
-    adminChannel.setReadPrivileges(24576);
-    adminChannel.setWritePrivileges(24576);
-    adminChannel.setAutoJoin(true);
-    channels.add(adminChannel);
 
     Channel devChannel = new Channel();
     devChannel.setName("#dev");
     devChannel.setTopic("General discussion for developers.");
-    devChannel.setReadPrivileges(16384);
-    devChannel.setWritePrivileges(16384);
+    devChannel.setReadPrivileges(1 << 30);
+    devChannel.setWritePrivileges(1 << 30);
     devChannel.setAutoJoin(true);
     channels.add(devChannel);
 

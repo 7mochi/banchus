@@ -22,4 +22,12 @@ public class ChannelService {
   public Channel findByName(String name) {
     return channelRepository.findByName(name);
   }
+
+  public boolean canReadChannel(Channel channel, int userPrivileges) {
+    if (channel.getReadPrivileges() == 0) {
+      return true;
+    }
+
+    return (userPrivileges & channel.getReadPrivileges()) == 0;
+  }
 }

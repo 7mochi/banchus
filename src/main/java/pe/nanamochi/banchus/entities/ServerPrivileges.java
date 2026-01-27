@@ -7,6 +7,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum ServerPrivileges {
+  UNRESTRICTED(1 << 0),
   SUBMITTED_HARDWARE_IDENTITY(1 << 1),
   SUPPORTER(1 << 4),
   PREMIUM(1 << 5),

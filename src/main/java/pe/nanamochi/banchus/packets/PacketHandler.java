@@ -140,28 +140,30 @@ public class PacketHandler {
       packet.setContent(packet.getContent().substring(0, 2000) + "...");
     }
 
+    // If the user is restricted, they cannot send messages
+    if (session.getUser().isRestricted()) return;
+
     // Send message to everyone else
-    if (!session.getUser().isRestricted()) {
-      ByteArrayOutputStream stream = new ByteArrayOutputStream();
-      packetWriter.writePacket(
-          stream,
-          new pe.nanamochi.banchus.packets.server.MessagePacket(
-              session.getUser().getUsername(),
-              packet.getContent(),
-              packet.getTarget(),
-              session.getUser().getId()));
+  ByteArrayOutputStream stream = new ByteArrayOutputStream();
+  packetWriter.writePacket(
+      stream,
+      new pe.nanamochi.banchus.packets.server.MessagePacket(
+          session.getUser().getUsername(),
+          packet.getContent(),
+          packet.getTarget(),
+          session.getUser().getId()));
 
-      Set<UUID> targetSessions = new HashSet<>();
+  Set<UUID> targetSessions = new HashSet<>();
 
-      if (!packet.getContent().startsWith("!help")) {
-        targetSessions = channelMembersService.getMembers(channel.getId());
-      }
+  if (!packet.getContent().startsWith("!help")) {
+    targetSessions = channelMembersService.getMembers(channel.getId());
+  }
 
-      for (UUID targetSessionId : targetSessions) {
-        if (targetSessionId.equals(session.getId())) continue; // Already sent to self
-        packetBundleService.enqueue(targetSessionId, new PacketBundle(stream.toByteArray()));
-      }
-    }
+  for (UUID targetSessionId : targetSessions) {
+    if (targetSessionId.equals(session.getId())) continue; // Already sent to self
+    packetBundleService.enqueue(targetSessionId, new PacketBundle(stream.toByteArray()));
+  }
+
 
     // TODO: handle commands
   }
@@ -249,6 +251,7 @@ public class PacketHandler {
 
     // TODO: Only get all sessions that has any privilege bit
     for (Session otherOsuSession : sessionService.getAllSessions()) {
+      if (!channelService.canReadChannel(channel, session.getUser().getPrivileges())) continue;
       ByteArrayOutputStream stream = new ByteArrayOutputStream();
       packetWriter.writePacket(
           stream,
@@ -283,6 +286,7 @@ public class PacketHandler {
 
     // TODO: Only get all sessions that has any privilege bit
     for (Session otherOsuSession : sessionService.getAllSessions()) {
+      if (!channelService.canReadChannel(channel, session.getUser().getPrivileges())) continue;
       ByteArrayOutputStream stream = new ByteArrayOutputStream();
       int newMemberCount = !currentMembers.isEmpty() ? currentMembers.size() - 1 : 0;
       packetWriter.writePacket(
@@ -310,6 +314,7 @@ public class PacketHandler {
 
     // TODO: Only get all sessions that has any privilege bit
     for (Session otherOsuSession : sessionService.getAllSessions()) {
+      if (!channelService.canReadChannel(channel, session.getUser().getPrivileges())) continue;
       ByteArrayOutputStream stream = new ByteArrayOutputStream();
       packetWriter.writePacket(
           stream,
