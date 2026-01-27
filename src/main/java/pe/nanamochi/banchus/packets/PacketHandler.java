@@ -136,6 +136,14 @@ public class PacketHandler {
       return;
     }
 
+    if (!channelService.canWriteChannel(channel, session.getUser().getPrivileges())) {
+      logger.warn(
+          "User {} attempted to send a message to channel {} without sufficient privileges.",
+          session.getUser().getUsername(),
+          channelName);
+      return;
+    }
+
     if (packet.getContent().length() > 2000) {
       packet.setContent(packet.getContent().substring(0, 2000) + "...");
     }
@@ -232,7 +240,7 @@ public class PacketHandler {
       throws IOException {
     Channel channel = channelService.findByName(packet.getName());
 
-    if (channel == null) return;
+    if (channel == null || !channelService.canReadChannel(channel, session.getUser().getPrivileges())) return;
 
     Set<UUID> currentChannelMembers = channelMembersService.getMembers(channel.getId());
 
