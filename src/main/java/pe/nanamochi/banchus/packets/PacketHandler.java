@@ -144,26 +144,25 @@ public class PacketHandler {
     if (session.getUser().isRestricted()) return;
 
     // Send message to everyone else
-  ByteArrayOutputStream stream = new ByteArrayOutputStream();
-  packetWriter.writePacket(
-      stream,
-      new pe.nanamochi.banchus.packets.server.MessagePacket(
-          session.getUser().getUsername(),
-          packet.getContent(),
-          packet.getTarget(),
-          session.getUser().getId()));
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    packetWriter.writePacket(
+        stream,
+        new pe.nanamochi.banchus.packets.server.MessagePacket(
+            session.getUser().getUsername(),
+            packet.getContent(),
+            packet.getTarget(),
+            session.getUser().getId()));
 
-  Set<UUID> targetSessions = new HashSet<>();
+    Set<UUID> targetSessions = new HashSet<>();
 
-  if (!packet.getContent().startsWith("!help")) {
-    targetSessions = channelMembersService.getMembers(channel.getId());
-  }
+    if (!packet.getContent().startsWith("!help")) {
+      targetSessions = channelMembersService.getMembers(channel.getId());
+    }
 
-  for (UUID targetSessionId : targetSessions) {
-    if (targetSessionId.equals(session.getId())) continue; // Already sent to self
-    packetBundleService.enqueue(targetSessionId, new PacketBundle(stream.toByteArray()));
-  }
-
+    for (UUID targetSessionId : targetSessions) {
+      if (targetSessionId.equals(session.getId())) continue; // Already sent to self
+      packetBundleService.enqueue(targetSessionId, new PacketBundle(stream.toByteArray()));
+    }
 
     // TODO: handle commands
   }
