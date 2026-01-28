@@ -7,3 +7,12 @@ A very WIP osu! server.
 - Maven
 - MariaDB
 - Redis
+
+## Features
+- Sign-in
+- In-game registration
+- Public channels and private messaging
+- Menu icon support (The image you see on the bottom of the osu! client)\
+
+## TODO
+Check our roadmap here: [Roadmap](https://github.com/users/7mochi/projects/2/views/1)
