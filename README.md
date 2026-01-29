@@ -13,6 +13,8 @@ A very WIP osu! server.
 - In-game registration
 - Public channels and private messaging
 - Menu icon support (The image you see on the bottom of the osu! client)\
+- Seasonal backgrounds
+- osu!direct
 
 ## TODO
 Check our roadmap here: [Roadmap](https://github.com/users/7mochi/projects/2/views/1)
