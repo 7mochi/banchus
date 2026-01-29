@@ -7,7 +7,7 @@ import pe.nanamochi.banchus.entities.DirectDisplayMode;
 
 public class OsuDirectApi {
   private static final RestTemplate restTemplate = new RestTemplate();
-  private static final String MIRROR_SEARCH_ENDPOINT = "https://osu.direct/api/v2/search";
+  public static final String BASE_URL = "https://osu.direct/api";
   private static final Set<String> SPECIAL_QUERIES = Set.of("Newest", "Top Rated", "Most Played");
 
   private OsuDirectApi() {}
@@ -15,7 +15,7 @@ public class OsuDirectApi {
   public static String search(
       String query, int mode, DirectDisplayMode displayMode, int pageOffset) {
     UriComponentsBuilder builder =
-        UriComponentsBuilder.fromUriString(MIRROR_SEARCH_ENDPOINT)
+        UriComponentsBuilder.fromUriString(BASE_URL + "/v2/search")
             .queryParam("amount", 100)
             .queryParam("offset", pageOffset * 100);
 

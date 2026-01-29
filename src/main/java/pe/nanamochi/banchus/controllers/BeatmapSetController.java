@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pe.nanamochi.banchus.entities.db.User;
 import pe.nanamochi.banchus.services.UserService;
+import pe.nanamochi.banchus.utils.OsuDirectApi;
 
 @RestController
 @RequestMapping("/d")
@@ -27,7 +28,7 @@ public class BeatmapSetController {
     }
 
     return ResponseEntity.status(307)
-        .header("Location", "https://catboy.best/d/" + beatmapSetId)
+        .header("Location", OsuDirectApi.BASE_URL + "/d/" + beatmapSetId)
         .build();
   }
 }
