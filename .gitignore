@@ -34,3 +34,6 @@ build/
 
 ### Environment Files ###
 .env
+
+### Banchus ###
+/.data
