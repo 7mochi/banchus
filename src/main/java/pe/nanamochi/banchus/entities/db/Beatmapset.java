@@ -9,9 +9,7 @@ import lombok.Data;
 @Data
 @Table(name = "beatmapsets")
 public class Beatmapset {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private int id;
+  @Id private int id;
 
   @Column(nullable = true)
   private String title;

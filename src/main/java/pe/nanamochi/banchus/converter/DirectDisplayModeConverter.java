@@ -2,15 +2,15 @@ package pe.nanamochi.banchus.converter;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
-import pe.nanamochi.banchus.entities.DirectDisplayMode;
+import pe.nanamochi.banchus.entities.BeatmapDirectDisplayMode;
 
 @Component
-public class DirectDisplayModeConverter implements Converter<String, DirectDisplayMode> {
+public class DirectDisplayModeConverter implements Converter<String, BeatmapDirectDisplayMode> {
 
   @Override
-  public DirectDisplayMode convert(String source) {
+  public BeatmapDirectDisplayMode convert(String source) {
     int value = Integer.parseInt(source);
-    for (DirectDisplayMode mode : DirectDisplayMode.values()) {
+    for (BeatmapDirectDisplayMode mode : BeatmapDirectDisplayMode.values()) {
       if (mode.getValue() == value) {
         return mode;
       }

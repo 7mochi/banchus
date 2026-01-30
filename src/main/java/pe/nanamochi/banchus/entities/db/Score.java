@@ -20,10 +20,12 @@ public class Score {
 
   @ManyToOne private User user;
   private String onlineChecksum;
-  private String beatmapMd5;
+
+  @ManyToOne private Beatmap beatmap;
+
   private int score;
   private double performancePoints;
-  private double accuracy;
+  private float accuracy;
   private int highestCombo;
   private boolean fullCombo;
   private int mods;

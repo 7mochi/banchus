@@ -1,7 +1,12 @@
 server:
-    port: ${APPLICATION_PORT:8080}
-    tomcat:
-      max-part-count: 100
+  port: ${APPLICATION_PORT:8080}
+  max-http-request-header-size: 128KB
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  tomcat:
+    max-part-count: 100
 spring:
   config:
     import: optional:file:.env[.properties]
@@ -25,6 +30,9 @@ logging:
   level:
     root: ${LOG_LEVEL_ROOT:INFO}
     pe.nanamochi.banchus: ${LOG_LEVEL_BANCHUS:WARN}
+   # org.springframework.web: DEBUG
+    #org.springframework.web.servlet.DispatcherServlet: DEBUG
+
 
 banchus:
   menu-icon:

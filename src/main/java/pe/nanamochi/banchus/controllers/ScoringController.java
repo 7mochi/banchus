@@ -3,23 +3,30 @@ package pe.nanamochi.banchus.controllers;
 import io.github.nanamochi.rosu_pp_jar.Mods;
 import io.github.nanamochi.rosu_pp_jar.Performance;
 import io.github.nanamochi.rosu_pp_jar.PerformanceAttributes;
+import io.github.nanamochi.rosu_pp_jar.RosuException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Part;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import pe.nanamochi.banchus.entities.BeatmapRankedStatus;
 import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.PacketBundle;
 import pe.nanamochi.banchus.entities.SubmissionStatus;
-import pe.nanamochi.banchus.entities.db.Beatmapset;
-import pe.nanamochi.banchus.entities.db.Score;
-import pe.nanamochi.banchus.entities.db.Session;
-import pe.nanamochi.banchus.entities.db.User;
+import pe.nanamochi.banchus.entities.db.*;
 import pe.nanamochi.banchus.entities.osuapi.Beatmap;
+import pe.nanamochi.banchus.packets.PacketWriter;
+import pe.nanamochi.banchus.packets.server.MessagePacket;
+import pe.nanamochi.banchus.packets.server.UserStatsPacket;
 import pe.nanamochi.banchus.services.*;
 import pe.nanamochi.banchus.utils.OsuApi;
 import pe.nanamochi.banchus.utils.Rijndael;
@@ -35,21 +42,27 @@ public class ScoringController {
   @Autowired private BeatmapsetService beatmapsetService;
   @Autowired private BeatmapService beatmapService;
   @Autowired private ReplayService replayService;
+  @Autowired private StatService statService;
   @Autowired private OsuApi osuApi;
+  @Autowired private PacketWriter packetWriter;
+  @Autowired private PacketBundleService packetBundleService;
+  @Autowired private ChannelService channelService;
+  @Autowired private ChannelMembersRedisService channelMembersRedisService;
 
-  @PostMapping(value = "/osu-submit-modular-selector.php")
+  @PostMapping(
+      value = "/osu-submit-modular-selector.php",
+      consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public String scoreSubmission(
       HttpServletRequest request,
-      @RequestHeader("token") String token,
-      @RequestParam("x") boolean exitedOut,
-      @RequestParam("ft") int failTime,
-      @RequestParam("iv") String ivB64,
-      @RequestParam("st") int scoreTime,
-      @RequestParam("pass") String passwordMd5,
-      @RequestParam("osuver") String osuVersion,
-      @RequestParam("s") String clientHashB64,
+      @RequestParam(value = "ft", required = false) Integer failTime,
+      @RequestParam(value = "iv", required = false) String ivB64,
+      @RequestParam(value = "st", required = false) Integer scoreTime,
+      @RequestParam(value = "pass", required = false) String passwordMd5,
+      @RequestParam(value = "osuver", required = false) String osuVersion,
+      @RequestParam(value = "s", required = false) String clientHashB64,
       @RequestPart(value = "i", required = false) MultipartFile flCheatScreenshot)
       throws Exception {
+    System.out.println("/osu-submit-modular-selector.php called");
     byte[] iv = Base64.getDecoder().decode(ivB64);
 
     // The bancho protocol uses the "score" parameter name for both the base64'ed score data,
@@ -79,7 +92,7 @@ public class ScoringController {
       // Malformed decrypted score data
     }
 
-    String username = scoreData[1];
+    String username = scoreData[1].stripTrailing();
 
     User user = userService.login(username, passwordMd5);
     if (user == null) {}
@@ -89,85 +102,72 @@ public class ScoringController {
 
     // TODO: handle differently depending on beatmap ranked status
 
-    Score score = new Score();
-    score.setOnlineChecksum(scoreData[2]);
-    score.setBeatmapMd5(scoreData[0]);
-    score.setScore(Integer.parseInt(scoreData[9]));
-    score.setHighestCombo(Integer.parseInt(scoreData[10]));
-    score.setFullCombo(Boolean.parseBoolean(scoreData[11]));
-    score.setMods(Integer.parseInt(scoreData[13]));
-    score.setNum300s(Integer.parseInt(scoreData[3]));
-    score.setNum100s(Integer.parseInt(scoreData[4]));
-    score.setNum50s(Integer.parseInt(scoreData[5]));
-    score.setNumMisses(Integer.parseInt(scoreData[8]));
-    score.setNumGekis(Integer.parseInt(scoreData[6]));
-    score.setNumKatus(Integer.parseInt(scoreData[7]));
-    score.setGrade(scoreData[12]);
-    score.setSubmissionStatus(
-        Boolean.parseBoolean(scoreData[14])
-            ? SubmissionStatus.SUBMITTED
-            : SubmissionStatus.FAILED); // TODO: determine best status
-    score.setMode(Mode.fromValue(Integer.parseInt(scoreData[15])));
-    score.setTimeElapsed(Boolean.parseBoolean(scoreData[14]) ? scoreTime : failTime);
+    boolean isPassed = Boolean.parseBoolean(scoreData[14]);
+    String beatmapMd5 = scoreData[0];
+    String onlineChecksum = scoreData[2];
+    int num300s = Integer.parseInt(scoreData[3]);
+    int num100s = Integer.parseInt(scoreData[4]);
+    int num50s = Integer.parseInt(scoreData[5]);
+    int numGekis = Integer.parseInt(scoreData[6]);
+    int numKatus = Integer.parseInt(scoreData[7]);
+    int numMisses = Integer.parseInt(scoreData[8]);
+    int scorePoints = Integer.parseInt(scoreData[9]);
+    int highestCombo = Integer.parseInt(scoreData[10]);
+    boolean fullCombo = Boolean.parseBoolean(scoreData[11]);
+    String grade = scoreData[12];
+    int mods = Integer.parseInt(scoreData[13]);
+    int mode = Integer.parseInt(scoreData[15]);
 
     // Do a request to the osu!api to get beatmap info, because we need to get the beatmap_id from
     // the md5 hash, by default all beatmaps are returned independtly from the hash, so we need to
     // filter them here
-    List<Beatmap> osuApibeatmaps = osuApi.getBeatmaps(score.getBeatmapMd5());
-    Beatmap osuApibeatmap = null;
-    for (Beatmap b : osuApibeatmaps) {
-      if (b.getFileMd5().equalsIgnoreCase(score.getBeatmapMd5())) {
-        osuApibeatmap = b;
-        break;
-      }
-    }
+    Beatmap osuApibeatmap = osuApi.getBeatmap(beatmapMd5);
 
     if (osuApibeatmap == null) {}
 
     // Check if the beatmapset exists in our database, if not, store the beatmapset and the beatmap
-    Beatmapset beatmapset =
-        beatmapsetService.findByBeatmapsetId(osuApibeatmaps.getFirst().getBeatmapsetId());
+    Beatmapset beatmapset = beatmapsetService.findByBeatmapsetId(osuApibeatmap.getBeatmapsetId());
     if (beatmapset == null) {
       beatmapset = new Beatmapset();
-      beatmapset.setId(osuApibeatmaps.getFirst().getBeatmapsetId());
-      beatmapset.setTitle(osuApibeatmaps.getFirst().getTitle());
-      beatmapset.setArtist(osuApibeatmaps.getFirst().getArtist());
-      beatmapset.setSource(osuApibeatmaps.getFirst().getSource());
-      beatmapset.setCreator(osuApibeatmaps.getFirst().getCreator());
+      beatmapset.setId(osuApibeatmap.getBeatmapsetId());
+      beatmapset.setTitle(osuApibeatmap.getTitle());
+      beatmapset.setArtist(osuApibeatmap.getArtist());
+      beatmapset.setSource(osuApibeatmap.getSource());
+      beatmapset.setCreator(osuApibeatmap.getCreator());
       beatmapset.setDescription(
           null); // TODO: osu!api v1 does not provide description, save it when we change to v2
-      beatmapset.setTags(osuApibeatmaps.getFirst().getTags());
+      beatmapset.setTags(osuApibeatmap.getTags());
       // 4 = loved, 3 = qualified, 2 = approved, 1 = ranked, 0 = pending,
       // -1 = WIP, -2 = graveyard
-      beatmapset.setSubmissionStatus(osuApibeatmaps.getFirst().getApproved());
-      beatmapset.setHasVideo(osuApibeatmaps.getFirst().isVideo());
-      beatmapset.setHasStoryboard(osuApibeatmaps.getFirst().isStoryboard());
-      beatmapset.setSubmissionDate(osuApibeatmaps.getFirst().getSubmitDate());
+      beatmapset.setSubmissionStatus(osuApibeatmap.getApproved());
+      beatmapset.setHasVideo(osuApibeatmap.getVideo());
+      beatmapset.setHasStoryboard(osuApibeatmap.getStoryboard());
+      beatmapset.setSubmissionDate(osuApibeatmap.getSubmitDate());
       beatmapset.setApprovedDate(
-          osuApibeatmaps.getFirst().getApprovedDate() != null
-              ? osuApibeatmaps.getFirst().getApprovedDate()
-              : null);
-      beatmapset.setLastUpdated(osuApibeatmaps.getFirst().getLastUpdate());
+          osuApibeatmap.getApprovedDate() != null ? osuApibeatmap.getApprovedDate() : null);
+      beatmapset.setLastUpdated(osuApibeatmap.getLastUpdate());
       beatmapset.setTotalPlaycount(0); // dont save bancho playcount, we will track our own
       // 0 = any, 1 = unspecified, 2 = english, 3 = japanese, 4 =
       // chinese, 5 = instrumental, 6 = korean, 7 = french, 8 = german, 9
       // = swedish, 10 = spanish, 11 = italian, 12 = russian, 13 =
       // polish, 14 = other
-      beatmapset.setLanguageId(osuApibeatmaps.getFirst().getLanguageId());
+      beatmapset.setLanguageId(osuApibeatmap.getLanguageId());
       // 0 = any, 1 = unspecified, 2 = video game, 3 = anime, 4 = rock, 5 =
       // pop, 6 = other, 7 = novelty, 9 = hip hop, 10 = electronic, 11 =
       // metal, 12 = classical, 13 = folk, 14 = jazz (note that there's no
       // 8)
-      beatmapset.setGenreId(osuApibeatmaps.getFirst().getGenreId());
+      beatmapset.setGenreId(osuApibeatmap.getGenreId());
       beatmapsetService.create(beatmapset);
 
+      List<Beatmap> osuApibeatmaps = osuApi.getBeatmaps(osuApibeatmap.getBeatmapsetId());
       for (Beatmap b : osuApibeatmaps) {
         pe.nanamochi.banchus.entities.db.Beatmap beatmap =
             new pe.nanamochi.banchus.entities.db.Beatmap();
         beatmap.setId(b.getBeatmapId());
+        beatmap.setBeatmapset(beatmapset);
         beatmap.setMode(Mode.fromValue(b.getMode()));
         beatmap.setMd5(b.getFileMd5());
-        beatmap.setStatus(b.getApproved());
+        beatmap.setStatus(BeatmapRankedStatus.fromValue(b.getApproved()));
         beatmap.setVersion(b.getVersion());
         beatmap.setSubmissionDate(b.getSubmitDate());
         beatmap.setLastUpdated(b.getLastUpdate());
@@ -191,29 +191,66 @@ public class ScoringController {
       }
     }
 
-    // Fetch the beatmap saved in our filesystem, if not found, download it and save it
-    // TODO: use beatmap.getId instead of osuApibeatmap.getBeatmapId()
-    byte[] osuFile =
-        beatmapService.getOrDownloadOsuFile(osuApibeatmap.getBeatmapId(), score.getBeatmapMd5());
+    Score score = new Score();
+    score.setOnlineChecksum(onlineChecksum);
+    score.setBeatmap(beatmapService.findByMd5(beatmapMd5));
+    score.setScore(scorePoints);
+    score.setHighestCombo(highestCombo);
+    score.setFullCombo(fullCombo);
+    score.setMods(mods);
+    score.setNum300s(num300s);
+    score.setNum100s(num100s);
+    score.setNum50s(num50s);
+    score.setNumMisses(numMisses);
+    score.setNumGekis(numGekis);
+    score.setNumKatus(numKatus);
+    score.setGrade(grade);
+    score.setSubmissionStatus(
+        isPassed
+            ? SubmissionStatus.SUBMITTED
+            : SubmissionStatus.FAILED); // TODO: determine best status
+    score.setMode(Mode.fromValue(mode));
+    score.setTimeElapsed(isPassed ? scoreTime : failTime);
 
-    // Calculate pp (move this to a method like calculateAccuracy)
-    io.github.nanamochi.rosu_pp_jar.Beatmap rosuBeatmap =
-        io.github.nanamochi.rosu_pp_jar.Beatmap.fromBytes(osuFile);
-    // rosuBeatmap.convert(GameMode.fromValues) // TODO: implement fromValue in rosu_pp_jar
-    Performance performance = Performance.create(rosuBeatmap);
-    performance.setMods(Mods.fromBits(score.getMods()));
-    performance.setAccuracy(score.getAccuracy());
-    performance.setNGeki(score.getNumGekis());
-    performance.setNGeki(score.getNumKatus());
-    performance.setN300(score.getNum300s());
-    performance.setN100(score.getNum100s());
-    performance.setN50(score.getNum50s());
-    performance.setMisses(score.getNumMisses());
-    performance.setCombo(score.getHighestCombo());
-    PerformanceAttributes attributes = performance.calculate();
+    double pp =
+        calculatePp(
+            beatmapService.getOrDownloadOsuFile(osuApibeatmap.getBeatmapId(), beatmapMd5), score);
+    float accuracy = calculateAccuracy(score);
 
-    double accuracy = calculateAccuracy(score);
-    score.setPerformancePoints(attributes.pp());
+    pe.nanamochi.banchus.entities.db.Beatmap beatmap = beatmapService.findByMd5(beatmapMd5);
+    SubmissionStatus submissionStatus;
+    Score previousBestScore = null;
+
+    if (isPassed) {
+      // List<Score> previousBests = scoreService.getMany(beatmap, user, SubmissionStatus.BEST);
+      // previousBestScore = previousBests.isEmpty() ? null : previousBests.getFirst();
+
+      // TODO: Fix this, previou best score returns null always for some reason
+      // maybe the methods is wrong, to fix
+      previousBestScore = scoreService.getBestScore(beatmap, user);
+      System.out.println("Previous best score: " + previousBestScore);
+      System.out.println(
+          "Previous score pp:"
+              + (previousBestScore != null ? previousBestScore.getPerformancePoints() : "null"));
+      System.out.println("New score pp: " + pp);
+      boolean isNewBest =
+          previousBestScore == null || pp > previousBestScore.getPerformancePoints();
+
+      if (isNewBest) {
+        submissionStatus = SubmissionStatus.BEST;
+        if (previousBestScore != null) {
+          previousBestScore.setSubmissionStatus(SubmissionStatus.SUBMITTED);
+          scoreService.updateScore(previousBestScore);
+        }
+      } else {
+        submissionStatus = SubmissionStatus.SUBMITTED;
+      }
+    } else {
+      submissionStatus = SubmissionStatus.FAILED;
+    }
+
+    score.setSubmissionStatus(submissionStatus);
+    score.setPerformancePoints(pp);
     score.setAccuracy(accuracy);
 
     // Persist new score to database
@@ -223,8 +260,6 @@ public class ScoringController {
     replayService.saveReplay(score.getId(), replayBytes);
 
     // Update beatmap stats (plays, passes)
-    pe.nanamochi.banchus.entities.db.Beatmap beatmap =
-        beatmapService.findByMd5(score.getBeatmapMd5());
     beatmap.setPlaycount(beatmap.getPlaycount() + 1);
     beatmap.setPasscount(
         score.getSubmissionStatus() != SubmissionStatus.FAILED
@@ -232,80 +267,227 @@ public class ScoringController {
             : beatmap.getPasscount());
     beatmapService.update(beatmap);
 
-    // TODO: update account statsd
+    Stat modeStats = statService.getStats(user, score.getMode());
+    List<Score> top100Scores =
+        scoreService.getMany(
+            user,
+            score.getMode(),
+            "performancePoints",
+            List.of(SubmissionStatus.BEST),
+            List.of(BeatmapRankedStatus.RANKED, BeatmapRankedStatus.APPROVED),
+            1,
+            100);
+    int totalScoreCount =
+        scoreService.getTotalCount(
+            user,
+            score.getMode(),
+            List.of(SubmissionStatus.BEST),
+            List.of(BeatmapRankedStatus.RANKED, BeatmapRankedStatus.APPROVED));
 
-    // TODO: calculate new overall accuracy
+    // Calculate new overall accuracy
+    float weightedAccuracy = calculateWeightedAccuracy(top100Scores);
+    float bonusAccuracy = 0.0f;
+    if (totalScoreCount > 0) {
+      bonusAccuracy = (float) (100.0f / (20 * (1 - Math.pow(0.95f, totalScoreCount))));
+    }
+    float totalAccuracy = Math.round((weightedAccuracy * bonusAccuracy) / 100.0);
 
-    // TODO: calculate new overall pp
+    // Calculate new overall pp
+    float weightedPp = calculateWeightedPp(top100Scores);
+    float bonusPp = (float) (416.6667f * (1 - Math.pow(0.9994f, totalScoreCount)));
+    float totalPp = Math.round(weightedPp + bonusPp);
 
-    // TODO: update this gamemode's stats with our new score submission
+    // Create a copy of the previous gamemode's stats.
+    // We will use this to construct overall ranking charts for the client
+    Stat previousModeStats = (Stat) modeStats.clone();
+    int newRankedScore = modeStats.getRankedScore();
+    if (score.getSubmissionStatus() == SubmissionStatus.BEST
+        && (beatmap.getStatus() == BeatmapRankedStatus.RANKED
+            || beatmap.getStatus() == BeatmapRankedStatus.APPROVED)) {
+      newRankedScore += scorePoints;
+
+      if (previousBestScore != null) {
+        newRankedScore -= previousBestScore.getScore();
+      }
+    }
+
+    // Update this gamemode's stats with our new score submission
+    modeStats.setGamemode(score.getMode());
+    modeStats.setTotalScore(modeStats.getTotalScore() + scorePoints);
+    modeStats.setRankedScore(newRankedScore);
+    modeStats.setPerformancePoints((int) totalPp);
+    modeStats.setPlayCount(modeStats.getPlayCount() + 1);
+    modeStats.setPlayTime(modeStats.getPlayTime() + score.getTimeElapsed());
+    modeStats.setAccuracy(totalAccuracy);
+    modeStats.setHighestCombo(Math.max(modeStats.getHighestCombo(), score.getHighestCombo()));
+    modeStats.setTotalHits(
+        modeStats.getTotalHits()
+            + score.getNum300s()
+            + score.getNum100s()
+            + score.getNum50s()
+            + score.getNumMisses());
+    modeStats.setXhCount(modeStats.getXhCount() + (score.getGrade().equals("XH") ? 1 : 0));
+    modeStats.setXCount(modeStats.getXCount() + (score.getGrade().equals("X") ? 1 : 0));
+    modeStats.setShCount(modeStats.getShCount() + (score.getGrade().equals("SH") ? 1 : 0));
+    modeStats.setSCount(modeStats.getSCount() + (score.getGrade().equals("S") ? 1 : 0));
+    modeStats.setACount(modeStats.getACount() + (score.getGrade().equals("A") ? 1 : 0));
+    statService.update(modeStats);
 
     // TODO: send account stats to all other osu! sessions if we're not restricted
+    List<Session> osuSessionsToNotify;
+    if (user.isRestricted()) {
+      osuSessionsToNotify = List.of(session);
+    } else {
+      osuSessionsToNotify = sessionService.getAllSessions();
+    }
+
+    // TODO: Get own global ranking
+    for (Session otherOsuSession : osuSessionsToNotify) {
+      ByteArrayOutputStream stream = new ByteArrayOutputStream();
+      packetWriter.writePacket(
+          stream,
+          new UserStatsPacket(
+              modeStats.getUser().getId(),
+              session.getAction(),
+              session.getInfoText(),
+              session.getBeatmapMd5(),
+              session.getMods(),
+              Mode.fromValue(mode),
+              session.getBeatmapId(),
+              modeStats.getRankedScore(),
+              modeStats.getAccuracy(),
+              modeStats.getPlayCount(),
+              modeStats.getTotalScore(),
+              727, // TODO: global rank
+              modeStats.getPerformancePoints()));
+      packetBundleService.enqueue(otherOsuSession.getId(), new PacketBundle(stream.toByteArray()));
+    }
+
+    // TODO: calculate score rank on the beatmap
+    int scoreRank = 1;
 
     // TODO: if this score is #1, send it to the #announce channel
+    if (score.getSubmissionStatus() == SubmissionStatus.BEST && scoreRank == 1) {
+      Channel announceChannel = channelService.findByName("#announce");
+      if (announceChannel != null) {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        String message =
+            String.format(
+                "%s just got the top score on %s [%s] +%s with %spp!",
+                user.getUsername(),
+                beatmapset.getArtist(),
+                beatmap.getVersion(),
+                Mods.fromBits(mods),
+                Math.round(score.getPerformancePoints()));
+        packetWriter.writePacket(stream, new MessagePacket("BanchoBot", message, "#announce", 0));
+        Set<UUID> announceChannelMembers =
+            channelMembersRedisService.getMembers(announceChannel.getId());
+        for (UUID osuSessionId : announceChannelMembers) {
+          packetBundleService.enqueue(osuSessionId, new PacketBundle(stream.toByteArray()));
+        }
+      }
+    }
 
     // TODO: unlock achievements
 
-    // TODO: build beatmap ranking chart values
+    // Build beatmap ranking chart values
+    String beatmapRankBefore = "";
+    String beatmapRankedScoreBefore = "";
+    String beatmapTotalScoreBefore = "";
+    String beatmapMaxComboBefore = "";
+    String beatmapAccuracyBefore = "";
+    String beatmapPerformancePointsBefore = "";
+    if (previousBestScore != null) {
+      beatmapRankBefore = String.valueOf(0); // TODO: get previous rank
+      beatmapRankedScoreBefore = String.valueOf(previousBestScore.getScore());
+      beatmapTotalScoreBefore = String.valueOf(previousBestScore.getScore());
+      beatmapMaxComboBefore = String.valueOf(previousBestScore.getHighestCombo());
+      beatmapAccuracyBefore = String.format("%.2f", previousBestScore.getAccuracy());
+      beatmapPerformancePointsBefore =
+          String.valueOf(Math.round(previousBestScore.getPerformancePoints()));
+    }
 
-    // TODO: build overall ranking chart values
+    String beatmapRankAfter = "1";
+    String beatmapRankedScoreAfter = String.valueOf(score.getScore());
+    String beatmapTotalScoreAfter = String.valueOf(score.getScore());
+    String beatmapMaxComboAfter = String.valueOf(score.getHighestCombo());
+    String beatmapAccuracyAfter = String.format("%.2f", score.getAccuracy());
+    String beatmapPerformancePointsAfter = String.valueOf(Math.round(score.getPerformancePoints()));
 
-    // TODO: construct response data
+    // Build overall ranking chart values
+    String overallRankBefore = "727"; // TODO: get previous overall rank
+    String overallRankAfter = "727"; // TODO: get new overall rank
+    String overallRankedScoreBefore = String.valueOf(previousModeStats.getRankedScore());
+    String overallRankedScoreAfter = String.valueOf(modeStats.getRankedScore());
+    String overallTotalScoreBefore = String.valueOf(previousModeStats.getTotalScore());
+    String overallTotalScoreAfter = String.valueOf(modeStats.getTotalScore());
+    String overallMaxComboBefore = String.valueOf(previousModeStats.getHighestCombo());
+    String overallMaxComboAfter = String.valueOf(modeStats.getHighestCombo());
+    String overallAccuracyBefore = String.format("%.2f", previousModeStats.getAccuracy());
+    String overallAccuracyAfter = String.format("%.2f", modeStats.getAccuracy());
+    String overallPerformancePointsBefore =
+        String.valueOf(previousModeStats.getPerformancePoints());
+    String overallPerformancePointsAfter = String.valueOf(modeStats.getPerformancePoints());
 
-    // TODO: add overall and beatmap ranking charts to response data
+    // Construct response data
+    StringBuilder response = new StringBuilder();
+    response.append("beatmapId:").append(beatmap.getId()).append("|");
+    response.append("beatmapSetId:").append(beatmap.getBeatmapset().getId()).append("|");
+    response.append("beatmapPlaycount:").append(beatmap.getPlaycount()).append("|");
+    response.append("beatmapPasscount:").append(beatmap.getPasscount()).append("|");
+    response.append("approvedDate:").append(beatmap.getSubmissionDate().toString()).append("|");
+    response.append("\n|chartId:beatmap|");
+    response
+        .append("chartUrl:https://osu.ppy.sh/beatmapsets/")
+        .append(beatmap.getBeatmapset().getId())
+        .append("|");
+    response.append("chartName:Beatmap Ranking|");
+    response.append("rankBefore:").append(beatmapRankBefore).append("|");
+    response.append("rankAfter:").append(beatmapRankAfter).append("|");
+    response.append("rankedScoreBefore:").append(beatmapRankedScoreBefore).append("|");
+    response.append("rankedScoreAfter:").append(beatmapRankedScoreAfter).append("|");
+    response.append("totalScoreBefore:").append(beatmapTotalScoreBefore).append("|");
+    response.append("totalScoreAfter:").append(beatmapTotalScoreAfter).append("|");
+    response.append("maxComboBefore:").append(beatmapMaxComboBefore).append("|");
+    response.append("maxComboAfter:").append(beatmapMaxComboAfter).append("|");
+    response.append("accuracyBefore:").append(beatmapAccuracyBefore).append("|");
+    response.append("accuracyAfter:").append(beatmapAccuracyAfter).append("|");
+    response.append("ppBefore:").append(beatmapPerformancePointsBefore).append("|");
+    response.append("ppAfter:").append(beatmapPerformancePointsAfter).append("|");
+    response.append("onlineScoreId:").append(score.getId()).append("|");
+    response.append("\n|chartId:overall|");
+    response.append("chartUrl:https://osu.ppy.sh/u/").append(user.getId()).append("|");
+    response.append("chartName:Overall Ranking|");
+    response.append("rankBefore:").append(overallRankBefore).append("|");
+    response.append("rankAfter:").append(overallRankAfter).append("|");
+    response.append("rankedScoreBefore:").append(overallRankedScoreBefore).append("|");
+    response.append("rankedScoreAfter:").append(overallRankedScoreAfter).append("|");
+    response.append("totalScoreBefore:").append(overallTotalScoreBefore).append("|");
+    response.append("totalScoreAfter:").append(overallTotalScoreAfter).append("|");
+    response.append("maxComboBefore:").append(overallMaxComboBefore).append("|");
+    response.append("maxComboAfter:").append(overallMaxComboAfter).append("|");
+    response.append("accuracyBefore:").append(overallAccuracyBefore).append("|");
+    response.append("accuracyAfter:").append(overallAccuracyAfter).append("|");
+    response.append("ppBefore:").append(overallPerformancePointsBefore).append("|");
+    response.append("ppAfter:").append(overallPerformancePointsAfter).append("|");
 
     // TODO: add newly unlocked achievements to response data
 
-    // Print all variables to test
-    logger.info("Score submission received:");
-    logger.info("Username: " + username);
-    logger.info("Score: " + score);
-
-    // Score: Score(id=1, user=null, onlineChecksum=3a1419d73b8497e64fdf7882c9b26ca3,
-    // beatmapMd5=971fc1aa53ab6d3691d765406d328672, score=43644, performancePoints=0,
-    // accuracy=86.29629629629629, highestCombo=51, fullCombo=false, mods=576, num300s=36,
-    // num100s=8, num50s=1, numMisses=0, numGekis=9, numKatus=4, grade=A,
-    // submissionStatus=SUBMITTED, mode=OSU, timeElapsed=24736,
-    // createdAt=2026-01-29T18:15:01.235108954Z, updatedAt=2026-01-29T18:15:01.235108954Z)       :
-
-    /*Data[0]: 971fc1aa53ab6d3691d765406d328672
-    Data[1]: test
-    Data[2]: 684e0165b10abe5fe5fa699efe3b4745
-    Data[3]: 35
-    Data[4]: 8
-    Data[5]: 1
-    Data[6]: 8
-    Data[7]: 5
-    Data[8]: 1
-    Data[9]: 54899
-    Data[10]: 61
-    Data[11]: False
-    Data[12]: C
-    Data[13]: 576
-    Data[14]: True
-    Data[15]: 0
-    Data[16]: 260129163524
-    Data[17]: 20260116
-    Data[18]: 47136405
-         */
-
-    byte[] clientHash = Base64.getDecoder().decode(clientHashB64);
-
-    return "Score submission endpoint - to be implemented";
+    return response.toString();
   }
 
-  private double calculateAccuracy(Score score) {
+  private float calculateAccuracy(Score score) {
     if (score.getMode() == Mode.OSU) {
       int totalNotes =
           score.getNum300s() + score.getNum100s() + score.getNum50s() + score.getNumMisses();
-      return (100.0
-          * ((score.getNum300s() * 300.0)
-              + (score.getNum100s() * 100.0)
-              + (score.getNum50s() * 50.0))
-          / (totalNotes * 300.0));
+      return (100.0f
+          * ((score.getNum300s() * 300.0f)
+              + (score.getNum100s() * 100.0f)
+              + (score.getNum50s() * 50.0f))
+          / (totalNotes * 300.0f));
     } else if (score.getMode() == Mode.TAIKO) {
       int totalNotes = score.getNum300s() + score.getNum100s() + score.getNumMisses();
-      return (100.0 * ((score.getNum100s() * 0.5) + score.getNum300s()) / totalNotes);
+      return (100.0f * ((score.getNum100s() * 0.5f) + score.getNum300s()) / totalNotes);
     } else if (score.getMode() == Mode.CATCH) {
       int totalNotes =
           score.getNum300s()
@@ -313,7 +495,7 @@ public class ScoringController {
               + score.getNum50s()
               + score.getNumKatus()
               + score.getNumMisses();
-      return (100.0 * (score.getNum300s() + score.getNum100s() + score.getNum50s())) / totalNotes;
+      return (100.0f * (score.getNum300s() + score.getNum100s() + score.getNum50s())) / totalNotes;
     } else if (score.getMode() == Mode.MANIA) {
       int totalNotes =
           score.getNum300s()
@@ -322,14 +504,49 @@ public class ScoringController {
               + score.getNumGekis()
               + score.getNumKatus()
               + score.getNumMisses();
-      return (100.0
-          * ((score.getNum50s() * 50.0)
-              + (score.getNum100s() * 100.0)
-              + (score.getNumKatus() * 200.0)
-              + ((score.getNum300s() + score.getNumGekis()) * 300.0))
-          / (totalNotes * 300.0));
+      return (100.0f
+          * ((score.getNum50s() * 50.0f)
+              + (score.getNum100s() * 100.0f)
+              + (score.getNumKatus() * 200.0f)
+              + ((score.getNum300s() + score.getNumGekis()) * 300.0f))
+          / (totalNotes * 300.0f));
     } else {
-      return 0.0;
+      return 0.0f;
     }
+  }
+
+  private double calculatePp(byte[] osuFile, Score score) throws RosuException {
+    io.github.nanamochi.rosu_pp_jar.Beatmap rosuBeatmap =
+        io.github.nanamochi.rosu_pp_jar.Beatmap.fromBytes(osuFile);
+    // rosuBeatmap.convert(GameMode.fromValues) // TODO: implement fromValue in rosu_pp_jar
+    Performance performance = Performance.create(rosuBeatmap);
+    performance.setMods(Mods.fromBits(score.getMods()));
+    performance.setAccuracy((double) score.getAccuracy());
+    performance.setNGeki(score.getNumGekis());
+    performance.setNGeki(score.getNumKatus());
+    performance.setN300(score.getNum300s());
+    performance.setN100(score.getNum100s());
+    performance.setN50(score.getNum50s());
+    performance.setMisses(score.getNumMisses());
+    performance.setCombo(score.getHighestCombo());
+    PerformanceAttributes attributes = performance.calculate();
+
+    return attributes.pp();
+  }
+
+  private float calculateWeightedAccuracy(List<Score> top100Scores) {
+    float weightedAccuracy = 0.0f;
+    for (int i = 0; i < top100Scores.size(); i++) {
+      weightedAccuracy += (float) (top100Scores.get(i).getAccuracy() * Math.pow(0.95f, i));
+    }
+    return weightedAccuracy;
+  }
+
+  private float calculateWeightedPp(List<Score> top100Scores) {
+    float weightedPp = 0.0f;
+    for (int i = 0; i < top100Scores.size(); i++) {
+      weightedPp += (float) (top100Scores.get(i).getPerformancePoints() * Math.pow(0.95f, i));
+    }
+    return weightedPp;
   }
 }

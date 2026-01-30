@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Beatmap {
 
-  private int approved;
+  private Integer approved;
 
   @JsonProperty("submit_date")
   private Instant submitDate;
@@ -26,89 +26,89 @@ public class Beatmap {
   private String artist;
 
   @JsonProperty("beatmap_id")
-  private int beatmapId;
+  private Integer beatmapId;
 
   @JsonProperty("beatmapset_id")
-  private int beatmapsetId;
+  private Integer beatmapsetId;
 
   private double bpm;
   private String creator;
 
   @JsonProperty("creator_id")
-  private int creatorId;
+  private Integer creatorId;
 
   @JsonProperty("difficultyrating")
-  private double difficultyRating;
+  private Double difficultyRating;
 
   @JsonProperty("diff_aim")
-  private double diffAim;
+  private Double diffAim;
 
   @JsonProperty("diff_speed")
-  private double diffSpeed;
+  private Double diffSpeed;
 
   @JsonProperty("diff_size")
-  private double diffSize;
+  private Double diffSize;
 
   @JsonProperty("diff_overall")
-  private double diffOverall;
+  private Double diffOverall;
 
   @JsonProperty("diff_approach")
-  private double diffApproach;
+  private Double diffApproach;
 
   @JsonProperty("diff_drain")
-  private double diffDrain;
+  private Double diffDrain;
 
   @JsonProperty("hit_length")
-  private int hitLength;
+  private Integer hitLength;
 
   private String source;
 
   @JsonProperty("genre_id")
-  private int genreId;
+  private Integer genreId;
 
   @JsonProperty("language_id")
-  private int languageId;
+  private Integer languageId;
 
   private String title;
 
   @JsonProperty("total_length")
-  private int totalLength;
+  private Integer totalLength;
 
   private String version;
 
   @JsonProperty("file_md5")
   private String fileMd5;
 
-  private int mode;
+  private Integer mode;
   private String tags;
 
   @JsonProperty("favourite_count")
-  private int favouriteCount;
+  private Integer favouriteCount;
 
-  private double rating;
-  private int playcount;
-  private int passcount;
+  private Double rating;
+  private Integer playcount;
+  private Integer passcount;
 
   @JsonProperty("count_normal")
-  private int countNormal;
+  private Integer countNormal;
 
   @JsonProperty("count_slider")
-  private int countSlider;
+  private Integer countSlider;
 
   @JsonProperty("count_spinner")
-  private int countSpinner;
+  private Integer countSpinner;
 
   @JsonProperty("max_combo")
-  private int maxCombo;
+  private Integer maxCombo;
 
-  private boolean storyboard;
-  private boolean video;
+  private Boolean storyboard;
+  private Boolean video;
 
   @JsonProperty("download_unavailable")
-  private boolean downloadUnavailable;
+  private Boolean downloadUnavailable;
 
   @JsonProperty("audio_unavailable")
-  private boolean audioUnavailable;
+  private Boolean audioUnavailable;
 
   @JsonProperty("submit_date")
   public void setSubmitDate(String submitDate) {
@@ -119,6 +119,7 @@ public class Beatmap {
 
   @JsonProperty("approved_date")
   public void setApprovedDate(String approvedDate) {
+    // approved_date can be null in the API response
     this.approvedDate =
         LocalDateTime.parse(approvedDate, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
             .toInstant(ZoneOffset.UTC);

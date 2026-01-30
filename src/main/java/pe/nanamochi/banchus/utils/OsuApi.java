@@ -31,12 +31,27 @@ public class OsuApi {
     }
   }
 
-  public List<Beatmap> getBeatmaps(String beatmapMd5) {
+  public Beatmap getBeatmap(String beatmapMd5) {
     UriComponentsBuilder builder =
         UriComponentsBuilder.fromUriString(BASE_URL + "/api/get_beatmaps")
             .queryParam("h", beatmapMd5)
             .queryParam("k", apiKey);
 
+    ResponseEntity<List<Beatmap>> response =
+        restTemplate.exchange(
+            builder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<>() {});
+    List<Beatmap> beatmaps = response.getBody();
+
+    return !beatmaps.isEmpty() ? beatmaps.getFirst() : null;
+  }
+
+  public List<Beatmap> getBeatmaps(int beatmapSetId) {
+    UriComponentsBuilder builder =
+        UriComponentsBuilder.fromUriString(BASE_URL + "/api/get_beatmaps")
+            .queryParam("s", beatmapSetId)
+            .queryParam("k", apiKey);
+
+    // System.out.println(builder.toUriString());
     ResponseEntity<List<Beatmap>> response =
         restTemplate.exchange(
             builder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<>() {});

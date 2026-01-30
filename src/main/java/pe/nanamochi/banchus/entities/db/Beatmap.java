@@ -3,19 +3,18 @@ package pe.nanamochi.banchus.entities.db;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.Data;
+import pe.nanamochi.banchus.entities.BeatmapRankedStatus;
 import pe.nanamochi.banchus.entities.Mode;
 
 @Entity
 @Data
 @Table(name = "beatmaps")
 public class Beatmap {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private int id;
+  @Id private int id;
 
   private Mode mode;
   private String md5;
-  private int status; // TODO: enum?
+  private BeatmapRankedStatus status;
   private String version;
   private Instant submissionDate;
   private Instant lastUpdated;

@@ -10,7 +10,7 @@ import pe.nanamochi.banchus.entities.Mode;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Stat {
+public class Stat implements Cloneable {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private int id;
@@ -31,4 +31,9 @@ public class Stat {
   private int shCount;
   private int sCount;
   private int aCount;
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    return super.clone();
+  }
 }

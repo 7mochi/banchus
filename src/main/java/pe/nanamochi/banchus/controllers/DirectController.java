@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import pe.nanamochi.banchus.entities.DirectDisplayMode;
+import pe.nanamochi.banchus.entities.BeatmapDirectDisplayMode;
 import pe.nanamochi.banchus.entities.db.User;
 import pe.nanamochi.banchus.services.UserService;
 import pe.nanamochi.banchus.utils.OsuDirectApi;
@@ -25,7 +25,7 @@ public class DirectController {
   public ResponseEntity<String> osuSearchHandler(
       @RequestParam("u") String username,
       @RequestParam("h") String passwordMd5,
-      @RequestParam("r") DirectDisplayMode displayMode,
+      @RequestParam("r") BeatmapDirectDisplayMode displayMode,
       @RequestParam("p") int pageOffset,
       @RequestParam("q") String query,
       @RequestParam("m") int mode) {

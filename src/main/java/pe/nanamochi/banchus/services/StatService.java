@@ -29,6 +29,13 @@ public class StatService {
     return stats;
   }
 
+  public Stat update(Stat stat) {
+    if (!statRepository.existsById(stat.getId())) {
+      throw new IllegalArgumentException("Stat not found: " + stat.getId());
+    }
+    return statRepository.save(stat);
+  }
+
   public Stat getStats(User user, Mode gamemode) {
     return statRepository.findByUserAndGamemode(user, gamemode);
   }
