@@ -63,7 +63,7 @@ public class LeaderboardController {
 
     // TODO: update user stats if they have changed
 
-    // TODO: fetch the beatmap with this md5
+    // Fetch the beatmap with this md5
     Beatmap beatmap = beatmapService.findByMd5(beatmapMd5);
 
     if (beatmap == null) {
@@ -164,11 +164,16 @@ public class LeaderboardController {
               .orElse(localLastUpdate);
 
       if (localLastUpdate.isBefore(remoteLastUpdate)) {
+        // Update and overwrite the local beatmap files
         logger.info(
             "Beatmapset has updates, downloading new files for id: {}",
             beatmap.getBeatmapset().getId());
 
-        // Update and overwrite the local beatmap files
+        Beatmapset beatmapset = beatmap.getBeatmapset();
+        // TODO: add more fields to update
+        beatmapset.setLastUpdated(remoteLastUpdate);
+        beatmapsetService.update(beatmapset);
+
         for (pe.nanamochi.banchus.entities.osuapi.Beatmap b : osuApiBeatmaps) {
           beatmapService.getOrDownloadOsuFile(b.getBeatmapId(), b.getFileMd5());
 
@@ -181,23 +186,24 @@ public class LeaderboardController {
             beatmapService.update(localBeatmap);
           }
         }
-
-        Beatmapset beatmapset = beatmap.getBeatmapset();
-        beatmapset.setLastUpdated(remoteLastUpdate);
-        beatmapsetService.update(beatmapset);
       }
     }
 
-    // TODO: create filter parameters for score fetching based on the leaderboard type
-    if (LeaderboardType.fromValue(leaderboardType) == LeaderboardType.MODS) {
-      // If the leaderboard type is MODS, we need to filter by the mods
+    // Create filter parameters for score fetching based on the leaderboard type
+    LeaderboardType type = LeaderboardType.fromValue(leaderboardType);
+    Integer modsToFilter = null;
+    CountryCode country = null;
+
+    switch (type) {
+      case MODS -> modsToFilter = Mods.toBitmask(mods);
+      case COUNTRY -> country = user.getCountry();
+      case FRIENDS -> logger.warn("Friends leaderboard type is not implemented yet");
     }
 
     // Fetch our top 50 scores for the leaderboard
     List<Score> scores =
         scoreService.getBeatmapLeaderboard(
-            beatmap, mode, Mods.toBitmask(mods), SubmissionStatus.BEST);
-    System.out.println(scores);
+            beatmap, mode, modsToFilter, SubmissionStatus.BEST, country);
 
     // Fetch our personal best score for the beatmap
     Score personalBestScore = scoreService.getBestScore(beatmap, user);
