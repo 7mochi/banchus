@@ -1,10 +1,7 @@
 package pe.nanamochi.banchus.controllers;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.Part;
 import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -24,7 +21,6 @@ import pe.nanamochi.banchus.packets.server.MessagePacket;
 import pe.nanamochi.banchus.packets.server.UserStatsPacket;
 import pe.nanamochi.banchus.services.*;
 import pe.nanamochi.banchus.utils.OsuApi;
-import pe.nanamochi.banchus.utils.Rijndael;
 
 @RestController
 @RequestMapping("/web")
@@ -62,70 +58,26 @@ public class ScoringController {
       @RequestParam(value = "s", required = false) String clientHashB64,
       @RequestPart(value = "i", required = false) MultipartFile flCheatScreenshot)
       throws Exception {
-    byte[] iv = Base64.getDecoder().decode(ivB64);
+    ScoreService.ParsedScoreDTO parsedScore =
+        scoreService.parseScoreData(request, ivB64, osuVersion, scoreTime, failTime);
+    Score score = parsedScore.getScore();
 
-    // The bancho protocol uses the "score" parameter name for both the base64'ed score data,
-    // and the replay file in the multipart. @RequestPart can´t handle it well, so we manually
-    // handle it here with HttpServletRequest
-    List<Part> scoreParts =
-        request.getParts().stream().filter(p -> p.getName().equals("score")).toList();
-    Part scoreDataPart = scoreParts.get(0);
-    Part replayPart = scoreParts.get(1);
-
-    String scoreDataAesB64 =
-        new String(scoreDataPart.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-    byte[] encryptedScoreData = Base64.getDecoder().decode(scoreDataAesB64);
-    byte[] replayBytes = replayPart.getInputStream().readAllBytes();
-
-    // Ensure AES key is exactly 32 bytes
-    String keyStr = ("osu!-scoreburgr---------" + osuVersion);
-    keyStr = String.format("%-32s", keyStr).substring(0, 32);
-    byte[] aesKey = keyStr.getBytes(StandardCharsets.UTF_8);
-
-    // Decrypt score data
-    byte[] decryptedBytes = Rijndael.decrypt(encryptedScoreData, aesKey, iv);
-    String decrypted = new String(decryptedBytes, StandardCharsets.UTF_8);
-    String[] scoreData = decrypted.split(":");
-
-    if (scoreData.length < 13) {
-      logger.info("A submitted score has a malformed score data.");
-      return "error: " + ScoreSubmissionErrors.NO.getValue();
-    }
-
-    String username = scoreData[1].stripTrailing();
-
-    User user = userService.login(username, passwordMd5);
+    User user = userService.login(score.getUser().getUsername(), passwordMd5);
     if (user == null) {
       return "error: " + ScoreSubmissionErrors.NEEDS_AUTHENTICATION.getValue();
     }
 
-    Session session = sessionService.getPrimarySessionByUsername(username);
+    Session session = sessionService.getPrimarySessionByUsername(user.getUsername());
     if (session == null) {
       return "error: " + ScoreSubmissionErrors.NEEDS_AUTHENTICATION.getValue();
     }
 
     // TODO: handle differently depending on beatmap ranked status
 
-    boolean isPassed = Boolean.parseBoolean(scoreData[14]);
-    String beatmapMd5 = scoreData[0];
-    String onlineChecksum = scoreData[2];
-    int num300s = Integer.parseInt(scoreData[3]);
-    int num100s = Integer.parseInt(scoreData[4]);
-    int num50s = Integer.parseInt(scoreData[5]);
-    int numGekis = Integer.parseInt(scoreData[6]);
-    int numKatus = Integer.parseInt(scoreData[7]);
-    int numMisses = Integer.parseInt(scoreData[8]);
-    int scorePoints = Integer.parseInt(scoreData[9]);
-    int highestCombo = Integer.parseInt(scoreData[10]);
-    boolean fullCombo = Boolean.parseBoolean(scoreData[11]);
-    String grade = scoreData[12];
-    int mods = Integer.parseInt(scoreData[13]);
-    int mode = Integer.parseInt(scoreData[15]);
-
     // Do a request to the osu!api to get beatmap info, because we need to get the beatmap_id from
     // the md5 hash, by default all beatmaps are returned independtly from the hash, so we need to
     // filter them here
-    Beatmap osuApibeatmap = osuApi.getBeatmap(beatmapMd5);
+    Beatmap osuApibeatmap = osuApi.getBeatmap(score.getBeatmap().getMd5());
 
     if (osuApibeatmap == null) {
       return "error: " + ScoreSubmissionErrors.BEATMAP_UNRANKED.getValue();
@@ -147,33 +99,19 @@ public class ScoringController {
       }
     }
 
-    Score score = new Score();
-    score.setUser(user);
-    score.setOnlineChecksum(onlineChecksum);
-    score.setBeatmap(beatmapService.findByMd5(beatmapMd5));
-    score.setScore(scorePoints);
-    score.setHighestCombo(highestCombo);
-    score.setFullCombo(fullCombo);
-    score.setMods(mods);
-    score.setNum300s(num300s);
-    score.setNum100s(num100s);
-    score.setNum50s(num50s);
-    score.setNumMisses(numMisses);
-    score.setNumGekis(numGekis);
-    score.setNumKatus(numKatus);
-    score.setGrade(grade);
-    score.setMode(Mode.fromValue(mode));
-    score.setTimeElapsed(isPassed ? scoreTime : failTime);
+    score.setBeatmap(beatmapService.findByMd5(score.getBeatmap().getMd5()));
 
     double pp =
         scoreService.calculatePp(
-            beatmapService.getOrDownloadOsuFile(osuApibeatmap.getBeatmapId(), beatmapMd5), score);
+            beatmapService.getOrDownloadOsuFile(
+                osuApibeatmap.getBeatmapId(), score.getBeatmap().getMd5()),
+            score);
 
-    var beatmap = beatmapService.findByMd5(beatmapMd5);
+    var beatmap = beatmapService.findByMd5(score.getBeatmap().getMd5());
     SubmissionStatus submissionStatus;
     Score previousBestScore = null;
 
-    if (isPassed) {
+    if (score.isPassed()) {
       previousBestScore = scoreService.getBestScore(beatmap, user);
       boolean isNewBest =
           previousBestScore == null || pp > previousBestScore.getPerformancePoints();
@@ -191,6 +129,7 @@ public class ScoringController {
       submissionStatus = SubmissionStatus.FAILED;
     }
 
+    score.setUser(user);
     score.setSubmissionStatus(submissionStatus);
     score.setPerformancePoints(pp);
 
@@ -198,7 +137,7 @@ public class ScoringController {
     score = scoreService.saveScore(score);
 
     // Save replay in our filesystem
-    replayService.saveReplay(score.getId(), replayBytes);
+    replayService.saveReplay(score.getId(), parsedScore.getReplayBytes());
 
     // Update beatmap stats (plays, passes)
     beatmap.setPlaycount(beatmap.getPlaycount() + 1);
@@ -228,14 +167,13 @@ public class ScoringController {
     // Create a copy of the previous gamemode's stats.
     // We will use this to construct overall ranking charts for the client
     Stat previousModeStats = (Stat) modeStats.clone();
-    int previousGlobalRank =
-        Math.toIntExact(rankingService.getGlobalRank(Mode.fromValue(mode), user));
+    int previousGlobalRank = Math.toIntExact(rankingService.getGlobalRank(score.getMode(), user));
     long newRankedScore = modeStats.getRankedScore();
 
     if (score.getSubmissionStatus() == SubmissionStatus.BEST
         && (beatmap.getStatus() == BeatmapRankedStatus.RANKED
             || beatmap.getStatus() == BeatmapRankedStatus.APPROVED)) {
-      newRankedScore += scorePoints;
+      newRankedScore += score.getScore();
 
       if (previousBestScore != null) {
         newRankedScore -= previousBestScore.getScore();
@@ -244,7 +182,7 @@ public class ScoringController {
 
     // Update this gamemode's stats with our new score submission
     modeStats.setGamemode(score.getMode());
-    modeStats.setTotalScore(modeStats.getTotalScore() + scorePoints);
+    modeStats.setTotalScore(modeStats.getTotalScore() + score.getScore());
     modeStats.setRankedScore(newRankedScore);
     modeStats.setPerformancePoints((int) totalPp);
     modeStats.setPlayCount(modeStats.getPlayCount() + 1);
@@ -264,7 +202,7 @@ public class ScoringController {
     modeStats.setACount(modeStats.getACount() + (score.getGrade().equals("A") ? 1 : 0));
     statService.update(modeStats);
 
-    rankingService.updateRanking(Mode.fromValue(mode), user, modeStats);
+    rankingService.updateRanking(score.getMode(), user, modeStats);
 
     // Send account stats to all other osu! sessions if we're not restricted
     List<Session> osuSessionsToNotify;
@@ -274,7 +212,7 @@ public class ScoringController {
       osuSessionsToNotify = sessionService.getAllSessions();
     }
 
-    int ownGlobalRank = Math.toIntExact(rankingService.getGlobalRank(Mode.fromValue(mode), user));
+    int ownGlobalRank = Math.toIntExact(rankingService.getGlobalRank(score.getMode(), user));
 
     for (Session otherOsuSession : osuSessionsToNotify) {
       ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -286,7 +224,7 @@ public class ScoringController {
               session.getInfoText(),
               session.getBeatmapMd5(),
               session.getMods(),
-              Mode.fromValue(mode),
+              score.getMode(),
               session.getBeatmapId(),
               modeStats.getRankedScore(),
               modeStats.getAccuracy(),

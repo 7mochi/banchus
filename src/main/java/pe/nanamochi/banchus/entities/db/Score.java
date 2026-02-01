@@ -38,6 +38,7 @@ public class Score {
   private String grade;
   private SubmissionStatus submissionStatus;
   private Mode mode;
+  private boolean passed;
   private int timeElapsed;
   @CreatedDate private Instant createdAt;
   @LastModifiedDate private Instant updatedAt;
