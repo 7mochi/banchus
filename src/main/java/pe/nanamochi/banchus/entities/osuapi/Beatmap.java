@@ -1,6 +1,8 @@
 package pe.nanamochi.banchus.entities.osuapi;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import jakarta.persistence.EntityListeners;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -121,8 +123,8 @@ public class Beatmap {
   }
 
   @JsonProperty("approved_date")
+  @JsonSetter(nulls = Nulls.SKIP)
   public void setApprovedDate(String approvedDate) {
-    // approved_date can be null in the API response
     this.approvedDate =
         LocalDateTime.parse(approvedDate, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
             .toInstant(ZoneOffset.UTC);

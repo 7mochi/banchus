@@ -248,7 +248,6 @@ public class ScoringController {
     beatmapService.update(beatmap);
 
     Stat modeStats = statService.getStats(user, score.getMode());
-    System.out.println("Mode stats finded: " + modeStats);
     List<Score> top100Scores = scoreService.getUserTop100(user, score.getMode());
     int totalScoreCount = scoreService.getUserBestScoresCount(user, score.getMode());
 

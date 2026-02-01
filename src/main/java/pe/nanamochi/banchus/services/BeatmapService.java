@@ -2,22 +2,29 @@ package pe.nanamochi.banchus.services;
 
 import java.security.MessageDigest;
 import java.util.HexFormat;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.StorageType;
 import pe.nanamochi.banchus.entities.db.Beatmap;
+import pe.nanamochi.banchus.mappers.BeatmapMapper;
 import pe.nanamochi.banchus.repositories.BeatmapRepository;
 import pe.nanamochi.banchus.utils.OsuApi;
 
 @Service
+@AllArgsConstructor
 public class BeatmapService {
 
-  @Autowired private BeatmapRepository beatmapRepository;
-  @Autowired private FileStorageService storage;
-  @Autowired private OsuApi osuApi;
+  private final BeatmapRepository beatmapRepository;
+  private final BeatmapMapper beatmapMapper;
+  private final FileStorageService storage;
+  private final OsuApi osuApi;
 
   public Beatmap create(Beatmap beatmap) {
     return beatmapRepository.save(beatmap);
+  }
+
+  public Beatmap createFromApi(pe.nanamochi.banchus.entities.osuapi.Beatmap beatmap) {
+    return beatmapMapper.fromApi(beatmap);
   }
 
   public Beatmap update(Beatmap beatmap) {

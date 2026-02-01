@@ -5,6 +5,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,7 +29,7 @@ public class LeaderboardController {
   @Autowired private OsuApi osuApi;
 
   @GetMapping("/osu-osz2-getscores.php")
-  public String getScores(
+  public ResponseEntity<String> getScores(
       @RequestParam(name = "us") String username,
       @RequestParam(name = "ha") String passwordMd5,
       @RequestParam(name = "s") Boolean skipScores,
@@ -44,21 +46,18 @@ public class LeaderboardController {
 
     // This is a quirk of the osu! client, where it adjusts this value only after it sends the
     // packet to the server; so we need to adjust
-    List<Mods> mods =
-        Mods.filterInvalidModCombinations(Mods.fromBitmask(modsBitmask), Mode.fromValue(gamemode));
     Mode mode = Mode.fromValue(gamemode);
+    List<Mods> mods = Mods.filterInvalidModCombinations(Mods.fromBitmask(modsBitmask), mode);
 
     // TODO: Fix the responses in the case of and error
     User user = userService.login(username, passwordMd5);
     if (user == null) {
-      logger.warn("Login failed for user: {}", username);
-      return "";
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     Session session = sessionService.getPrimarySessionByUsername(user.getUsername());
     if (session == null) {
-      logger.warn("No session found for user: {}", username);
-      return "";
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     // TODO: update user stats if they have changed
@@ -66,81 +65,37 @@ public class LeaderboardController {
     // Fetch the beatmap with this md5
     Beatmap beatmap = beatmapService.findByMd5(beatmapMd5);
 
-    if (beatmap == null) {
-      logger.info("Beatmap not found locally, fetching from osu! API: {}", beatmapMd5);
+    List<pe.nanamochi.banchus.entities.osuapi.Beatmap> osuApiBeatmaps = null;
 
-      pe.nanamochi.banchus.entities.osuapi.Beatmap osuApiBeatmap = osuApi.getBeatmap(beatmapMd5);
+    if (beatmap == null) {
+      var osuApiBeatmap = osuApi.getBeatmap(beatmapMd5);
       if (osuApiBeatmap == null) {
-        logger.warn("Beatmap not found in osu! API: {}", beatmapMd5);
-        return ""; // TODO: Beatmap doesn't exist in the official osu! server
+        return ResponseEntity.ok("-1|false");
       }
 
       Beatmapset beatmapset = beatmapsetService.findByBeatmapsetId(osuApiBeatmap.getBeatmapsetId());
 
       if (beatmapset == null) {
-        logger.info("Creating new beatmapset: {}", osuApiBeatmap.getBeatmapsetId());
-
-        beatmapset = new Beatmapset();
-        beatmapset.setId(osuApiBeatmap.getBeatmapsetId());
-        beatmapset.setTitle(osuApiBeatmap.getTitle());
-        beatmapset.setArtist(osuApiBeatmap.getArtist());
-        beatmapset.setSource(osuApiBeatmap.getSource());
-        beatmapset.setCreator(osuApiBeatmap.getCreator());
-        beatmapset.setTags(osuApiBeatmap.getTags());
-        beatmapset.setSubmissionStatus(BeatmapRankedStatus.fromValue(osuApiBeatmap.getApproved()));
-        beatmapset.setHasVideo(osuApiBeatmap.getVideo());
-        beatmapset.setHasStoryboard(osuApiBeatmap.getStoryboard());
-        beatmapset.setSubmissionDate(osuApiBeatmap.getSubmitDate());
-        beatmapset.setApprovedDate(
-            osuApiBeatmap.getApprovedDate() != null ? osuApiBeatmap.getApprovedDate() : null);
-        beatmapset.setLastUpdated(osuApiBeatmap.getLastUpdate());
-        beatmapset.setTotalPlaycount(0); // dont save bancho playcount, we will track our own
-        beatmapset.setLanguageId(osuApiBeatmap.getLanguageId());
-        beatmapset.setGenreId(osuApiBeatmap.getGenreId());
+        beatmapset = beatmapsetService.createFromApi(osuApiBeatmap);
         beatmapsetService.create(beatmapset);
       }
 
-      List<pe.nanamochi.banchus.entities.osuapi.Beatmap> osuApiBeatmaps =
-          osuApi.getBeatmaps(osuApiBeatmap.getBeatmapsetId());
-
+      osuApiBeatmaps = osuApi.getBeatmaps(osuApiBeatmap.getBeatmapsetId());
       if (osuApiBeatmaps == null || osuApiBeatmaps.isEmpty()) {
-        logger.error(
-            "Failed to fetch beatmaps for beatmapset: {}", osuApiBeatmap.getBeatmapsetId());
-        return "";
+        return ResponseEntity.ok("-1|false");
       }
 
-      for (pe.nanamochi.banchus.entities.osuapi.Beatmap b : osuApiBeatmaps) {
-        Beatmap existingBeatmap = beatmapService.findByMd5(b.getFileMd5());
-        if (existingBeatmap != null) {
+      for (var b : osuApiBeatmaps) {
+        Beatmap existing = beatmapService.findByMd5(b.getFileMd5());
+        if (existing != null) {
           if (b.getFileMd5().equals(beatmapMd5)) {
-            beatmap = existingBeatmap;
+            beatmap = existing;
           }
           continue;
         }
 
-        Beatmap newBeatmap = new Beatmap();
-        newBeatmap.setId(b.getBeatmapId());
+        Beatmap newBeatmap = beatmapService.createFromApi(b);
         newBeatmap.setBeatmapset(beatmapset);
-        newBeatmap.setMode(Mode.fromValue(b.getMode()));
-        newBeatmap.setMd5(b.getFileMd5());
-        newBeatmap.setStatus(BeatmapRankedStatus.fromValue(b.getApproved()));
-        newBeatmap.setVersion(b.getVersion());
-        newBeatmap.setSubmissionDate(b.getSubmitDate());
-        newBeatmap.setLastUpdated(b.getLastUpdate());
-        newBeatmap.setPlaycount(0); // dont save bancho playcount, we will track our own
-        newBeatmap.setPasscount(0); // dont save bancho passcount, we will track our own
-        newBeatmap.setTotalLength(b.getTotalLength());
-        newBeatmap.setDrainLength(b.getHitLength());
-        newBeatmap.setCountNormal(b.getCountNormal());
-        newBeatmap.setCountSlider(b.getCountSlider());
-        newBeatmap.setCountSpinner(b.getCountSpinner());
-        newBeatmap.setMaxCombo(b.getMaxCombo());
-        newBeatmap.setBpm(b.getBpm());
-        newBeatmap.setCs(b.getDiffSize());
-        newBeatmap.setAr(b.getDiffApproach());
-        newBeatmap.setOd(b.getDiffOverall());
-        newBeatmap.setHp(b.getDiffDrain());
-        newBeatmap.setStarRating(b.getDifficultyRating());
 
         beatmapService.create(newBeatmap);
         beatmapService.getOrDownloadOsuFile(b.getBeatmapId(), b.getFileMd5());
@@ -151,9 +106,9 @@ public class LeaderboardController {
       }
     }
 
-    // Check if the beatmap has a update in the official osu! servers
-    List<pe.nanamochi.banchus.entities.osuapi.Beatmap> osuApiBeatmaps =
-        osuApi.getBeatmaps(beatmap.getBeatmapset().getId());
+    if (osuApiBeatmaps == null) {
+      osuApiBeatmaps = osuApi.getBeatmaps(beatmap.getBeatmapset().getId());
+    }
 
     if (osuApiBeatmaps != null && !osuApiBeatmaps.isEmpty()) {
       Instant localLastUpdate = beatmap.getBeatmapset().getLastUpdated();
@@ -174,7 +129,7 @@ public class LeaderboardController {
         beatmapset.setLastUpdated(remoteLastUpdate);
         beatmapsetService.update(beatmapset);
 
-        for (pe.nanamochi.banchus.entities.osuapi.Beatmap b : osuApiBeatmaps) {
+        for (var b : osuApiBeatmaps) {
           beatmapService.getOrDownloadOsuFile(b.getBeatmapId(), b.getFileMd5());
 
           Beatmap localBeatmap = beatmapService.findByMd5(b.getFileMd5());
@@ -197,7 +152,7 @@ public class LeaderboardController {
     switch (type) {
       case MODS -> modsToFilter = Mods.toBitmask(mods);
       case COUNTRY -> country = user.getCountry();
-      case FRIENDS -> logger.warn("Friends leaderboard type is not implemented yet");
+      case FRIENDS -> logger.warn("Friends leaderboard not implemented yet");
     }
 
     // Fetch our top 50 scores for the leaderboard
@@ -208,7 +163,7 @@ public class LeaderboardController {
     // Fetch our personal best score for the beatmap
     Score personalBestScore = scoreService.getBestScore(beatmap, user);
 
-    return formatLeaderboardResponse(scores, personalBestScore, user, beatmap);
+    return ResponseEntity.ok(formatLeaderboardResponse(scores, personalBestScore, user, beatmap));
   }
 
   public String formatLeaderboardResponse(

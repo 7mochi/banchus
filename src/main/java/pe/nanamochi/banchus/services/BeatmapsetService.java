@@ -1,17 +1,23 @@
 package pe.nanamochi.banchus.services;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.db.Beatmapset;
+import pe.nanamochi.banchus.mappers.BeatmapsetMapper;
 import pe.nanamochi.banchus.repositories.BeatmapsetRepository;
 
 @Service
+@AllArgsConstructor
 public class BeatmapsetService {
-  @Autowired private BeatmapsetRepository beatmapsetRepository;
-  @Autowired private BeatmapService beatmapService;
+  private final BeatmapsetRepository beatmapsetRepository;
+  private final BeatmapsetMapper beatmapsetMapper;
 
   public Beatmapset create(Beatmapset beatmapset) {
     return beatmapsetRepository.save(beatmapset);
+  }
+
+  public Beatmapset createFromApi(pe.nanamochi.banchus.entities.osuapi.Beatmap beatmap) {
+    return beatmapsetMapper.fromApi(beatmap);
   }
 
   public Beatmapset update(Beatmapset beatmapset) {

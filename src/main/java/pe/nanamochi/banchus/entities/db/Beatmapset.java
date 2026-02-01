@@ -44,7 +44,6 @@ public class Beatmapset {
   private Instant submissionDate;
   private Instant approvedDate;
   private Instant lastUpdated;
-  private Instant lastOsuApiCheck;
   private int totalPlaycount;
   private int languageId; // TODO: enum?
   private int genreId; // TODO: enum?
