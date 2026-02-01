@@ -1,5 +1,9 @@
 package pe.nanamochi.banchus.services;
 
+import io.github.nanamochi.rosu_pp_jar.Mods;
+import io.github.nanamochi.rosu_pp_jar.Performance;
+import io.github.nanamochi.rosu_pp_jar.PerformanceAttributes;
+import io.github.nanamochi.rosu_pp_jar.RosuException;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -76,5 +80,24 @@ public class ScoreService {
     return scoreRepository
         .findTop50ByBeatmapAndModeAndSubmissionStatusAndUser_RestrictedFalseOrderByScoreDesc(
             beatmap, mode, status);
+  }
+
+  public double calculatePp(byte[] osuFile, Score score) throws RosuException {
+    io.github.nanamochi.rosu_pp_jar.Beatmap rosuBeatmap =
+        io.github.nanamochi.rosu_pp_jar.Beatmap.fromBytes(osuFile);
+    // rosuBeatmap.convert(GameMode.fromValues) // TODO: implement fromValue in rosu_pp_jar
+    Performance performance = Performance.create(rosuBeatmap);
+    performance.setMods(Mods.fromBits(score.getMods()));
+    performance.setAccuracy((double) score.getAccuracy());
+    performance.setNGeki(score.getNumGekis());
+    performance.setNGeki(score.getNumKatus());
+    performance.setN300(score.getNum300s());
+    performance.setN100(score.getNum100s());
+    performance.setN50(score.getNum50s());
+    performance.setMisses(score.getNumMisses());
+    performance.setCombo(score.getHighestCombo());
+    PerformanceAttributes attributes = performance.calculate();
+
+    return attributes.pp();
   }
 }

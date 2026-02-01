@@ -1,9 +1,5 @@
 package pe.nanamochi.banchus.controllers;
 
-import io.github.nanamochi.rosu_pp_jar.Mods;
-import io.github.nanamochi.rosu_pp_jar.Performance;
-import io.github.nanamochi.rosu_pp_jar.PerformanceAttributes;
-import io.github.nanamochi.rosu_pp_jar.RosuException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Part;
 import java.io.ByteArrayOutputStream;
@@ -21,6 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 import pe.nanamochi.banchus.entities.*;
 import pe.nanamochi.banchus.entities.db.*;
 import pe.nanamochi.banchus.entities.osuapi.Beatmap;
+import pe.nanamochi.banchus.mappers.BeatmapMapper;
+import pe.nanamochi.banchus.mappers.BeatmapsetMapper;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.server.MessagePacket;
 import pe.nanamochi.banchus.packets.server.UserStatsPacket;
@@ -38,6 +36,8 @@ public class ScoringController {
   @Autowired private ScoreService scoreService;
   @Autowired private BeatmapsetService beatmapsetService;
   @Autowired private BeatmapService beatmapService;
+  @Autowired private BeatmapMapper beatmapMapper;
+  @Autowired private BeatmapsetMapper beatmapsetMapper;
   @Autowired private ReplayService replayService;
   @Autowired private StatService statService;
   @Autowired private OsuApi osuApi;
@@ -46,6 +46,8 @@ public class ScoringController {
   @Autowired private ChannelService channelService;
   @Autowired private ChannelMembersRedisService channelMembersRedisService;
   @Autowired private RankingService rankingService;
+  @Autowired private UserStatCalculationService userStatCalculationService;
+  @Autowired private ChartService chartService;
 
   @PostMapping(
       value = "/osu-submit-modular-selector.php",
@@ -126,58 +128,19 @@ public class ScoringController {
     Beatmap osuApibeatmap = osuApi.getBeatmap(beatmapMd5);
 
     if (osuApibeatmap == null) {
-      return "error: "
-          + ScoreSubmissionErrors.BEATMAP_UNRANKED.getValue(); // TODO: is this the correct error?
+      return "error: " + ScoreSubmissionErrors.BEATMAP_UNRANKED.getValue();
     }
 
     // Check if the beatmapset exists in our database, if not, store the beatmapset and the beatmap
     Beatmapset beatmapset = beatmapsetService.findByBeatmapsetId(osuApibeatmap.getBeatmapsetId());
     if (beatmapset == null) {
-      beatmapset = new Beatmapset();
-      beatmapset.setId(osuApibeatmap.getBeatmapsetId());
-      beatmapset.setTitle(osuApibeatmap.getTitle());
-      beatmapset.setArtist(osuApibeatmap.getArtist());
-      beatmapset.setSource(osuApibeatmap.getSource());
-      beatmapset.setCreator(osuApibeatmap.getCreator());
-      beatmapset.setTags(osuApibeatmap.getTags());
-      beatmapset.setSubmissionStatus(BeatmapRankedStatus.fromValue(osuApibeatmap.getApproved()));
-      beatmapset.setHasVideo(osuApibeatmap.getVideo());
-      beatmapset.setHasStoryboard(osuApibeatmap.getStoryboard());
-      beatmapset.setSubmissionDate(osuApibeatmap.getSubmitDate());
-      beatmapset.setApprovedDate(
-          osuApibeatmap.getApprovedDate() != null ? osuApibeatmap.getApprovedDate() : null);
-      beatmapset.setLastUpdated(osuApibeatmap.getLastUpdate());
-      beatmapset.setTotalPlaycount(0); // dont save bancho playcount, we will track our own
-      beatmapset.setLanguageId(osuApibeatmap.getLanguageId());
-      beatmapset.setGenreId(osuApibeatmap.getGenreId());
+      beatmapset = beatmapsetMapper.fromApi(osuApibeatmap);
       beatmapsetService.create(beatmapset);
 
       List<Beatmap> osuApibeatmaps = osuApi.getBeatmaps(osuApibeatmap.getBeatmapsetId());
       for (Beatmap b : osuApibeatmaps) {
-        pe.nanamochi.banchus.entities.db.Beatmap beatmap =
-            new pe.nanamochi.banchus.entities.db.Beatmap();
-        beatmap.setId(b.getBeatmapId());
+        var beatmap = beatmapMapper.fromApi(b);
         beatmap.setBeatmapset(beatmapset);
-        beatmap.setMode(Mode.fromValue(b.getMode()));
-        beatmap.setMd5(b.getFileMd5());
-        beatmap.setStatus(BeatmapRankedStatus.fromValue(b.getApproved()));
-        beatmap.setVersion(b.getVersion());
-        beatmap.setSubmissionDate(b.getSubmitDate());
-        beatmap.setLastUpdated(b.getLastUpdate());
-        beatmap.setPlaycount(0); // dont save bancho playcount, we will track our own
-        beatmap.setPasscount(0); // dont save bancho passcount, we will track our own
-        beatmap.setTotalLength(b.getTotalLength());
-        beatmap.setDrainLength(b.getHitLength());
-        beatmap.setCountNormal(b.getCountNormal());
-        beatmap.setCountSlider(b.getCountSlider());
-        beatmap.setCountSpinner(b.getCountSpinner());
-        beatmap.setMaxCombo(b.getMaxCombo());
-        beatmap.setBpm(b.getBpm());
-        beatmap.setCs(b.getDiffSize());
-        beatmap.setAr(b.getDiffApproach());
-        beatmap.setOd(b.getDiffOverall());
-        beatmap.setHp(b.getDiffDrain());
-        beatmap.setStarRating(b.getDifficultyRating());
 
         beatmapService.create(beatmap);
         beatmapService.getOrDownloadOsuFile(b.getBeatmapId(), b.getFileMd5());
@@ -203,11 +166,10 @@ public class ScoringController {
     score.setTimeElapsed(isPassed ? scoreTime : failTime);
 
     double pp =
-        calculatePp(
+        scoreService.calculatePp(
             beatmapService.getOrDownloadOsuFile(osuApibeatmap.getBeatmapId(), beatmapMd5), score);
-    float accuracy = calculateAccuracy(score);
 
-    pe.nanamochi.banchus.entities.db.Beatmap beatmap = beatmapService.findByMd5(beatmapMd5);
+    var beatmap = beatmapService.findByMd5(beatmapMd5);
     SubmissionStatus submissionStatus;
     Score previousBestScore = null;
 
@@ -231,7 +193,6 @@ public class ScoringController {
 
     score.setSubmissionStatus(submissionStatus);
     score.setPerformancePoints(pp);
-    score.setAccuracy(accuracy);
 
     // Persist new score to database
     score = scoreService.saveScore(score);
@@ -252,7 +213,7 @@ public class ScoringController {
     int totalScoreCount = scoreService.getUserBestScoresCount(user, score.getMode());
 
     // Calculate new overall accuracy
-    float weightedAccuracy = calculateWeightedAccuracy(top100Scores);
+    float weightedAccuracy = userStatCalculationService.calculateWeightedAccuracy(top100Scores);
     float bonusAccuracy = 0.0f;
     if (totalScoreCount > 0) {
       bonusAccuracy = (float) (100.0f / (20 * (1 - Math.pow(0.95f, totalScoreCount))));
@@ -260,7 +221,7 @@ public class ScoringController {
     float totalAccuracy = (weightedAccuracy * bonusAccuracy) / 100.0f;
 
     // Calculate new overall pp
-    float weightedPp = calculateWeightedPp(top100Scores);
+    float weightedPp = userStatCalculationService.calculateWeightedPp(top100Scores);
     float bonusPp = (float) (416.6667f * (1 - Math.pow(0.9994f, totalScoreCount)));
     float totalPp = Math.round(weightedPp + bonusPp);
 
@@ -358,87 +319,6 @@ public class ScoringController {
     // TODO: unlock achievements
 
     // Build beatmap ranking chart values
-    String beatmapRankBefore = "";
-    String beatmapRankedScoreBefore = "";
-    String beatmapTotalScoreBefore = "";
-    String beatmapMaxComboBefore = "";
-    String beatmapAccuracyBefore = "";
-    String beatmapPerformancePointsBefore = "";
-    if (previousBestScore != null) {
-      beatmapRankBefore = String.valueOf(0); // TODO: get previous rank
-      beatmapRankedScoreBefore = String.valueOf(previousBestScore.getScore());
-      beatmapTotalScoreBefore = String.valueOf(previousBestScore.getScore());
-      beatmapMaxComboBefore = String.valueOf(previousBestScore.getHighestCombo());
-      beatmapAccuracyBefore = String.format("%.2f", previousBestScore.getAccuracy());
-      beatmapPerformancePointsBefore =
-          String.valueOf(Math.round(previousBestScore.getPerformancePoints()));
-    }
-
-    String beatmapRankAfter = "1";
-    String beatmapRankedScoreAfter = String.valueOf(score.getScore());
-    String beatmapTotalScoreAfter = String.valueOf(score.getScore());
-    String beatmapMaxComboAfter = String.valueOf(score.getHighestCombo());
-    String beatmapAccuracyAfter = String.format("%.2f", score.getAccuracy());
-    String beatmapPerformancePointsAfter = String.valueOf(Math.round(score.getPerformancePoints()));
-
-    // Build overall ranking chart values
-    String overallRankBefore = String.valueOf(previousGlobalRank);
-    String overallRankAfter = String.valueOf(ownGlobalRank);
-    String overallRankedScoreBefore = String.valueOf(previousModeStats.getRankedScore());
-    String overallRankedScoreAfter = String.valueOf(modeStats.getRankedScore());
-    String overallTotalScoreBefore = String.valueOf(previousModeStats.getTotalScore());
-    String overallTotalScoreAfter = String.valueOf(modeStats.getTotalScore());
-    String overallMaxComboBefore = String.valueOf(previousModeStats.getHighestCombo());
-    String overallMaxComboAfter = String.valueOf(modeStats.getHighestCombo());
-    String overallAccuracyBefore = String.format("%.2f", previousModeStats.getAccuracy());
-    String overallAccuracyAfter = String.format("%.2f", modeStats.getAccuracy());
-    String overallPerformancePointsBefore =
-        String.valueOf(previousModeStats.getPerformancePoints());
-    String overallPerformancePointsAfter = String.valueOf(modeStats.getPerformancePoints());
-
-    // Construct response data
-    StringBuilder response = new StringBuilder();
-    response.append("beatmapId:").append(beatmap.getId()).append("|");
-    response.append("beatmapSetId:").append(beatmap.getBeatmapset().getId()).append("|");
-    response.append("beatmapPlaycount:").append(beatmap.getPlaycount()).append("|");
-    response.append("beatmapPasscount:").append(beatmap.getPasscount()).append("|");
-    response.append("approvedDate:").append(beatmap.getSubmissionDate().toString()).append("|");
-    response.append("\n|chartId:beatmap|");
-    response
-        .append("chartUrl:https://osu.ppy.sh/beatmapsets/")
-        .append(beatmap.getBeatmapset().getId())
-        .append("|");
-    response.append("chartName:Beatmap Ranking|");
-    response.append("rankBefore:").append(beatmapRankBefore).append("|");
-    response.append("rankAfter:").append(beatmapRankAfter).append("|");
-    response.append("rankedScoreBefore:").append(beatmapRankedScoreBefore).append("|");
-    response.append("rankedScoreAfter:").append(beatmapRankedScoreAfter).append("|");
-    response.append("totalScoreBefore:").append(beatmapTotalScoreBefore).append("|");
-    response.append("totalScoreAfter:").append(beatmapTotalScoreAfter).append("|");
-    response.append("maxComboBefore:").append(beatmapMaxComboBefore).append("|");
-    response.append("maxComboAfter:").append(beatmapMaxComboAfter).append("|");
-    response.append("accuracyBefore:").append(beatmapAccuracyBefore).append("|");
-    response.append("accuracyAfter:").append(beatmapAccuracyAfter).append("|");
-    response.append("ppBefore:").append(beatmapPerformancePointsBefore).append("|");
-    response.append("ppAfter:").append(beatmapPerformancePointsAfter).append("|");
-    response.append("onlineScoreId:").append(score.getId()).append("|");
-    response.append("\n|chartId:overall|");
-    response.append("chartUrl:https://osu.ppy.sh/u/").append(user.getId()).append("|");
-    response.append("chartName:Overall Ranking|");
-    response.append("rankBefore:").append(overallRankBefore).append("|");
-    response.append("rankAfter:").append(overallRankAfter).append("|");
-    response.append("rankedScoreBefore:").append(overallRankedScoreBefore).append("|");
-    response.append("rankedScoreAfter:").append(overallRankedScoreAfter).append("|");
-    response.append("totalScoreBefore:").append(overallTotalScoreBefore).append("|");
-    response.append("totalScoreAfter:").append(overallTotalScoreAfter).append("|");
-    response.append("maxComboBefore:").append(overallMaxComboBefore).append("|");
-    response.append("maxComboAfter:").append(overallMaxComboAfter).append("|");
-    response.append("accuracyBefore:").append(overallAccuracyBefore).append("|");
-    response.append("accuracyAfter:").append(overallAccuracyAfter).append("|");
-    response.append("ppBefore:").append(overallPerformancePointsBefore).append("|");
-    response.append("ppAfter:").append(overallPerformancePointsAfter).append("|");
-
-    // TODO: add newly unlocked achievements to response data
 
     logger.info(
         "[{}] {} submitted a score | ({}), {}pp",
@@ -447,80 +327,14 @@ public class ScoringController {
         score.getSubmissionStatus(),
         String.format("%.2f", score.getPerformancePoints()));
 
-    return response.toString();
-  }
-
-  private float calculateAccuracy(Score score) {
-    if (score.getMode() == Mode.OSU) {
-      int totalNotes =
-          score.getNum300s() + score.getNum100s() + score.getNum50s() + score.getNumMisses();
-      return (100.0f
-          * ((score.getNum300s() * 300.0f)
-              + (score.getNum100s() * 100.0f)
-              + (score.getNum50s() * 50.0f))
-          / (totalNotes * 300.0f));
-    } else if (score.getMode() == Mode.TAIKO) {
-      int totalNotes = score.getNum300s() + score.getNum100s() + score.getNumMisses();
-      return (100.0f * ((score.getNum100s() * 0.5f) + score.getNum300s()) / totalNotes);
-    } else if (score.getMode() == Mode.CATCH) {
-      int totalNotes =
-          score.getNum300s()
-              + score.getNum100s()
-              + score.getNum50s()
-              + score.getNumKatus()
-              + score.getNumMisses();
-      return (100.0f * (score.getNum300s() + score.getNum100s() + score.getNum50s())) / totalNotes;
-    } else if (score.getMode() == Mode.MANIA) {
-      int totalNotes =
-          score.getNum300s()
-              + score.getNum100s()
-              + score.getNum50s()
-              + score.getNumGekis()
-              + score.getNumKatus()
-              + score.getNumMisses();
-      return (100.0f
-          * ((score.getNum50s() * 50.0f)
-              + (score.getNum100s() * 100.0f)
-              + (score.getNumKatus() * 200.0f)
-              + ((score.getNum300s() + score.getNumGekis()) * 300.0f))
-          / (totalNotes * 300.0f));
-    } else {
-      return 0.0f;
-    }
-  }
-
-  private double calculatePp(byte[] osuFile, Score score) throws RosuException {
-    io.github.nanamochi.rosu_pp_jar.Beatmap rosuBeatmap =
-        io.github.nanamochi.rosu_pp_jar.Beatmap.fromBytes(osuFile);
-    // rosuBeatmap.convert(GameMode.fromValues) // TODO: implement fromValue in rosu_pp_jar
-    Performance performance = Performance.create(rosuBeatmap);
-    performance.setMods(Mods.fromBits(score.getMods()));
-    performance.setAccuracy((double) score.getAccuracy());
-    performance.setNGeki(score.getNumGekis());
-    performance.setNGeki(score.getNumKatus());
-    performance.setN300(score.getNum300s());
-    performance.setN100(score.getNum100s());
-    performance.setN50(score.getNum50s());
-    performance.setMisses(score.getNumMisses());
-    performance.setCombo(score.getHighestCombo());
-    PerformanceAttributes attributes = performance.calculate();
-
-    return attributes.pp();
-  }
-
-  private float calculateWeightedAccuracy(List<Score> top100Scores) {
-    float weightedAccuracy = 0.0f;
-    for (int i = 0; i < top100Scores.size(); i++) {
-      weightedAccuracy += (float) (top100Scores.get(i).getAccuracy() * Math.pow(0.95f, i));
-    }
-    return weightedAccuracy;
-  }
-
-  private float calculateWeightedPp(List<Score> top100Scores) {
-    float weightedPp = 0.0f;
-    for (int i = 0; i < top100Scores.size(); i++) {
-      weightedPp += (float) (top100Scores.get(i).getPerformancePoints() * Math.pow(0.95f, i));
-    }
-    return weightedPp;
+    return chartService.buildCharts(
+        beatmap,
+        score,
+        previousBestScore,
+        user,
+        previousModeStats,
+        modeStats,
+        previousGlobalRank,
+        ownGlobalRank);
   }
 }
