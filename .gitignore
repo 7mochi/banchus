@@ -32,5 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 
-### Environment Files ###
+### Banchus ###
 .env
+.data
