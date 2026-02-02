@@ -3,7 +3,8 @@ package pe.nanamochi.banchus.utils;
 public class Validation {
   private static final String USERNAME_REGEX = "^[\\w \\[\\]-]{2,15}$";
   private static final String EMAIL_REGEX =
-      "\"^[^@\\s]{1,200}@[^@\\s\\.]{1,30}(?:\\.[^@\\.\\s]{2,24})+$";
+      "^(?=.{1,64}@)[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*@"
+          + "[^-][A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$";
 
   private Validation() {}
 
