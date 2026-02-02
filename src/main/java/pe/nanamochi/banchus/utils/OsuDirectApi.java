@@ -3,7 +3,7 @@ package pe.nanamochi.banchus.utils;
 import java.util.Set;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import pe.nanamochi.banchus.entities.DirectDisplayMode;
+import pe.nanamochi.banchus.entities.BeatmapDirectDisplayMode;
 
 public class OsuDirectApi {
   private static final RestTemplate restTemplate = new RestTemplate();
@@ -13,7 +13,7 @@ public class OsuDirectApi {
   private OsuDirectApi() {}
 
   public static String search(
-      String query, int mode, DirectDisplayMode displayMode, int pageOffset) {
+      String query, int mode, BeatmapDirectDisplayMode displayMode, int pageOffset) {
     UriComponentsBuilder builder =
         UriComponentsBuilder.fromUriString(BASE_URL + "/v2/search")
             .queryParam("amount", 100)
@@ -34,8 +34,8 @@ public class OsuDirectApi {
       builder.queryParam("mode", mode);
     }
 
-    if (displayMode != DirectDisplayMode.ALL) {
-      builder.queryParam("status", DirectDisplayMode.convertToOsuApiStatus(displayMode));
+    if (displayMode != BeatmapDirectDisplayMode.ALL) {
+      builder.queryParam("status", BeatmapDirectDisplayMode.convertToOsuApiStatus(displayMode));
     }
 
     builder.queryParam("osudirect", "true");
