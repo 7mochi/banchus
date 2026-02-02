@@ -10,15 +10,15 @@ import pe.nanamochi.banchus.entities.Mode;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Stat {
+public class Stat implements Cloneable {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private int id;
 
   @ManyToOne private User user;
   private Mode gamemode;
-  private int totalScore;
-  private int rankedScore;
+  private long totalScore;
+  private long rankedScore;
   private int performancePoints;
   private int playCount;
   private int playTime;
@@ -31,4 +31,9 @@ public class Stat {
   private int shCount;
   private int sCount;
   private int aCount;
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    return super.clone();
+  }
 }

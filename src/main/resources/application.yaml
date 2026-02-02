@@ -1,5 +1,12 @@
 server:
-    port: ${APPLICATION_PORT:8080}
+  port: ${APPLICATION_PORT:8080}
+  max-http-request-header-size: 128KB
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  tomcat:
+    max-part-count: 100
 spring:
   config:
     import: optional:file:.env[.properties]
@@ -16,11 +23,14 @@ spring:
       password: ${REDIS_PASSWORD:}
       port: ${REDIS_PORT:6379}
   jpa:
+    #show-sql: false
     hibernate:
       ddl-auto: ${JPA_HIBERNATE_DDL_AUTO:update}
 
 logging:
   level:
+    #org.hibernate.SQL: DEBUG
+    #org.hibernate.orm.jdbc.bind: TRACE
     root: ${LOG_LEVEL_ROOT:INFO}
     pe.nanamochi.banchus: ${LOG_LEVEL_BANCHUS:WARN}
 
@@ -30,3 +40,6 @@ banchus:
     redirect-url: ${MENU_ICON_REDIRECT_URL}
   seasonal-backgrounds:
     urls: ${SEASONAL_BACKGROUND_URLS:}
+  osu-api:
+    v1:
+      key: ${OSU_API_V1_KEY}
