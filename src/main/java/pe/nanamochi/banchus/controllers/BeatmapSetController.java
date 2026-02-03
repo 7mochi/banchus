@@ -15,7 +15,7 @@ public class BeatmapSetController {
 
   @GetMapping("/{beatmapSetId}")
   public ResponseEntity<String> downloadBeatmapSet(
-      @PathVariable("beatmapSetId") String beatmapSetId,
+      @PathVariable String beatmapSetId,
       @RequestParam("u") String username,
       @RequestParam("h") String passwordMd5,
       @RequestParam("vv") int endpointVersion) {

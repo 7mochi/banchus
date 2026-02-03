@@ -2,9 +2,9 @@ package pe.nanamochi.banchus.packets.client.handlers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pe.nanamochi.banchus.entities.Mods;
 import pe.nanamochi.banchus.entities.PacketBundle;
@@ -21,14 +21,15 @@ import pe.nanamochi.banchus.services.SessionService;
 import pe.nanamochi.banchus.services.StatService;
 
 @Component
+@RequiredArgsConstructor
 public class UserStatusHandler extends AbstractPacketHandler<UserStatusPacket> {
   private static final Logger logger = LoggerFactory.getLogger(UserStatusHandler.class);
 
-  @Autowired private PacketWriter packetWriter;
-  @Autowired private PacketBundleService packetBundleService;
-  @Autowired private StatService statService;
-  @Autowired private SessionService sessionService;
-  @Autowired private RankingService rankingService;
+  private final PacketWriter packetWriter;
+  private final PacketBundleService packetBundleService;
+  private final StatService statService;
+  private final SessionService sessionService;
+  private final RankingService rankingService;
 
   @Override
   public Packets getPacketType() {

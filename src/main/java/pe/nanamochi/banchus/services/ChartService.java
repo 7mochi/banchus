@@ -8,7 +8,6 @@ import pe.nanamochi.banchus.entities.db.User;
 
 @Service
 public class ChartService {
-
   public String buildCharts(
       Beatmap beatmap,
       Score score,

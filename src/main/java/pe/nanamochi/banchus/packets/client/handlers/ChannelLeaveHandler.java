@@ -4,9 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pe.nanamochi.banchus.entities.PacketBundle;
 import pe.nanamochi.banchus.entities.db.Channel;
@@ -22,14 +22,15 @@ import pe.nanamochi.banchus.services.PacketBundleService;
 import pe.nanamochi.banchus.services.SessionService;
 
 @Component
+@RequiredArgsConstructor
 public class ChannelLeaveHandler extends AbstractPacketHandler<ChannelLeavePacket> {
   private static final Logger logger = LoggerFactory.getLogger(ChannelLeaveHandler.class);
 
-  @Autowired private PacketWriter packetWriter;
-  @Autowired private PacketBundleService packetBundleService;
-  @Autowired private SessionService sessionService;
-  @Autowired private ChannelService channelService;
-  @Autowired private ChannelMembersService channelMembersService;
+  private final PacketWriter packetWriter;
+  private final PacketBundleService packetBundleService;
+  private final SessionService sessionService;
+  private final ChannelService channelService;
+  private final ChannelMembersService channelMembersService;
 
   @Override
   public Packets getPacketType() {

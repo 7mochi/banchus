@@ -3,9 +3,9 @@ package pe.nanamochi.banchus.packets.client.handlers;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pe.nanamochi.banchus.entities.PacketBundle;
 import pe.nanamochi.banchus.entities.db.Session;
@@ -16,13 +16,14 @@ import pe.nanamochi.banchus.packets.client.CantSpectatePacket;
 import pe.nanamochi.banchus.services.*;
 
 @Component
+@RequiredArgsConstructor
 public class CantSpectateHandler extends AbstractPacketHandler<CantSpectatePacket> {
   private static final Logger logger = LoggerFactory.getLogger(CantSpectateHandler.class);
 
-  @Autowired private PacketWriter packetWriter;
-  @Autowired private PacketBundleService packetBundleService;
-  @Autowired private SessionService sessionService;
-  @Autowired private SpectatorService spectatorService;
+  private final PacketWriter packetWriter;
+  private final PacketBundleService packetBundleService;
+  private final SessionService sessionService;
+  private final SpectatorService spectatorService;
 
   @Override
   public Packets getPacketType() {

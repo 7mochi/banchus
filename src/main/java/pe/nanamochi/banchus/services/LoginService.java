@@ -25,7 +25,6 @@ import pe.nanamochi.banchus.utils.PrivilegesUtil;
 @Service
 @RequiredArgsConstructor
 public class LoginService {
-
   private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
 
   private final UserService userService;

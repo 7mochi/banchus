@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pe.nanamochi.banchus.entities.PacketBundle;
 import pe.nanamochi.banchus.entities.db.Channel;
@@ -21,13 +21,14 @@ import pe.nanamochi.banchus.services.ChannelService;
 import pe.nanamochi.banchus.services.PacketBundleService;
 
 @Component
+@RequiredArgsConstructor
 public class MessageHandler extends AbstractPacketHandler<MessagePacket> {
   private static final Logger logger = LoggerFactory.getLogger(MessageHandler.class);
 
-  @Autowired private PacketWriter packetWriter;
-  @Autowired private PacketBundleService packetBundleService;
-  @Autowired private ChannelService channelService;
-  @Autowired private ChannelMembersService channelMembersService;
+  private final PacketWriter packetWriter;
+  private final PacketBundleService packetBundleService;
+  private final ChannelService channelService;
+  private final ChannelMembersService channelMembersService;
 
   @Override
   public Packets getPacketType() {

@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DataDirectoryInitializer {
-
   private static final Logger logger = LoggerFactory.getLogger(DataDirectoryInitializer.class);
 
   public static final Path DATA_DIR = Path.of(".data");
