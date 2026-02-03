@@ -25,8 +25,8 @@ public interface BeatmapMapper {
   @Mapping(target = "od", source = "diffOverall")
   @Mapping(target = "hp", source = "diffDrain")
   @Mapping(target = "starRating", source = "difficultyRating")
-  @Mapping(target = "playcount", constant = "0")
-  @Mapping(target = "passcount", constant = "0")
+  @Mapping(target = "playcount", constant = "0L")
+  @Mapping(target = "passcount", constant = "0L")
   @Mapping(target = "beatmapset", ignore = true)
   Beatmap fromApi(pe.nanamochi.banchus.entities.osuapi.Beatmap api);
 }

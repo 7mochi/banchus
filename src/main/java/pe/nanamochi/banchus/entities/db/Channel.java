@@ -1,37 +1,47 @@
 package pe.nanamochi.banchus.entities.db;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
-@Table(name = "channels")
+@Table(
+    name = "channels",
+    indexes = {@Index(name = "channels_name_idx", columnList = "name")})
 @EntityListeners(AuditingEntityListener.class)
 public class Channel {
   @Id
   @JdbcTypeCode(SqlTypes.VARCHAR)
-  private UUID id = UUID.randomUUID();
+  @Column(name = "id", nullable = false, length = 36, updatable = false)
+  private UUID id;
 
-  @Column(nullable = false, length = 32, unique = true)
+  @Column(name = "name", nullable = false, length = 32, unique = true)
   private String name;
 
-  @Column(nullable = false, length = 256)
+  @Column(name = "topic", nullable = false, length = 256)
   private String topic;
 
-  @Column(nullable = false)
-  private int readPrivileges = 1;
+  @Column(name = "read_privileges", nullable = false)
+  private int readPrivileges;
 
-  @Column(nullable = false)
-  private int writePrivileges = 2;
+  @Column(name = "write_privileges", nullable = false)
+  private int writePrivileges;
 
-  @Column(nullable = false)
-  private boolean autoJoin = false;
+  @Column(name = "auto_join", nullable = false)
+  private boolean autoJoin;
+
+  @CreatedDate
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private Instant createdAt;
+
+  @LastModifiedDate
+  @Column(name = "updated_at", nullable = false)
+  private Instant updatedAt;
 }

@@ -11,37 +11,91 @@ import pe.nanamochi.banchus.entities.SubmissionStatus;
 
 @Entity
 @Data
-@Table(name = "scores")
+@Table(
+    name = "scores",
+    indexes = {
+      @Index(
+          name = "score_user_mode_status_pp_idx",
+          columnList = "user_id, mode, submission_status, performance_points DESC"),
+      @Index(name = "beatmap_mode_status_idx", columnList = "beatmap_id"),
+      @Index(name = "beatmap_status_idx", columnList = "submissionStatus")
+    })
 @EntityListeners(AuditingEntityListener.class)
 public class Score {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "id", nullable = false)
   private int id;
 
-  @ManyToOne private User user;
+  @ManyToOne
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
+
+  @Column(name = "online_checksum", length = 32, nullable = false)
   private String onlineChecksum;
 
-  @ManyToOne private Beatmap beatmap;
+  @ManyToOne
+  @JoinColumn(name = "beatmap_id", nullable = false)
+  private Beatmap beatmap;
 
-  private int score;
-  private double performancePoints;
+  @Column(name = "score", nullable = false)
+  private long score;
+
+  @Column(name = "performance_points", nullable = false)
+  private float performancePoints;
+
+  @Column(name = "accuracy", nullable = false)
   private float accuracy;
+
+  @Column(name = "highest_combo", nullable = false)
   private int highestCombo;
+
+  @Column(name = "full_combo", nullable = false)
   private boolean fullCombo;
+
+  @Column(name = "mods", nullable = false)
   private int mods;
+
+  @Column(name = "num_300s", nullable = false)
   private int num300s;
+
+  @Column(name = "num_100s", nullable = false)
   private int num100s;
+
+  @Column(name = "num_50s", nullable = false)
   private int num50s;
+
+  @Column(name = "num_misses", nullable = false)
   private int numMisses;
+
+  @Column(name = "num_gekis", nullable = false)
   private int numGekis;
+
+  @Column(name = "num_katus", nullable = false)
   private int numKatus;
+
+  @Column(name = "grade", length = 2, nullable = false)
   private String grade;
+
+  @Column(name = "submission_status", nullable = false)
   private SubmissionStatus submissionStatus;
+
+  @Column(name = "mode", nullable = false)
   private Mode mode;
+
+  @Column(name = "passed", nullable = false)
   private boolean passed;
+
+  @Column(name = "time_elapsed", nullable = false)
   private int timeElapsed;
-  @CreatedDate private Instant createdAt;
-  @LastModifiedDate private Instant updatedAt;
+
+  @CreatedDate
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private Instant createdAt;
+
+  @LastModifiedDate
+  @Column(name = "updated_at", nullable = false)
+  private Instant updatedAt;
 
   @PrePersist
   @PreUpdate

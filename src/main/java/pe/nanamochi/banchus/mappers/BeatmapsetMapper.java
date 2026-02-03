@@ -25,7 +25,7 @@ public interface BeatmapsetMapper {
   @Mapping(target = "submissionDate", source = "submitDate")
   @Mapping(target = "approvedDate", source = "approvedDate")
   @Mapping(target = "lastUpdated", source = "lastUpdate")
-  @Mapping(target = "totalPlaycount", constant = "0")
+  @Mapping(target = "totalPlaycount", constant = "0L")
   @Mapping(target = "languageId", source = "languageId")
   @Mapping(target = "genreId", source = "genreId")
   @Mapping(target = "beatmaps", ignore = true)

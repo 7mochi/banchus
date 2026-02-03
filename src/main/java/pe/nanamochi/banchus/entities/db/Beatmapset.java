@@ -10,42 +10,63 @@ import pe.nanamochi.banchus.entities.BeatmapRankedStatus;
 @Entity
 @Data
 @ToString(exclude = "beatmaps")
-@Table(name = "beatmapsets")
+@Table(
+    name = "beatmapsets",
+    indexes = {@Index(name = "beatmapsets_id_idx", columnList = "id")})
 public class Beatmapset {
-  @Id private int id;
+  @Id
+  @Column(name = "id", nullable = false)
+  private int id;
 
-  @Column(nullable = true)
+  @Column(name = "title", length = 128)
   private String title;
 
-  @Column(nullable = true)
+  @Column(name = "title_unicode", length = 128)
   private String titleUnicode;
 
-  @Column(nullable = true)
+  @Column(name = "artist", length = 128)
   private String artist;
 
-  @Column(nullable = true)
+  @Column(name = "artist_unicode", length = 128)
   private String artistUnicode;
 
-  @Column(nullable = true)
+  @Column(name = "source", length = 128)
   private String source;
 
-  @Column(nullable = true)
+  @Column(name = "source_unicode", length = 128)
   private String sourceUnicode;
 
-  @Column(nullable = true)
+  @Column(name = "creator", length = 128)
   private String creator;
 
-  @Column(nullable = true, length = 512)
-  private String tags = "";
+  @Column(name = "tags", length = 1024)
+  private String tags;
 
+  @Column(name = "submission_status", nullable = false)
   private BeatmapRankedStatus submissionStatus;
+
+  @Column(name = "has_video", nullable = false)
   private boolean hasVideo;
+
+  @Column(name = "has_storyboard", nullable = false)
   private boolean hasStoryboard;
+
+  @Column(name = "submission_date", nullable = false)
   private Instant submissionDate;
+
+  @Column(name = "approved_date")
   private Instant approvedDate;
+
+  @Column(name = "last_updated", nullable = false)
   private Instant lastUpdated;
-  private int totalPlaycount;
+
+  @Column(name = "total_playcount", nullable = false)
+  private Long totalPlaycount;
+
+  @Column(name = "language_id", nullable = false)
   private int languageId; // TODO: enum?
+
+  @Column(name = "genre_id", nullable = false)
   private int genreId; // TODO: enum?
 
   @OneToMany(mappedBy = "beatmapset", cascade = CascadeType.ALL)

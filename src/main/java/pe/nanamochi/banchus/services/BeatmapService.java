@@ -128,7 +128,7 @@ public class BeatmapService {
         Beatmap localBeatmap = findByMd5(b.getFileMd5());
         if (localBeatmap != null) {
           localBeatmap.setLastUpdated(b.getLastUpdate());
-          localBeatmap.setStarRating(b.getDifficultyRating());
+          localBeatmap.setStarRating(b.getDifficultyRating().floatValue());
           update(localBeatmap);
 
           if (b.getFileMd5().equals(beatmap.getMd5())) {

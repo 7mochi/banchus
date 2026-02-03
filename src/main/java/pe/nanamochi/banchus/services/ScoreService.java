@@ -278,7 +278,7 @@ public class ScoreService {
     return new ParsedScoreDTO(score, replayBytes);
   }
 
-  public double calculatePp(byte[] osuFile, Score score) throws RosuException {
+  public float calculatePp(byte[] osuFile, Score score) throws RosuException {
     io.github.nanamochi.rosu_pp_jar.Beatmap rosuBeatmap =
         io.github.nanamochi.rosu_pp_jar.Beatmap.fromBytes(osuFile);
     // rosuBeatmap.convert(GameMode.fromValues) // TODO: implement fromValue in rosu_pp_jar
@@ -294,7 +294,7 @@ public class ScoreService {
     performance.setCombo(score.getHighestCombo());
     PerformanceAttributes attributes = performance.calculate();
 
-    return attributes.pp();
+    return attributes.pp().floatValue();
   }
 
   public String processScoreSubmission(
@@ -302,7 +302,7 @@ public class ScoreService {
     Score score = parsedScore.getScore();
     score.setBeatmap(beatmap);
 
-    double pp =
+    float pp =
         calculatePp(
             beatmapService.getOrDownloadOsuFile(beatmap.getId(), score.getBeatmap().getMd5()),
             score);

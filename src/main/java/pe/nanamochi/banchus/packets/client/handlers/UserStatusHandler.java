@@ -16,6 +16,7 @@ import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.UserStatusPacket;
 import pe.nanamochi.banchus.packets.server.UserStatsPacket;
 import pe.nanamochi.banchus.services.PacketBundleService;
+import pe.nanamochi.banchus.services.RankingService;
 import pe.nanamochi.banchus.services.SessionService;
 import pe.nanamochi.banchus.services.StatService;
 
@@ -27,6 +28,7 @@ public class UserStatusHandler extends AbstractPacketHandler<UserStatusPacket> {
   @Autowired private PacketBundleService packetBundleService;
   @Autowired private StatService statService;
   @Autowired private SessionService sessionService;
+  @Autowired private RankingService rankingService;
 
   @Override
   public Packets getPacketType() {
@@ -57,9 +59,9 @@ public class UserStatusHandler extends AbstractPacketHandler<UserStatusPacket> {
     session.setBeatmapId(packet.getBeatmapId());
     session = sessionService.updateSession(session);
 
-    // TODO: Calculate global rank
-
     Stat ownStats = statService.getStats(session.getUser(), packet.getMode());
+    int globalRank =
+        Math.toIntExact(rankingService.getGlobalRank(packet.getMode(), session.getUser()));
 
     // Send the stats update to all active osu sessions
     for (Session otherSession : sessionService.getAllSessions()) {
@@ -78,7 +80,7 @@ public class UserStatusHandler extends AbstractPacketHandler<UserStatusPacket> {
               ownStats.getAccuracy(),
               ownStats.getPlayCount(),
               ownStats.getTotalScore(),
-              727, // TODO: global rank
+              globalRank,
               ownStats.getPerformancePoints()));
       packetBundleService.enqueue(otherSession.getId(), new PacketBundle(stream.toByteArray()));
     }

@@ -10,6 +10,7 @@ import pe.nanamochi.banchus.entities.Mode;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "stats")
 public class Stat implements Cloneable {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)

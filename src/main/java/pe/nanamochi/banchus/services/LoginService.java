@@ -99,7 +99,7 @@ public class LoginService {
     ownOsuSession.setUser(user);
     ownOsuSession.setUtcOffset(Integer.parseInt(loginData.getUtcOffset()));
     ownOsuSession.setGamemode(Mode.OSU);
-    ownOsuSession.setCountry(geolocation.getCountryCode().toLowerCase());
+    ownOsuSession.setCountry(CountryCode.fromCode(geolocation.getCountryCode().toLowerCase()));
     ownOsuSession.setLatitude(geolocation.getLat());
     ownOsuSession.setLongitude(geolocation.getLon());
     ownOsuSession.setDisplayCityLocation(Boolean.parseBoolean(loginData.getDisplayCity()));
@@ -157,7 +157,7 @@ public class LoginService {
             user.getId(),
             user.getUsername(),
             session.getUtcOffset(),
-            CountryCode.fromCode(session.getCountry()).getId(),
+            session.getCountry().getId(),
             0, // TODO: permissions
             session.getLatitude(),
             session.getLongitude(),
@@ -193,7 +193,7 @@ public class LoginService {
             ownSession.getUser().getId(),
             ownSession.getUser().getUsername(),
             ownSession.getUtcOffset(),
-            CountryCode.fromCode(ownSession.getCountry()).getId(),
+            ownSession.getCountry().getId(),
             0, // TODO: permissions
             ownSession.getLatitude(),
             ownSession.getLongitude(),
@@ -246,7 +246,7 @@ public class LoginService {
               otherSession.getUser().getId(),
               otherSession.getUser().getUsername(),
               otherSession.getUtcOffset(),
-              CountryCode.fromCode(otherSession.getCountry()).getId(),
+              otherSession.getCountry().getId(),
               0, // TODO: permissions
               otherSession.getLatitude(),
               otherSession.getLongitude(),
