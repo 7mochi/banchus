@@ -13,6 +13,7 @@ import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.CantSpectatePacket;
+import pe.nanamochi.banchus.packets.server.SpectatorCantSpectatePacket;
 import pe.nanamochi.banchus.services.*;
 
 @Component
@@ -54,7 +55,7 @@ public class CantSpectateHandler extends AbstractPacketHandler<CantSpectatePacke
     }
 
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    packetWriter.writePacket(stream, new CantSpectatePacket(session.getUser().getId()));
+    packetWriter.writePacket(stream, new SpectatorCantSpectatePacket(session.getUser().getId()));
     packetBundleService.enqueue(hostSession.getId(), new PacketBundle(stream.toByteArray()));
 
     for (UUID spectatorSessionId : spectatorService.getMembers(hostSession.getId())) {
