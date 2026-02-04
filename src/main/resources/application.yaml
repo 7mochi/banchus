@@ -11,7 +11,7 @@ spring:
   config:
     import: optional:file:.env[.properties]
   application:
-    name: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME:banchus}
   datasource:
     url: jdbc:mariadb://${DATABASE_HOST:localhost}:${DATABASE_PORT:3306}/${DATABASE_NAME}
     username: ${DATABASE_USERNAME}
