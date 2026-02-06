@@ -42,6 +42,9 @@ public enum Mods {
   MIRROR(1 << 30, "Mirror", "MR"),
   ;
 
+  public static final int SPEED_CHANGING =
+      DOUBLE_TIME.getValue() | HALF_TIME.getValue() | NIGHTCORE.getValue();
+
   private final int value;
   private final String displayName;
   private final String initial;

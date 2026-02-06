@@ -10,7 +10,6 @@ import pe.nanamochi.banchus.packets.Packets;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TargetIsSilencedPacket implements Packet {
-
   private String username;
 
   @Override

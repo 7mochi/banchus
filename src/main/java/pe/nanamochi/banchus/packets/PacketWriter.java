@@ -4,8 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import org.springframework.stereotype.Component;
-import pe.nanamochi.banchus.entities.ReplayFrame;
-import pe.nanamochi.banchus.entities.ScoreFrame;
+import pe.nanamochi.banchus.entities.MatchType;
+import pe.nanamochi.banchus.entities.SlotStatus;
+import pe.nanamochi.banchus.entities.packets.Match;
+import pe.nanamochi.banchus.entities.packets.MatchSlot;
+import pe.nanamochi.banchus.entities.packets.ReplayFrame;
+import pe.nanamochi.banchus.entities.packets.ScoreFrame;
 import pe.nanamochi.banchus.io.data.BanchoDataWriter;
 import pe.nanamochi.banchus.io.data.IDataWriter;
 import pe.nanamochi.banchus.packets.server.*;
@@ -50,6 +54,18 @@ public class PacketWriter {
       case BANCHO_CHANNEL_REVOKED -> write(stream, (ChannelRevokedPacket) packet);
       case BANCHO_SPECTATE_FRAMES -> write(stream, (SpectateFramesPacket) packet);
       case BANCHO_SPECTATOR_CANT_SPECTATE -> write(stream, (SpectatorCantSpectatePacket) packet);
+      case BANCHO_MATCH_UPDATE -> write(stream, (MatchUpdatePacket) packet);
+      case BANCHO_MATCH_JOIN_SUCCESS -> write(stream, (MatchJoinSuccessPacket) packet);
+      case BANCHO_MATCH_JOIN_FAIL -> write(stream, (MatchJoinFailPacket) packet);
+      case BANCHO_MATCH_DISBAND -> write(stream, (MatchDisbandPacket) packet);
+      case BANCHO_MATCH_TRANSFER_HOST -> write(stream, (MatchTransferHostPacket) packet);
+      case BANCHO_MATCH_START -> write(stream, (MatchStartPacket) packet);
+      case BANCHO_MATCH_SCORE_UPDATE -> write(stream, (MatchScoreUpdatePacket) packet);
+      case BANCHO_MATCH_COMPLETE -> write(stream, (MatchCompletePacket) packet);
+      case BANCHO_MATCH_ALL_PLAYERS_LOADED -> write(stream, (MatchAllPlayersLoadedPacket) packet);
+      case BANCHO_MATCH_PLAYER_FAILED -> write(stream, (MatchPlayerFailedPacket) packet);
+      case BANCHO_MATCH_PLAYER_SKIPPED -> write(stream, (MatchPlayerSkippedPacket) packet);
+      case BANCHO_MATCH_SKIP -> write(stream, (MatchSkipPacket) packet);
       default ->
           throw new UnsupportedOperationException(
               "Cannot write packet type: " + packet.getPacketType());
@@ -239,26 +255,7 @@ public class PacketWriter {
 
     ScoreFrame frame = packet.getReplayFrameBundle().getFrame();
     if (frame != null) {
-      writer.writeInt32(buffer, frame.getTime());
-      writer.writeUint8(buffer, frame.getId());
-      writer.writeUint16(buffer, frame.getTotal300());
-      writer.writeUint16(buffer, frame.getTotal100());
-      writer.writeUint16(buffer, frame.getTotal50());
-      writer.writeUint16(buffer, frame.getTotalGeki());
-      writer.writeUint16(buffer, frame.getTotalKatu());
-      writer.writeUint16(buffer, frame.getTotalMiss());
-      writer.writeUint32(buffer, frame.getTotalScore());
-      writer.writeUint16(buffer, frame.getMaxCombo());
-      writer.writeUint16(buffer, frame.getCurrentCombo());
-      writer.writeBoolean(buffer, frame.isPerfect());
-      writer.writeUint8(buffer, frame.getHp());
-      writer.writeUint8(buffer, frame.getTagByte());
-      writer.writeBoolean(buffer, frame.isUsingScoreV2());
-
-      if (frame.isUsingScoreV2()) {
-        writer.writeFloat64(buffer, frame.getComboPortion());
-        writer.writeFloat64(buffer, frame.getBonusPortion());
-      }
+      writeScoreFrame(buffer, frame);
     }
 
     writer.writeUint16(buffer, (short) packet.getReplayFrameBundle().getSequence());
@@ -270,5 +267,140 @@ public class PacketWriter {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     writer.writeUint32(buffer, packet.getUserId());
     writeRawPacket(stream, Packets.BANCHO_SPECTATOR_CANT_SPECTATE, buffer.toByteArray());
+  }
+
+  private void write(OutputStream stream, MatchJoinSuccessPacket packet) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    writeMatch(buffer, packet.getMatch(), packet.isShouldSendPassword());
+    writeRawPacket(stream, Packets.BANCHO_MATCH_JOIN_SUCCESS, buffer.toByteArray());
+  }
+
+  private void write(OutputStream stream, MatchUpdatePacket packet) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    writeMatch(buffer, packet.getMatch(), packet.isShouldSendPassword());
+    writeRawPacket(stream, Packets.BANCHO_MATCH_UPDATE, buffer.toByteArray());
+  }
+
+  private void write(OutputStream stream, MatchJoinFailPacket packet) throws IOException {
+    writeRawPacket(stream, Packets.BANCHO_MATCH_JOIN_FAIL, new byte[0]);
+  }
+
+  private void write(OutputStream stream, MatchDisbandPacket packet) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    writer.writeUint32(buffer, packet.getMatchId());
+    writeRawPacket(stream, Packets.BANCHO_MATCH_DISBAND, buffer.toByteArray());
+  }
+
+  private void write(OutputStream stream, MatchTransferHostPacket packet) throws IOException {
+    writeRawPacket(stream, Packets.BANCHO_MATCH_TRANSFER_HOST, new byte[0]);
+  }
+
+  private void write(OutputStream stream, MatchStartPacket packet) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    writeMatch(buffer, packet.getMatch(), packet.isShouldSendPassword());
+    writeRawPacket(stream, Packets.BANCHO_MATCH_START, buffer.toByteArray());
+  }
+
+  private void write(OutputStream stream, MatchScoreUpdatePacket packet) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    writeScoreFrame(buffer, packet.getFrame());
+    writeRawPacket(stream, Packets.BANCHO_MATCH_SCORE_UPDATE, buffer.toByteArray());
+  }
+
+  private void write(OutputStream stream, MatchCompletePacket packet) throws IOException {
+    writeRawPacket(stream, Packets.BANCHO_MATCH_COMPLETE, new byte[0]);
+  }
+
+  private void write(OutputStream stream, MatchAllPlayersLoadedPacket packet) throws IOException {
+    writeRawPacket(stream, Packets.BANCHO_MATCH_ALL_PLAYERS_LOADED, new byte[0]);
+  }
+
+  private void write(OutputStream stream, MatchPlayerFailedPacket packet) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    writer.writeInt32(buffer, packet.getSlotId());
+    writeRawPacket(stream, Packets.BANCHO_MATCH_PLAYER_FAILED, buffer.toByteArray());
+  }
+
+  private void write(OutputStream stream, MatchPlayerSkippedPacket packet) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    writer.writeInt32(buffer, packet.getSlotId());
+    writeRawPacket(stream, Packets.BANCHO_MATCH_PLAYER_SKIPPED, buffer.toByteArray());
+  }
+
+  private void write(OutputStream stream, MatchSkipPacket packet) throws IOException {
+    writeRawPacket(stream, Packets.BANCHO_MATCH_SKIP, new byte[0]);
+  }
+
+  private void writeScoreFrame(OutputStream stream, ScoreFrame frame) throws IOException {
+    writer.writeInt32(stream, frame.getTime());
+    writer.writeUint8(stream, frame.getId());
+    writer.writeUint16(stream, frame.getTotal300());
+    writer.writeUint16(stream, frame.getTotal100());
+    writer.writeUint16(stream, frame.getTotal50());
+    writer.writeUint16(stream, frame.getTotalGeki());
+    writer.writeUint16(stream, frame.getTotalKatu());
+    writer.writeUint16(stream, frame.getTotalMiss());
+    writer.writeUint32(stream, frame.getTotalScore());
+    writer.writeUint16(stream, frame.getMaxCombo());
+    writer.writeUint16(stream, frame.getCurrentCombo());
+    writer.writeBoolean(stream, frame.isPerfect());
+    writer.writeUint8(stream, frame.getHp());
+    writer.writeUint8(stream, frame.getTagByte());
+    writer.writeBoolean(stream, frame.isUsingScoreV2());
+
+    if (frame.isUsingScoreV2()) {
+      writer.writeFloat64(stream, frame.getComboPortion());
+      writer.writeFloat64(stream, frame.getBonusPortion());
+    }
+  }
+
+  private void writeMatch(OutputStream stream, Match match, boolean shouldSendPassword)
+      throws IOException {
+    writer.writeUint16(stream, match.getId());
+    writer.writeBoolean(stream, match.isInProgress());
+    writer.writeUint8(stream, MatchType.STANDARD.getValue());
+    writer.writeUint32(stream, match.getMods());
+    writer.writeString(stream, match.getName());
+    if (match.getPassword() != null && !match.getPassword().isEmpty()) {
+      if (shouldSendPassword) {
+        writer.writeString(stream, match.getPassword());
+      } else {
+        stream.write(new byte[] {0x0B, 0x00});
+      }
+    } else {
+      stream.write(new byte[] {0x00});
+    }
+    writer.writeString(stream, match.getBeatmapName());
+    writer.writeInt32(stream, match.getBeatmapId());
+    writer.writeString(stream, match.getBeatmapMd5());
+
+    for (MatchSlot slot : match.getSlots()) {
+      writer.writeUint8(stream, slot.getStatus());
+    }
+
+    for (MatchSlot slot : match.getSlots()) {
+      writer.writeUint8(stream, slot.getTeam().getValue());
+    }
+
+    for (MatchSlot slot : match.getSlots()) {
+      if ((slot.getStatus() & SlotStatus.HAS_PLAYER.getValue()) != 0) {
+        writer.writeInt32(stream, slot.getUserId());
+      }
+    }
+
+    writer.writeInt32(stream, match.getHostId());
+    writer.writeUint8(stream, match.getMode().getValue());
+    writer.writeUint8(stream, match.getScoringType().getValue());
+    writer.writeUint8(stream, match.getTeamType().getValue());
+
+    writer.writeBoolean(stream, match.isFreemodsEnabled());
+
+    if (match.isFreemodsEnabled()) {
+      for (MatchSlot slot : match.getSlots()) {
+        writer.writeUint32(stream, slot.getMods());
+      }
+    }
+
+    writer.writeUint32(stream, match.getRandomSeed());
   }
 }

@@ -7,7 +7,9 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericToStringSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
-import pe.nanamochi.banchus.entities.PacketBundle;
+import pe.nanamochi.banchus.entities.redis.MultiplayerMatch;
+import pe.nanamochi.banchus.entities.redis.MultiplayerSlot;
+import pe.nanamochi.banchus.entities.redis.PacketBundle;
 
 @Configuration
 public class RedisConfig {
@@ -31,6 +33,30 @@ public class RedisConfig {
 
     template.setKeySerializer(RedisSerializer.string());
     template.setValueSerializer(new GenericToStringSerializer<>(UUID.class));
+
+    return template;
+  }
+
+  @Bean
+  public RedisTemplate<String, MultiplayerMatch> multiplayerMatchRedisTemplate(
+      RedisConnectionFactory connectionFactory) {
+    RedisTemplate<String, MultiplayerMatch> template = new RedisTemplate<>();
+    template.setConnectionFactory(connectionFactory);
+
+    template.setKeySerializer(RedisSerializer.string());
+    template.setValueSerializer(RedisSerializer.json());
+
+    return template;
+  }
+
+  @Bean
+  public RedisTemplate<String, MultiplayerSlot> multiplayerSlotRedisTemplate(
+      RedisConnectionFactory connectionFactory) {
+    RedisTemplate<String, MultiplayerSlot> template = new RedisTemplate<>();
+    template.setConnectionFactory(connectionFactory);
+
+    template.setKeySerializer(RedisSerializer.string());
+    template.setValueSerializer(RedisSerializer.json());
 
     return template;
   }

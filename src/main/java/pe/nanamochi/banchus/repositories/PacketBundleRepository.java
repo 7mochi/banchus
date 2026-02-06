@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
-import pe.nanamochi.banchus.entities.PacketBundle;
+import pe.nanamochi.banchus.entities.redis.PacketBundle;
 
 @Repository
 public class PacketBundleRepository {

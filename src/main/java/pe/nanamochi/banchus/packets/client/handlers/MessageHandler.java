@@ -11,9 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import pe.nanamochi.banchus.commands.CommandProcessor;
-import pe.nanamochi.banchus.entities.PacketBundle;
 import pe.nanamochi.banchus.entities.db.Channel;
 import pe.nanamochi.banchus.entities.db.Session;
+import pe.nanamochi.banchus.entities.redis.PacketBundle;
 import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
@@ -54,7 +54,15 @@ public class MessageHandler extends AbstractPacketHandler<MessagePacket> {
 
     String channelName = null;
     if (packet.getTarget().equals("#multiplayer")) {
-      // TODO: Handle multiplayer chat
+      Integer multiplayerMatchId = session.getMultiplayerMatchId();
+      if (multiplayerMatchId == null) {
+        logger.warn(
+            "User {} tried to send a message in #multiplayer without being in a match.",
+            session.getUser().getUsername());
+        return;
+      }
+
+      channelName = "#mp_" + multiplayerMatchId;
     } else if (packet.getTarget().equals("#spectator")) {
       // We may be spectating someone, or may be the host of spectators
       UUID spectatorHostSessionId;

@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.entities;
+package pe.nanamochi.banchus.entities.redis;
 
 import java.time.Instant;
 import lombok.Data;

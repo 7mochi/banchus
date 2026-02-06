@@ -18,6 +18,7 @@ import pe.nanamochi.banchus.entities.db.Channel;
 import pe.nanamochi.banchus.entities.db.Session;
 import pe.nanamochi.banchus.entities.db.Stat;
 import pe.nanamochi.banchus.entities.db.User;
+import pe.nanamochi.banchus.entities.redis.PacketBundle;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.server.*;
 import pe.nanamochi.banchus.utils.PrivilegesUtil;

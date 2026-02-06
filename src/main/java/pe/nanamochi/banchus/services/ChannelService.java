@@ -27,8 +27,12 @@ public class ChannelService {
     return channelRepository.save(channel);
   }
 
-  public void delete(Channel channel) {
+  public Channel delete(Channel channel) {
+    if (!channelRepository.existsById(channel.getId())) {
+      throw new IllegalArgumentException("Channel not found: " + channel.getId());
+    }
     channelRepository.delete(channel);
+    return channel;
   }
 
   public boolean canReadChannel(Channel channel, int userPrivileges) {
