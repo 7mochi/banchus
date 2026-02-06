@@ -11,6 +11,7 @@ import pe.nanamochi.banchus.entities.redis.PacketBundle;
 @Repository
 public class PacketBundleRepository {
   private final RedisTemplate<String, PacketBundle> redisTemplate;
+  private static final int warningQueueSizeThreshold = 100;
   private static final Logger logger = LoggerFactory.getLogger(PacketBundleRepository.class);
 
   public PacketBundleRepository(RedisTemplate<String, PacketBundle> redisTemplate) {
@@ -20,8 +21,8 @@ public class PacketBundleRepository {
   public void enqueue(UUID sessionId, PacketBundle packetBundle) {
     Long queueSize = redisTemplate.opsForList().rightPush(makeKey(sessionId), packetBundle);
 
-    if (queueSize > 50) {
-      logger.warn("Packet bundle size exceeded 50 items for Session ID: {}", sessionId);
+    if (queueSize > warningQueueSizeThreshold) {
+      logger.warn("Packet bundle size exceeded warning threshold for Session ID: {}", sessionId);
     }
   }
 
