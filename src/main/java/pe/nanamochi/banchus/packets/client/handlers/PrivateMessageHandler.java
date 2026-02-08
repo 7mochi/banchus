@@ -15,7 +15,7 @@ public class PrivateMessageHandler extends AbstractPacketHandler<PrivateMessageP
   private static final Logger logger = LoggerFactory.getLogger(PrivateMessageHandler.class);
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

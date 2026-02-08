@@ -29,7 +29,7 @@ public class StatusUpdateRequestHandler extends AbstractPacketHandler<StatusUpda
   private final PacketBundleService packetBundleService;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

@@ -15,7 +15,7 @@ public class ReceiveUpdatesHandler extends AbstractPacketHandler<ReceiveUpdatesP
   private static final Logger logger = LoggerFactory.getLogger(ReceiveUpdatesHandler.class);
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

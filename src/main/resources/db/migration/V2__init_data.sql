@@ -4,7 +4,7 @@ VALUES (1, 'BanchoBot', 'bancho@osupe.ru', '098f6bcd4621d373cade4e832627b4f6', 1
        (4, 'test2', 'test2@gmail.com', '098f6bcd4621d373cade4e832627b4f6', 13, 0),
        (5, 'test3', 'test3@gmail.com', '098f6bcd4621d373cade4e832627b4f6', 13, 1);
 
-ALTER SEQUENCE user_seq RESTART WITH 5;
+ALTER SEQUENCE user_seq RESTART WITH 6;
 
 INSERT INTO channels (id, name, topic, read_privileges, write_privileges, auto_join, temporary, created_at, updated_at)
 VALUES (UUID(), '#osu', 'General discussion.', 0, 1, 1, false, NOW(), NOW()),

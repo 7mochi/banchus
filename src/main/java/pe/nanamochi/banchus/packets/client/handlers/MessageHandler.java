@@ -37,7 +37,7 @@ public class MessageHandler extends AbstractPacketHandler<MessagePacket> {
   private final CommandProcessor commandProcessor;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

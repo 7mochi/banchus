@@ -31,7 +31,7 @@ public class StopSpectatingHandler extends AbstractPacketHandler<StopSpectatingP
   private final ChannelMembersService channelMembersService;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

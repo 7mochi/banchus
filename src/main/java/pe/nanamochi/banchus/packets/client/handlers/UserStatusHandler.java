@@ -32,7 +32,7 @@ public class UserStatusHandler extends AbstractPacketHandler<UserStatusPacket> {
   private final RankingService rankingService;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

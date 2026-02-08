@@ -33,7 +33,7 @@ public class ChannelLeaveHandler extends AbstractPacketHandler<ChannelLeavePacke
   private final ChannelMembersService channelMembersService;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

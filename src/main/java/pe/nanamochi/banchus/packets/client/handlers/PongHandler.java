@@ -15,7 +15,7 @@ public class PongHandler extends AbstractPacketHandler<PongPacket> {
   private static final Logger logger = LoggerFactory.getLogger(PongHandler.class);
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

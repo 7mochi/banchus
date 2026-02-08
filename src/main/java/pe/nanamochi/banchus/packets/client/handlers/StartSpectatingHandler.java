@@ -33,7 +33,7 @@ public class StartSpectatingHandler extends AbstractPacketHandler<StartSpectatin
   private final ChannelMembersService channelMembersService;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

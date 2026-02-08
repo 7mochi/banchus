@@ -34,7 +34,7 @@ public class ChannelJoinHandler extends AbstractPacketHandler<ChannelJoinPacket>
   private final ChannelMembersService channelMembersService;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

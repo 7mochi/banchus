@@ -46,7 +46,7 @@ public class ExitPacketHandler extends AbstractPacketHandler<ExitPacket> {
   private final MatchBroadcastService matchBroadcastService;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

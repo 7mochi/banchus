@@ -15,7 +15,7 @@ public class UserStatsRequestHandler extends AbstractPacketHandler<UserStatsRequ
   private static final Logger logger = LoggerFactory.getLogger(UserStatsRequestHandler.class);
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 

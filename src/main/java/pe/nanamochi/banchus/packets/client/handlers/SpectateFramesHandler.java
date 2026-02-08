@@ -25,7 +25,7 @@ public class SpectateFramesHandler extends AbstractPacketHandler<SpectateFramesP
   private final SpectatorService spectatorService;
 
   @Override
-  public boolean isRestricted() {
+  public boolean checkForRestriction() {
     return true;
   }
 
