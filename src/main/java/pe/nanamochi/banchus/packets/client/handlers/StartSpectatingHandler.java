@@ -9,10 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import pe.nanamochi.banchus.entities.PacketBundle;
 import pe.nanamochi.banchus.entities.ServerPrivileges;
 import pe.nanamochi.banchus.entities.db.Channel;
 import pe.nanamochi.banchus.entities.db.Session;
+import pe.nanamochi.banchus.entities.redis.PacketBundle;
 import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
@@ -31,6 +31,11 @@ public class StartSpectatingHandler extends AbstractPacketHandler<StartSpectatin
   private final SpectatorService spectatorService;
   private final ChannelService channelService;
   private final ChannelMembersService channelMembersService;
+
+  @Override
+  public boolean checkForRestriction() {
+    return true;
+  }
 
   @Override
   public Packets getPacketType() {
@@ -79,7 +84,7 @@ public class StartSpectatingHandler extends AbstractPacketHandler<StartSpectatin
     session.setSpectatorHostSessionId(hostSession.getId());
     session = sessionService.updateSession(session);
 
-    // TODO: fetch the #spectator channel
+    // Fetch the #spectator channel
     Channel spectatorChannel = channelService.findByName("#spec_" + hostSession.getId());
     if (spectatorChannel == null) {
       spectatorChannel = new Channel();

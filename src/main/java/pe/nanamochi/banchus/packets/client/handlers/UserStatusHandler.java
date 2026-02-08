@@ -7,9 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import pe.nanamochi.banchus.entities.Mods;
-import pe.nanamochi.banchus.entities.PacketBundle;
 import pe.nanamochi.banchus.entities.db.Session;
 import pe.nanamochi.banchus.entities.db.Stat;
+import pe.nanamochi.banchus.entities.redis.PacketBundle;
 import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
@@ -30,6 +30,11 @@ public class UserStatusHandler extends AbstractPacketHandler<UserStatusPacket> {
   private final StatService statService;
   private final SessionService sessionService;
   private final RankingService rankingService;
+
+  @Override
+  public boolean checkForRestriction() {
+    return true;
+  }
 
   @Override
   public Packets getPacketType() {

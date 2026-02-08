@@ -10,7 +10,6 @@ import pe.nanamochi.banchus.packets.Packets;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MessagePacket implements Packet {
-
   private String sender;
   private String content;
   private String target;

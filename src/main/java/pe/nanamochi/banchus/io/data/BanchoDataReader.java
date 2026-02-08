@@ -127,16 +127,14 @@ public class BanchoDataReader implements IDataReader {
 
   @Override
   public String readString(InputStream in) throws IOException {
-    byte b = readUint8(in);
-    if (b == 0x00) {
+    if (readUint8(in) != 0x0b) {
       return "";
     }
 
-    if (b != 0x0b) {
-      throw new IOException("Invalid string type");
-    }
-
     int length = uleb128Decode(in);
+    if (length == 0) {
+      return "";
+    }
     byte[] buf = new byte[length];
     if (in.read(buf) != length) {
       throw new IOException("Failed to read string data");

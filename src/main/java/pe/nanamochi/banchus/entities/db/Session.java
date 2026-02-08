@@ -78,7 +78,7 @@ public class Session {
   private String awayMessage;
 
   @Column(name = "multiplayer_match_id")
-  private int multiplayerMatchId;
+  private Integer multiplayerMatchId;
 
   @Column(name = "last_communicated_at", nullable = false)
   private Instant lastCommunicatedAt;

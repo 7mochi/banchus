@@ -1,7 +1,8 @@
-package pe.nanamochi.banchus.entities;
+package pe.nanamochi.banchus.entities.packets;
 
 import java.util.List;
 import lombok.Data;
+import pe.nanamochi.banchus.entities.ReplayAction;
 
 @Data
 public class ReplayFrameBundle {

@@ -8,8 +8,6 @@ import pe.nanamochi.banchus.packets.Packets;
 @Data
 @NoArgsConstructor
 public class LobbyPartPacket implements Packet {
-  private String name;
-
   @Override
   public Packets getPacketType() {
     return Packets.OSU_LOBBY_PART;

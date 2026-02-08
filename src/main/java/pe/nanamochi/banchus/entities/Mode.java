@@ -39,6 +39,6 @@ public enum Mode {
         return mode;
       }
     }
-    throw new IllegalArgumentException("Unknown Mode value: " + value);
+    return OSU;
   }
 }

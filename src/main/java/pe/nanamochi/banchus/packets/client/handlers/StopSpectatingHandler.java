@@ -8,9 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import pe.nanamochi.banchus.entities.PacketBundle;
 import pe.nanamochi.banchus.entities.db.Channel;
 import pe.nanamochi.banchus.entities.db.Session;
+import pe.nanamochi.banchus.entities.redis.PacketBundle;
 import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
@@ -29,6 +29,11 @@ public class StopSpectatingHandler extends AbstractPacketHandler<StopSpectatingP
   private final SpectatorService spectatorService;
   private final ChannelService channelService;
   private final ChannelMembersService channelMembersService;
+
+  @Override
+  public boolean checkForRestriction() {
+    return true;
+  }
 
   @Override
   public Packets getPacketType() {
