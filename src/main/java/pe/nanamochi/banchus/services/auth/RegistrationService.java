@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.auth;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.commons.CountryCode;
 import pe.nanamochi.banchus.entities.db.User;
+import pe.nanamochi.banchus.services.player.StatService;
+import pe.nanamochi.banchus.services.player.UserService;
 import pe.nanamochi.banchus.utils.Security;
 import pe.nanamochi.banchus.utils.Validation;
 

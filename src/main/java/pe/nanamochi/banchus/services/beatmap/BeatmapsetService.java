@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.beatmap;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -14,8 +14,8 @@ import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.MatchFailedPacket;
 import pe.nanamochi.banchus.packets.server.MatchPlayerFailedPacket;
-import pe.nanamochi.banchus.services.MatchBroadcastService;
-import pe.nanamochi.banchus.services.MultiplayerService;
+import pe.nanamochi.banchus.services.multiplayer.MatchBroadcastService;
+import pe.nanamochi.banchus.services.multiplayer.MultiplayerService;
 
 @Component
 @RequiredArgsConstructor

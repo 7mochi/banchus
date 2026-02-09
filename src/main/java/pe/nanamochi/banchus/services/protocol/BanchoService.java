@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.protocol;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,6 +17,7 @@ import pe.nanamochi.banchus.packets.PacketReader;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.server.AnnouncePacket;
 import pe.nanamochi.banchus.packets.server.RestartPacket;
+import pe.nanamochi.banchus.services.auth.SessionService;
 
 @Service
 @RequiredArgsConstructor

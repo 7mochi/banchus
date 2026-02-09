@@ -18,9 +18,9 @@ import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.MessagePacket;
-import pe.nanamochi.banchus.services.ChannelMembersService;
-import pe.nanamochi.banchus.services.ChannelService;
-import pe.nanamochi.banchus.services.PacketBundleService;
+import pe.nanamochi.banchus.services.communication.ChannelMembersService;
+import pe.nanamochi.banchus.services.communication.ChannelService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 
 @Component
 @RequiredArgsConstructor

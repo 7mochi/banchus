@@ -15,10 +15,10 @@ import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.UserStatusPacket;
 import pe.nanamochi.banchus.packets.server.UserStatsPacket;
-import pe.nanamochi.banchus.services.PacketBundleService;
-import pe.nanamochi.banchus.services.RankingService;
-import pe.nanamochi.banchus.services.SessionService;
-import pe.nanamochi.banchus.services.StatService;
+import pe.nanamochi.banchus.services.auth.SessionService;
+import pe.nanamochi.banchus.services.player.RankingService;
+import pe.nanamochi.banchus.services.player.StatService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 
 @Component
 @RequiredArgsConstructor

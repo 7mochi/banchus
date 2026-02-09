@@ -13,7 +13,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pe.nanamochi.banchus.dto.LoginData;
-import pe.nanamochi.banchus.services.*;
+import pe.nanamochi.banchus.services.auth.LoginService;
+import pe.nanamochi.banchus.services.protocol.BanchoService;
 
 @RestController
 @RequestMapping("/")

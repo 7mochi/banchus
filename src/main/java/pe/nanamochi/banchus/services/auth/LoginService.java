@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.auth;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -26,6 +26,13 @@ import pe.nanamochi.banchus.entities.db.User;
 import pe.nanamochi.banchus.entities.redis.PacketBundle;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.server.*;
+import pe.nanamochi.banchus.services.communication.ChannelMembersService;
+import pe.nanamochi.banchus.services.communication.ChannelService;
+import pe.nanamochi.banchus.services.infra.IPApiService;
+import pe.nanamochi.banchus.services.player.RankingService;
+import pe.nanamochi.banchus.services.player.StatService;
+import pe.nanamochi.banchus.services.player.UserService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 import pe.nanamochi.banchus.utils.PrivilegesUtil;
 
 @Service

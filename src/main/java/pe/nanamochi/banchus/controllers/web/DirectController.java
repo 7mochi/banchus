@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pe.nanamochi.banchus.entities.commons.BeatmapDirectDisplayMode;
 import pe.nanamochi.banchus.entities.db.User;
 import pe.nanamochi.banchus.services.OsuDirectApiService;
-import pe.nanamochi.banchus.services.UserService;
+import pe.nanamochi.banchus.services.player.UserService;
 
 @RestController
 @RequestMapping("/web")

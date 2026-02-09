@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.communication;
 
 import java.util.Set;
 import java.util.UUID;

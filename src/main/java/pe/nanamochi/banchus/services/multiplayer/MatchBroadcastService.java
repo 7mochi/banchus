@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.multiplayer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,11 +20,13 @@ import pe.nanamochi.banchus.entities.redis.MultiplayerSlot;
 import pe.nanamochi.banchus.entities.redis.PacketBundle;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.server.MatchUpdatePacket;
+import pe.nanamochi.banchus.services.communication.ChannelMembersService;
+import pe.nanamochi.banchus.services.communication.ChannelService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 
 @Service
 @RequiredArgsConstructor
 public class MatchBroadcastService {
-
   private static final Logger logger = LoggerFactory.getLogger(MatchBroadcastService.class);
 
   private final MultiplayerService multiplayerService;

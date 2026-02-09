@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.auth;
 
 import java.util.List;
 import java.util.UUID;

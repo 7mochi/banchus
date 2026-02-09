@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.infra;
 
 import java.io.IOException;
 import java.nio.file.Files;

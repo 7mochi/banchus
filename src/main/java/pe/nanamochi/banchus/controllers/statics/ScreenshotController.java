@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pe.nanamochi.banchus.services.ScreenshotService;
+import pe.nanamochi.banchus.services.infra.ScreenshotService;
 import pe.nanamochi.banchus.utils.Media;
 
 @RestController("StaticScreenshotController")

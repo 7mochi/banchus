@@ -13,7 +13,8 @@ import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.SpectateFramesPacket;
-import pe.nanamochi.banchus.services.*;
+import pe.nanamochi.banchus.services.gameplay.SpectatorService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 
 @Component
 @RequiredArgsConstructor

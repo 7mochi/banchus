@@ -22,7 +22,12 @@ import pe.nanamochi.banchus.packets.client.MatchPartPacket;
 import pe.nanamochi.banchus.packets.server.ChannelRevokedPacket;
 import pe.nanamochi.banchus.packets.server.MatchDisbandPacket;
 import pe.nanamochi.banchus.packets.server.MatchTransferHostPacket;
-import pe.nanamochi.banchus.services.*;
+import pe.nanamochi.banchus.services.auth.SessionService;
+import pe.nanamochi.banchus.services.communication.ChannelMembersService;
+import pe.nanamochi.banchus.services.communication.ChannelService;
+import pe.nanamochi.banchus.services.multiplayer.MatchBroadcastService;
+import pe.nanamochi.banchus.services.multiplayer.MultiplayerService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 
 @Component
 @RequiredArgsConstructor

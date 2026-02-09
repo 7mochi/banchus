@@ -17,10 +17,10 @@ import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.ChannelJoinPacket;
 import pe.nanamochi.banchus.packets.server.ChannelAvailablePacket;
 import pe.nanamochi.banchus.packets.server.ChannelJoinSuccessPacket;
-import pe.nanamochi.banchus.services.ChannelMembersService;
-import pe.nanamochi.banchus.services.ChannelService;
-import pe.nanamochi.banchus.services.PacketBundleService;
-import pe.nanamochi.banchus.services.SessionService;
+import pe.nanamochi.banchus.services.auth.SessionService;
+import pe.nanamochi.banchus.services.communication.ChannelMembersService;
+import pe.nanamochi.banchus.services.communication.ChannelService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 
 @Component
 @RequiredArgsConstructor

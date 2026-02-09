@@ -13,8 +13,8 @@ import pe.nanamochi.banchus.entities.redis.MultiplayerSlot;
 import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.MatchReadyPacket;
-import pe.nanamochi.banchus.services.MatchBroadcastService;
-import pe.nanamochi.banchus.services.MultiplayerService;
+import pe.nanamochi.banchus.services.multiplayer.MatchBroadcastService;
+import pe.nanamochi.banchus.services.multiplayer.MultiplayerService;
 
 @Component
 @RequiredArgsConstructor

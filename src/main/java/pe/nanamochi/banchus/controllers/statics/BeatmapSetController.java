@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pe.nanamochi.banchus.entities.db.User;
 import pe.nanamochi.banchus.services.OsuDirectApiService;
-import pe.nanamochi.banchus.services.UserService;
+import pe.nanamochi.banchus.services.player.UserService;
 
 @RestController
 @RequestMapping("/d")

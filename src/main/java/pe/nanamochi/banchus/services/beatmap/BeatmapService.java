@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.beatmap;
 
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -11,6 +11,8 @@ import pe.nanamochi.banchus.entities.db.Beatmap;
 import pe.nanamochi.banchus.entities.db.Beatmapset;
 import pe.nanamochi.banchus.mappers.BeatmapMapper;
 import pe.nanamochi.banchus.repositories.db.BeatmapRepository;
+import pe.nanamochi.banchus.services.OsuApiService;
+import pe.nanamochi.banchus.services.infra.FileStorageService;
 
 @Service
 @RequiredArgsConstructor

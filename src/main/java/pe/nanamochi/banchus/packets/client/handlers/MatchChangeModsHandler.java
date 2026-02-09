@@ -14,9 +14,9 @@ import pe.nanamochi.banchus.entities.redis.MultiplayerSlot;
 import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.MatchChangeModsPacket;
-import pe.nanamochi.banchus.services.MatchBroadcastService;
-import pe.nanamochi.banchus.services.MultiplayerService;
-import pe.nanamochi.banchus.services.SessionService;
+import pe.nanamochi.banchus.services.auth.SessionService;
+import pe.nanamochi.banchus.services.multiplayer.MatchBroadcastService;
+import pe.nanamochi.banchus.services.multiplayer.MultiplayerService;
 
 @Component
 @RequiredArgsConstructor

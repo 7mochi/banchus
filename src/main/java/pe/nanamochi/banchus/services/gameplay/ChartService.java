@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.gameplay;
 
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.db.Beatmap;

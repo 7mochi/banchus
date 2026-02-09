@@ -21,7 +21,9 @@ import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.LobbyJoinPacket;
 import pe.nanamochi.banchus.packets.server.MatchUpdatePacket;
-import pe.nanamochi.banchus.services.*;
+import pe.nanamochi.banchus.services.auth.SessionService;
+import pe.nanamochi.banchus.services.multiplayer.MultiplayerService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 
 @Component
 @RequiredArgsConstructor

@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import pe.nanamochi.banchus.entities.db.User;
-import pe.nanamochi.banchus.services.*;
+import pe.nanamochi.banchus.services.infra.ScreenshotService;
+import pe.nanamochi.banchus.services.player.UserService;
 
 @RestController
 @RequestMapping("/web")

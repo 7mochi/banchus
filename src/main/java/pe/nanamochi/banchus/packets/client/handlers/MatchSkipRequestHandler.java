@@ -15,8 +15,8 @@ import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.MatchSkipRequestPacket;
 import pe.nanamochi.banchus.packets.server.MatchPlayerSkippedPacket;
 import pe.nanamochi.banchus.packets.server.MatchSkipPacket;
-import pe.nanamochi.banchus.services.MatchBroadcastService;
-import pe.nanamochi.banchus.services.MultiplayerService;
+import pe.nanamochi.banchus.services.multiplayer.MatchBroadcastService;
+import pe.nanamochi.banchus.services.multiplayer.MultiplayerService;
 
 @Component
 @RequiredArgsConstructor

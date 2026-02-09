@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.gameplay;
 
 import io.github.nanamochi.rosu_pp_jar.Mods;
 import io.github.nanamochi.rosu_pp_jar.Performance;
@@ -23,6 +23,13 @@ import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.server.MessagePacket;
 import pe.nanamochi.banchus.packets.server.UserStatsPacket;
 import pe.nanamochi.banchus.repositories.db.ScoreRepository;
+import pe.nanamochi.banchus.services.auth.SessionService;
+import pe.nanamochi.banchus.services.beatmap.BeatmapService;
+import pe.nanamochi.banchus.services.communication.ChannelMembersService;
+import pe.nanamochi.banchus.services.communication.ChannelService;
+import pe.nanamochi.banchus.services.player.RankingService;
+import pe.nanamochi.banchus.services.player.StatService;
+import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 import pe.nanamochi.banchus.utils.Rijndael;
 
 @Service

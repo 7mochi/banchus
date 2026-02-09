@@ -12,7 +12,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pe.nanamochi.banchus.entities.commons.*;
 import pe.nanamochi.banchus.entities.db.*;
-import pe.nanamochi.banchus.services.*;
+import pe.nanamochi.banchus.services.auth.SessionService;
+import pe.nanamochi.banchus.services.beatmap.BeatmapService;
+import pe.nanamochi.banchus.services.gameplay.ScoreService;
+import pe.nanamochi.banchus.services.player.UserService;
 
 @RestController
 @RequestMapping("/web")

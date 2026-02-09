@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.services;
+package pe.nanamochi.banchus.services.player;
 
 import java.util.ArrayList;
 import java.util.List;
