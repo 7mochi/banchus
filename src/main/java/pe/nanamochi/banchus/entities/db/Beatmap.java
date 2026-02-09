@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.Data;
 import lombok.ToString;
-import pe.nanamochi.banchus.entities.BeatmapRankedStatus;
-import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.commons.BeatmapRankedStatus;
+import pe.nanamochi.banchus.entities.commons.Mode;
 
 @Entity
 @Data

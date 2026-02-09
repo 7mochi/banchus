@@ -2,10 +2,10 @@ package pe.nanamochi.banchus.entities.redis;
 
 import java.time.Instant;
 import lombok.Data;
-import pe.nanamochi.banchus.entities.MatchStatus;
-import pe.nanamochi.banchus.entities.MatchTeamType;
-import pe.nanamochi.banchus.entities.Mode;
-import pe.nanamochi.banchus.entities.ScoringType;
+import pe.nanamochi.banchus.entities.commons.MatchStatus;
+import pe.nanamochi.banchus.entities.commons.MatchTeamType;
+import pe.nanamochi.banchus.entities.commons.Mode;
+import pe.nanamochi.banchus.entities.commons.ScoringType;
 
 @Data
 public class MultiplayerMatch {

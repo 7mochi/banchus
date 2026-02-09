@@ -4,7 +4,7 @@ import java.net.InetAddress;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import pe.nanamochi.banchus.entities.Geolocation;
+import pe.nanamochi.banchus.dto.Geolocation;
 
 @Service
 @RequiredArgsConstructor

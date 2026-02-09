@@ -5,7 +5,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.db.Session;
-import pe.nanamochi.banchus.repositories.SessionRepository;
+import pe.nanamochi.banchus.repositories.db.SessionRepository;
 
 @Service
 @RequiredArgsConstructor

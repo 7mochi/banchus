@@ -3,7 +3,8 @@ package pe.nanamochi.banchus.mappers;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
-import pe.nanamochi.banchus.entities.BeatmapRankedStatus;
+import pe.nanamochi.banchus.dto.Beatmap;
+import pe.nanamochi.banchus.entities.commons.BeatmapRankedStatus;
 import pe.nanamochi.banchus.entities.db.Beatmapset;
 
 @Mapper(
@@ -35,5 +36,5 @@ public interface BeatmapsetMapper {
   @Mapping(target = "titleUnicode", ignore = true)
   @Mapping(target = "artistUnicode", ignore = true)
   @Mapping(target = "sourceUnicode", ignore = true)
-  Beatmapset fromApi(pe.nanamochi.banchus.entities.osuapi.Beatmap api);
+  Beatmapset fromApi(Beatmap api);
 }

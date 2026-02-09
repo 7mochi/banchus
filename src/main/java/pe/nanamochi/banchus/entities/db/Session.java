@@ -12,8 +12,8 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import pe.nanamochi.banchus.entities.CountryCode;
-import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.commons.CountryCode;
+import pe.nanamochi.banchus.entities.commons.Mode;
 
 @Entity
 @Data

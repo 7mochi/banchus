@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pe.nanamochi.banchus.entities.CountryCode;
+import pe.nanamochi.banchus.entities.commons.CountryCode;
 import pe.nanamochi.banchus.entities.db.User;
 import pe.nanamochi.banchus.utils.Security;
 import pe.nanamochi.banchus.utils.Validation;

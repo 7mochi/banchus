@@ -2,7 +2,7 @@ package pe.nanamochi.banchus.entities.redis;
 
 import java.util.UUID;
 import lombok.Data;
-import pe.nanamochi.banchus.entities.SlotTeam;
+import pe.nanamochi.banchus.entities.commons.SlotTeam;
 
 @Data
 public class MultiplayerSlot {

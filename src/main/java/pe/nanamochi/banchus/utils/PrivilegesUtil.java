@@ -1,7 +1,7 @@
 package pe.nanamochi.banchus.utils;
 
-import pe.nanamochi.banchus.entities.ClientPrivileges;
-import pe.nanamochi.banchus.entities.ServerPrivileges;
+import pe.nanamochi.banchus.entities.commons.ClientPrivileges;
+import pe.nanamochi.banchus.entities.commons.ServerPrivileges;
 
 public class PrivilegesUtil {
   private PrivilegesUtil() {}

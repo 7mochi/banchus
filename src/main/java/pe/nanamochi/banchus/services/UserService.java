@@ -3,7 +3,7 @@ package pe.nanamochi.banchus.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.db.User;
-import pe.nanamochi.banchus.repositories.UserRepository;
+import pe.nanamochi.banchus.repositories.db.UserRepository;
 
 @Service
 @RequiredArgsConstructor

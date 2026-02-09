@@ -8,8 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import pe.nanamochi.banchus.entities.SlotStatus;
-import pe.nanamochi.banchus.entities.SlotTeam;
+import pe.nanamochi.banchus.entities.commons.SlotStatus;
+import pe.nanamochi.banchus.entities.commons.SlotTeam;
 import pe.nanamochi.banchus.entities.db.Channel;
 import pe.nanamochi.banchus.entities.db.Session;
 import pe.nanamochi.banchus.entities.redis.MultiplayerMatch;
@@ -59,6 +59,14 @@ public class MatchPartHandler extends AbstractPacketHandler<MatchPartPacket> {
     }
 
     MultiplayerMatch match = multiplayerService.findById(session.getMultiplayerMatchId());
+    if (match == null) {
+      logger.warn(
+          "User {} tried to leave a match that doesn't exist.", session.getUser().getUsername());
+      session.setMultiplayerMatchId(-1);
+      sessionService.updateSession(session);
+      return;
+    }
+
     MultiplayerSlot currentSlot =
         multiplayerService.findSlotBySessionId(match.getMatchId(), session.getId());
     if (currentSlot == null) {

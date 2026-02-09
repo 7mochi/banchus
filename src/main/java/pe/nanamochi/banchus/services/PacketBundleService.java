@@ -5,7 +5,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.redis.PacketBundle;
-import pe.nanamochi.banchus.repositories.PacketBundleRepository;
+import pe.nanamochi.banchus.repositories.redis.PacketBundleRepository;
 
 @Service
 @RequiredArgsConstructor

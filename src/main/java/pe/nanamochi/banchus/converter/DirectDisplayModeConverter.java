@@ -2,7 +2,7 @@ package pe.nanamochi.banchus.converter;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
-import pe.nanamochi.banchus.entities.BeatmapDirectDisplayMode;
+import pe.nanamochi.banchus.entities.commons.BeatmapDirectDisplayMode;
 
 @Component
 public class DirectDisplayModeConverter implements Converter<String, BeatmapDirectDisplayMode> {

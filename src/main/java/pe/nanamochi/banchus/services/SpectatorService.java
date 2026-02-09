@@ -4,7 +4,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pe.nanamochi.banchus.repositories.SpectatorRepository;
+import pe.nanamochi.banchus.repositories.redis.SpectatorRepository;
 
 @Service
 @RequiredArgsConstructor

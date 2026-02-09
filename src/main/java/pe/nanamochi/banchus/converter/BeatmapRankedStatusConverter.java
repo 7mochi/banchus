@@ -2,7 +2,7 @@ package pe.nanamochi.banchus.converter;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import pe.nanamochi.banchus.entities.BeatmapRankedStatus;
+import pe.nanamochi.banchus.entities.commons.BeatmapRankedStatus;
 
 @Converter(autoApply = true)
 public class BeatmapRankedStatusConverter

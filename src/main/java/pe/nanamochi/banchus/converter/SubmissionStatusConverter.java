@@ -2,7 +2,7 @@ package pe.nanamochi.banchus.converter;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import pe.nanamochi.banchus.entities.SubmissionStatus;
+import pe.nanamochi.banchus.entities.commons.SubmissionStatus;
 
 @Converter(autoApply = true)
 public class SubmissionStatusConverter implements AttributeConverter<SubmissionStatus, Integer> {

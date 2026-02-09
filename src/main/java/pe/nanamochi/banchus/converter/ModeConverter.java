@@ -2,7 +2,7 @@ package pe.nanamochi.banchus.converter;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.commons.Mode;
 
 @Converter(autoApply = true)
 public class ModeConverter implements AttributeConverter<Mode, Integer> {

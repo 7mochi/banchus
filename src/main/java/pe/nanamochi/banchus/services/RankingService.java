@@ -2,11 +2,11 @@ package pe.nanamochi.banchus.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pe.nanamochi.banchus.entities.CountryCode;
-import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.commons.CountryCode;
+import pe.nanamochi.banchus.entities.commons.Mode;
 import pe.nanamochi.banchus.entities.db.Stat;
 import pe.nanamochi.banchus.entities.db.User;
-import pe.nanamochi.banchus.repositories.RankingRepository;
+import pe.nanamochi.banchus.repositories.redis.RankingRepository;
 
 @Service
 @RequiredArgsConstructor

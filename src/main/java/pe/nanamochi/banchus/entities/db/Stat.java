@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.commons.Mode;
 
 @Entity
 @Data

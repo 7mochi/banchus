@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import pe.nanamochi.banchus.entities.ScoreSubmissionErrors;
+import pe.nanamochi.banchus.entities.commons.ScoreSubmissionErrors;
 import pe.nanamochi.banchus.entities.db.Beatmap;
 import pe.nanamochi.banchus.entities.db.Score;
 import pe.nanamochi.banchus.entities.db.Session;

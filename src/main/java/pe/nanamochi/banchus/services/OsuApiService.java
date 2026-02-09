@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import pe.nanamochi.banchus.entities.osuapi.Beatmap;
+import pe.nanamochi.banchus.dto.Beatmap;
 
 @Service
 @RequiredArgsConstructor

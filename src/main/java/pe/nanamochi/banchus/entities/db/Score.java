@@ -6,8 +6,8 @@ import lombok.Data;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import pe.nanamochi.banchus.entities.Mode;
-import pe.nanamochi.banchus.entities.SubmissionStatus;
+import pe.nanamochi.banchus.entities.commons.Mode;
+import pe.nanamochi.banchus.entities.commons.SubmissionStatus;
 
 @Entity
 @Data

@@ -3,7 +3,7 @@ package pe.nanamochi.banchus.packets.server;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.commons.Mode;
 import pe.nanamochi.banchus.packets.Packet;
 import pe.nanamochi.banchus.packets.Packets;
 

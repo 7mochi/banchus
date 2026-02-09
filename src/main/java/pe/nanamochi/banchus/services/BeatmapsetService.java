@@ -2,9 +2,10 @@ package pe.nanamochi.banchus.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import pe.nanamochi.banchus.dto.Beatmap;
 import pe.nanamochi.banchus.entities.db.Beatmapset;
 import pe.nanamochi.banchus.mappers.BeatmapsetMapper;
-import pe.nanamochi.banchus.repositories.BeatmapsetRepository;
+import pe.nanamochi.banchus.repositories.db.BeatmapsetRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -16,7 +17,7 @@ public class BeatmapsetService {
     return beatmapsetRepository.save(beatmapset);
   }
 
-  public Beatmapset createFromApi(pe.nanamochi.banchus.entities.osuapi.Beatmap beatmap) {
+  public Beatmapset createFromApi(Beatmap beatmap) {
     return beatmapsetMapper.fromApi(beatmap);
   }
 

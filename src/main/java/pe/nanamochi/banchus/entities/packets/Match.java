@@ -4,10 +4,10 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import pe.nanamochi.banchus.entities.MatchTeamType;
-import pe.nanamochi.banchus.entities.MatchType;
-import pe.nanamochi.banchus.entities.Mode;
-import pe.nanamochi.banchus.entities.ScoringType;
+import pe.nanamochi.banchus.entities.commons.MatchTeamType;
+import pe.nanamochi.banchus.entities.commons.MatchType;
+import pe.nanamochi.banchus.entities.commons.Mode;
+import pe.nanamochi.banchus.entities.commons.ScoringType;
 
 @Data
 @NoArgsConstructor

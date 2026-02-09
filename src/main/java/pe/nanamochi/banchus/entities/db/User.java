@@ -3,8 +3,8 @@ package pe.nanamochi.banchus.entities.db;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
-import pe.nanamochi.banchus.entities.CountryCode;
-import pe.nanamochi.banchus.entities.ServerPrivileges;
+import pe.nanamochi.banchus.entities.commons.CountryCode;
+import pe.nanamochi.banchus.entities.commons.ServerPrivileges;
 
 @Entity
 @Data

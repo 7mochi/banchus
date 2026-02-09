@@ -4,13 +4,13 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pe.nanamochi.banchus.entities.SlotStatus;
-import pe.nanamochi.banchus.entities.SlotTeam;
+import pe.nanamochi.banchus.entities.commons.SlotStatus;
+import pe.nanamochi.banchus.entities.commons.SlotTeam;
 import pe.nanamochi.banchus.entities.redis.MultiplayerMatch;
 import pe.nanamochi.banchus.entities.redis.MultiplayerSlot;
-import pe.nanamochi.banchus.repositories.MultiplayerMatchIdRepository;
-import pe.nanamochi.banchus.repositories.MultiplayerMatchRepository;
-import pe.nanamochi.banchus.repositories.MultiplayerSlotRepository;
+import pe.nanamochi.banchus.repositories.redis.MultiplayerMatchIdRepository;
+import pe.nanamochi.banchus.repositories.redis.MultiplayerMatchRepository;
+import pe.nanamochi.banchus.repositories.redis.MultiplayerSlotRepository;
 
 @Service
 @RequiredArgsConstructor

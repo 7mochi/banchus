@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import lombok.Data;
 import lombok.ToString;
-import pe.nanamochi.banchus.entities.BeatmapRankedStatus;
+import pe.nanamochi.banchus.entities.commons.BeatmapRankedStatus;
 
 @Entity
 @Data

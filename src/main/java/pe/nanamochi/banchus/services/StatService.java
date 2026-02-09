@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.commons.Mode;
 import pe.nanamochi.banchus.entities.db.Score;
 import pe.nanamochi.banchus.entities.db.Stat;
 import pe.nanamochi.banchus.entities.db.User;
-import pe.nanamochi.banchus.repositories.StatRepository;
+import pe.nanamochi.banchus.repositories.db.StatRepository;
 
 @Service
 @RequiredArgsConstructor

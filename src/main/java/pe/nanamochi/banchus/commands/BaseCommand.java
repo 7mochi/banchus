@@ -1,7 +1,7 @@
 package pe.nanamochi.banchus.commands;
 
 import java.util.Arrays;
-import pe.nanamochi.banchus.entities.ServerPrivileges;
+import pe.nanamochi.banchus.entities.commons.ServerPrivileges;
 import pe.nanamochi.banchus.entities.db.User;
 
 public abstract class BaseCommand {

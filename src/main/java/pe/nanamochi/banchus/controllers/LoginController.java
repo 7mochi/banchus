@@ -12,8 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pe.nanamochi.banchus.entities.*;
-import pe.nanamochi.banchus.packets.server.*;
+import pe.nanamochi.banchus.dto.LoginData;
 import pe.nanamochi.banchus.services.*;
 
 @RestController

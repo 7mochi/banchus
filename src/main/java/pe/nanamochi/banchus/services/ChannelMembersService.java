@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.db.Channel;
 import pe.nanamochi.banchus.entities.db.Session;
-import pe.nanamochi.banchus.repositories.ChannelMembersRepository;
+import pe.nanamochi.banchus.repositories.redis.ChannelMembersRepository;
 
 @Service
 @RequiredArgsConstructor

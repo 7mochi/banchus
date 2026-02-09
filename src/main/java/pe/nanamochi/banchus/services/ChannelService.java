@@ -4,7 +4,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.db.Channel;
-import pe.nanamochi.banchus.repositories.ChannelRepository;
+import pe.nanamochi.banchus.repositories.db.ChannelRepository;
 
 @Service
 @RequiredArgsConstructor

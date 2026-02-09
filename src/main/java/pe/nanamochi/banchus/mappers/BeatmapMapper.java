@@ -3,8 +3,8 @@ package pe.nanamochi.banchus.mappers;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
-import pe.nanamochi.banchus.entities.BeatmapRankedStatus;
-import pe.nanamochi.banchus.entities.Mode;
+import pe.nanamochi.banchus.entities.commons.BeatmapRankedStatus;
+import pe.nanamochi.banchus.entities.commons.Mode;
 import pe.nanamochi.banchus.entities.db.Beatmap;
 
 @Mapper(
@@ -28,5 +28,5 @@ public interface BeatmapMapper {
   @Mapping(target = "playcount", constant = "0L")
   @Mapping(target = "passcount", constant = "0L")
   @Mapping(target = "beatmapset", ignore = true)
-  Beatmap fromApi(pe.nanamochi.banchus.entities.osuapi.Beatmap api);
+  Beatmap fromApi(pe.nanamochi.banchus.dto.Beatmap api);
 }

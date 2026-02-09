@@ -6,11 +6,11 @@ import java.util.HexFormat;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pe.nanamochi.banchus.entities.StorageType;
+import pe.nanamochi.banchus.config.StorageConfig;
 import pe.nanamochi.banchus.entities.db.Beatmap;
 import pe.nanamochi.banchus.entities.db.Beatmapset;
 import pe.nanamochi.banchus.mappers.BeatmapMapper;
-import pe.nanamochi.banchus.repositories.BeatmapRepository;
+import pe.nanamochi.banchus.repositories.db.BeatmapRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +25,7 @@ public class BeatmapService {
     return beatmapRepository.save(beatmap);
   }
 
-  public Beatmap createFromApi(pe.nanamochi.banchus.entities.osuapi.Beatmap beatmap) {
+  public Beatmap createFromApi(pe.nanamochi.banchus.dto.Beatmap beatmap) {
     return beatmapMapper.fromApi(beatmap);
   }
 
@@ -47,8 +47,8 @@ public class BeatmapService {
   public byte[] getOrDownloadOsuFile(int beatmapId, String expectedMd5) {
     String fileKey = String.valueOf(beatmapId);
 
-    if (storage.exists(StorageType.OSU, fileKey)) {
-      byte[] localFile = storage.read(StorageType.OSU, fileKey);
+    if (storage.exists(StorageConfig.OSU, fileKey)) {
+      byte[] localFile = storage.read(StorageConfig.OSU, fileKey);
 
       if (localFile != null) {
         if (expectedMd5 == null || calculateMd5(localFile).equalsIgnoreCase(expectedMd5)) {
@@ -62,7 +62,7 @@ public class BeatmapService {
       return null;
     }
 
-    storage.write(StorageType.OSU, fileKey, downloaded);
+    storage.write(StorageConfig.OSU, fileKey, downloaded);
     return downloaded;
   }
 
@@ -79,7 +79,7 @@ public class BeatmapService {
         beatmapsetService.create(beatmapset);
       }
 
-      List<pe.nanamochi.banchus.entities.osuapi.Beatmap> osuApiBeatmaps =
+      List<pe.nanamochi.banchus.dto.Beatmap> osuApiBeatmaps =
           osuApiService.getBeatmaps(osuApiBeatmap.getBeatmapsetId());
       if (osuApiBeatmaps == null || osuApiBeatmaps.isEmpty()) return null;
 
@@ -105,14 +105,14 @@ public class BeatmapService {
   }
 
   private Beatmap updateBeatmapIfOutdated(Beatmap beatmap) {
-    List<pe.nanamochi.banchus.entities.osuapi.Beatmap> osuApiBeatmaps =
+    List<pe.nanamochi.banchus.dto.Beatmap> osuApiBeatmaps =
         osuApiService.getBeatmaps(beatmap.getBeatmapset().getId());
     if (osuApiBeatmaps == null || osuApiBeatmaps.isEmpty()) return beatmap;
 
     Instant localLastUpdate = beatmap.getBeatmapset().getLastUpdated();
     Instant remoteLastUpdate =
         osuApiBeatmaps.stream()
-            .map(pe.nanamochi.banchus.entities.osuapi.Beatmap::getLastUpdate)
+            .map(pe.nanamochi.banchus.dto.Beatmap::getLastUpdate)
             .max(Instant::compareTo)
             .orElse(localLastUpdate);
 
