@@ -19,6 +19,7 @@ A very WIP osu! server.
 - Beatmap leaderboard (National, global and per-mods, friends leaderboards coming soon)
 - Spectating
 - Multiplayer
+- Upload screenshots from the client
 
 ## TODO
 Check our roadmap here: [Roadmap](https://github.com/users/7mochi/projects/2/views/1)
