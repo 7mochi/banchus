@@ -38,9 +38,8 @@ import pe.nanamochi.banchus.services.protocol.PacketBundleService;
 
 @Component
 @RequiredArgsConstructor
-public class ExitPacketHandler extends AbstractPacketHandler<ExitPacket> {
-
-  private static final Logger logger = LoggerFactory.getLogger(ExitPacketHandler.class);
+public class ExitHandler extends AbstractPacketHandler<ExitPacket> {
+  private static final Logger logger = LoggerFactory.getLogger(ExitHandler.class);
 
   private final PacketWriter packetWriter;
   private final PacketBundleService packetBundleService;

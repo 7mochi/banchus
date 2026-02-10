@@ -17,7 +17,7 @@ public class RollCommand extends BaseCommand {
 
   @Override
   String processCommand(User user, String trigger, String[] args) {
-    logger.info("Processing command !roll");
+    logger.info("Processing command roll");
     int max = 100;
     if (args.length != 0) {
       max = Math.min(NumberUtils.toInt(args[0], max), 32767);

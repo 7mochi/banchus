@@ -1,5 +1,6 @@
 package pe.nanamochi.banchus.commands;
 
+import java.io.IOException;
 import java.util.Arrays;
 import pe.nanamochi.banchus.entities.commons.ServerPrivileges;
 import pe.nanamochi.banchus.entities.db.User;
@@ -19,5 +20,5 @@ public abstract class BaseCommand {
     return !command.multiplayer() || isMultiplayer;
   }
 
-  abstract String processCommand(User user, String trigger, String[] args);
+  abstract String processCommand(User user, String trigger, String[] args) throws IOException;
 }

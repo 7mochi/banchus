@@ -2,7 +2,6 @@ package pe.nanamochi.banchus.packets.client.handlers;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -55,32 +54,14 @@ public class MessageHandler extends AbstractPacketHandler<MessagePacket> {
   public void handle(MessagePacket packet, Session session, ByteArrayOutputStream responseStream)
       throws IOException {
     logger.debug("Handling packet: {}", getPacketType());
-    // TODO: Validate silence
-
-    String channelName = null;
-    if (packet.getTarget().equals("#multiplayer")) {
-      Integer multiplayerMatchId = session.getMultiplayerMatchId();
-      if (multiplayerMatchId == null) {
-        logger.warn(
-            "User {} tried to send a message in #multiplayer without being in a match.",
-            session.getUser().getUsername());
-        return;
-      }
-
-      channelName = "#mp_" + multiplayerMatchId;
-    } else if (packet.getTarget().equals("#spectator")) {
-      // We may be spectating someone, or may be the host of spectators
-      UUID spectatorHostSessionId;
-      if (session.getSpectatorHostSessionId() != null) {
-        spectatorHostSessionId = session.getSpectatorHostSessionId();
-      } else {
-        spectatorHostSessionId = session.getId();
-      }
-
-      channelName = "#spec_" + spectatorHostSessionId;
-    } else {
-      channelName = packet.getTarget();
+    if (session.getUser().isSilenced()) {
+      logger.warn(
+          "User {} attempted to send a message while silenced.", session.getUser().getUsername());
+      return;
     }
+
+    String channelName = resolveChannelName(packet, session);
+    if (channelName == null) return;
 
     Channel channel = channelService.findByName(channelName);
     if (channel == null) {
@@ -103,49 +84,76 @@ public class MessageHandler extends AbstractPacketHandler<MessagePacket> {
       packet.setContent(packet.getContent().substring(0, 2000) + "...");
     }
 
-    // Send message to everyone else
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    packetWriter.writePacket(
-        stream,
-        new pe.nanamochi.banchus.packets.server.MessagePacket(
+    boolean isPrivateCommand = packet.getContent().startsWith(commandPrefix + "help");
+
+    if (!isPrivateCommand) {
+      broadcastToChannel(packet, session, channel);
+    }
+
+    handleCommands(session, packet, channel, isPrivateCommand);
+  }
+
+  private String resolveChannelName(MessagePacket packet, Session session) {
+    String target = packet.getTarget();
+
+    if (target.equals("#multiplayer")) {
+      return (session.getMultiplayerMatchId() != null)
+          ? "#mp_" + session.getMultiplayerMatchId()
+          : null;
+    }
+
+    if (target.equals("#spectator")) {
+      UUID hostId =
+          (session.getSpectatorHostSessionId() != null)
+              ? session.getSpectatorHostSessionId()
+              : session.getId();
+      return "#spec_" + hostId;
+    }
+
+    return target;
+  }
+
+  private void broadcastToChannel(MessagePacket packet, Session session, Channel channel)
+      throws IOException {
+    byte[] msgBytes =
+        createMessagePacket(
             session.getUser().getUsername(),
             packet.getContent(),
             packet.getTarget(),
-            session.getUser().getId()));
+            session.getUser().getId());
 
-    Set<UUID> targetSessions = new HashSet<>();
-
-    if (!packet.getContent().startsWith("!help")) {
-      targetSessions = channelMembersService.getMembers(channel.getId());
+    Set<UUID> members = channelMembersService.getMembers(channel.getId());
+    for (UUID targetId : members) {
+      if (targetId.equals(session.getId())) continue;
+      packetBundleService.enqueue(targetId, new PacketBundle(msgBytes));
     }
+  }
 
-    for (UUID targetSessionId : targetSessions) {
-      if (targetSessionId.equals(session.getId())) continue; // Already sent to self
-      packetBundleService.enqueue(targetSessionId, new PacketBundle(stream.toByteArray()));
-    }
-
-    handleCommands(session, packet, targetSessions, channel);
+  private byte[] createMessagePacket(String sender, String content, String target, int userId)
+      throws IOException {
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    packetWriter.writePacket(
+        stream,
+        new pe.nanamochi.banchus.packets.server.MessagePacket(sender, content, target, userId));
+    return stream.toByteArray();
   }
 
   private void handleCommands(
-      Session session, MessagePacket packet, Set<UUID> targetSessions, Channel channel)
+      Session session, MessagePacket packet, Channel channel, boolean isPrivateCommand)
       throws IOException {
     String result =
         commandProcessor.handle(commandPrefix, packet.getContent(), session.getUser(), channel);
 
     if (result == null || result.trim().isEmpty()) return;
 
-    if (packet.getContent().startsWith("!help")) {
-      targetSessions = Set.of(session.getId());
-    }
+    Set<UUID> targetSessions =
+        isPrivateCommand
+            ? Set.of(session.getId())
+            : channelMembersService.getMembers(channel.getId());
 
+    byte[] responsePacket = createMessagePacket("BanchoBot", result, packet.getTarget(), 1);
     for (UUID targetSessionId : targetSessions) {
-      ByteArrayOutputStream commandStream = new ByteArrayOutputStream();
-      packetWriter.writePacket(
-          commandStream,
-          new pe.nanamochi.banchus.packets.server.MessagePacket(
-              "BanchoBot", result, packet.getTarget(), 1));
-      packetBundleService.enqueue(targetSessionId, new PacketBundle(commandStream.toByteArray()));
+      packetBundleService.enqueue(targetSessionId, new PacketBundle(responsePacket));
     }
   }
 }

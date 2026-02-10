@@ -24,10 +24,7 @@ import pe.nanamochi.banchus.packets.AbstractPacketHandler;
 import pe.nanamochi.banchus.packets.PacketWriter;
 import pe.nanamochi.banchus.packets.Packets;
 import pe.nanamochi.banchus.packets.client.MatchJoinPacket;
-import pe.nanamochi.banchus.packets.server.ChannelAvailableAutoJoinPacket;
-import pe.nanamochi.banchus.packets.server.ChannelJoinSuccessPacket;
-import pe.nanamochi.banchus.packets.server.MatchJoinFailPacket;
-import pe.nanamochi.banchus.packets.server.MatchJoinSuccessPacket;
+import pe.nanamochi.banchus.packets.server.*;
 import pe.nanamochi.banchus.services.auth.SessionService;
 import pe.nanamochi.banchus.services.communication.ChannelMembersService;
 import pe.nanamochi.banchus.services.communication.ChannelService;
@@ -74,6 +71,30 @@ public class MatchJoinHandler extends AbstractPacketHandler<MatchJoinPacket> {
       ByteArrayOutputStream stream = new ByteArrayOutputStream();
       packetWriter.writePacket(stream, new MatchJoinFailPacket());
       packetBundleService.enqueue(session.getId(), new PacketBundle(stream.toByteArray()));
+      return;
+    }
+
+    if (session.getUser().isRestricted()) {
+      ByteArrayOutputStream stream = new ByteArrayOutputStream();
+      packetWriter.writePacket(stream, new MatchJoinFailPacket());
+      packetWriter.writePacket(
+          stream, new AnnouncePacket("Multiplayer is not available while restricted."));
+      packetBundleService.enqueue(session.getId(), new PacketBundle(stream.toByteArray()));
+      logger.warn(
+          "A restricted user ({}) attempted to join a multiplayer match.",
+          session.getUser().getUsername());
+      return;
+    }
+
+    if (session.getUser().isSilenced()) {
+      ByteArrayOutputStream stream = new ByteArrayOutputStream();
+      packetWriter.writePacket(stream, new MatchJoinFailPacket());
+      packetWriter.writePacket(
+          stream, new AnnouncePacket("Multiplayer is not available while silenced."));
+      packetBundleService.enqueue(session.getId(), new PacketBundle(stream.toByteArray()));
+      logger.warn(
+          "A silenced user ({}) attempted to join a multiplayer match.",
+          session.getUser().getUsername());
       return;
     }
 

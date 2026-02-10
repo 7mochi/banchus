@@ -65,9 +65,23 @@ public class MatchCreateHandler extends AbstractPacketHandler<MatchCreatePacket>
     if (session.getUser().isRestricted()) {
       ByteArrayOutputStream stream = new ByteArrayOutputStream();
       packetWriter.writePacket(stream, new MatchJoinFailPacket());
+      packetWriter.writePacket(
+          stream, new AnnouncePacket("Multiplayer is not available while restricted."));
       packetBundleService.enqueue(session.getId(), new PacketBundle(stream.toByteArray()));
       logger.warn(
           "A restricted user ({}) attempted to create a multiplayer match.",
+          session.getUser().getUsername());
+      return;
+    }
+
+    if (session.getUser().isSilenced()) {
+      ByteArrayOutputStream stream = new ByteArrayOutputStream();
+      packetWriter.writePacket(stream, new MatchJoinFailPacket());
+      packetWriter.writePacket(
+          stream, new AnnouncePacket("Multiplayer is not available while silenced."));
+      packetBundleService.enqueue(session.getId(), new PacketBundle(stream.toByteArray()));
+      logger.warn(
+          "A silenced user ({}) attempted to create a multiplayer match.",
           session.getUser().getUsername());
       return;
     }

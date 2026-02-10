@@ -1,5 +1,6 @@
 package pe.nanamochi.banchus.commands;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -19,7 +20,8 @@ public class CommandProcessor {
             .toList();
   }
 
-  public String handle(String prefix, String message, User user, Channel channel) {
+  public String handle(String prefix, String message, User user, Channel channel)
+      throws IOException {
     BaseCommand command =
         this.commands.stream()
             .filter(
@@ -28,7 +30,7 @@ public class CommandProcessor {
                         prefix,
                         message,
                         user.getPrivileges(),
-                        "#multiplayer".equals(channel.getName())))
+                        channel.getName().startsWith("#mp_")))
             .findFirst()
             .orElse(null);
     if (command == null) return null;

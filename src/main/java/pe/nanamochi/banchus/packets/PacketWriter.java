@@ -66,6 +66,7 @@ public class PacketWriter {
       case BANCHO_MATCH_PLAYER_FAILED -> write(stream, (MatchPlayerFailedPacket) packet);
       case BANCHO_MATCH_PLAYER_SKIPPED -> write(stream, (MatchPlayerSkippedPacket) packet);
       case BANCHO_MATCH_SKIP -> write(stream, (MatchSkipPacket) packet);
+      case BANCHO_USER_SILENCED -> write(stream, (UserSilencedPacket) packet);
       default ->
           throw new UnsupportedOperationException(
               "Cannot write packet type: " + packet.getPacketType());
@@ -329,6 +330,12 @@ public class PacketWriter {
 
   private void write(OutputStream stream, MatchSkipPacket packet) throws IOException {
     writeRawPacket(stream, Packets.BANCHO_MATCH_SKIP, new byte[0]);
+  }
+
+  private void write(OutputStream stream, UserSilencedPacket packet) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    writer.writeInt32(buffer, packet.getUserId());
+    writeRawPacket(stream, Packets.BANCHO_USER_SILENCED, buffer.toByteArray());
   }
 
   private void writeScoreFrame(OutputStream stream, ScoreFrame frame) throws IOException {

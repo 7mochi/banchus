@@ -23,7 +23,7 @@ public class ScreenshotController {
           .contentType(MediaType.APPLICATION_JSON)
           .body("{\"status\": \"Screenshot not found.\"}");
     }
-    // TODO: idk if its jpg or png :sob:
+
     return ResponseEntity.ok()
         .contentType(Media.getImageMediaType(screenshotData))
         .body(screenshotData);

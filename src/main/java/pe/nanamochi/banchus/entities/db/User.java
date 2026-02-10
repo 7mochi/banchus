@@ -34,6 +34,10 @@ public class User {
   @Column(name = "privileges", nullable = false)
   private int privileges = 1;
 
+  public boolean isSilenced() {
+    return this.getSilenceEnd() != null && this.getSilenceEnd().isAfter(Instant.now());
+  }
+
   public boolean isRestricted() {
     return !ServerPrivileges.fromBitmask(this.getPrivileges())
         .contains(ServerPrivileges.UNRESTRICTED);
