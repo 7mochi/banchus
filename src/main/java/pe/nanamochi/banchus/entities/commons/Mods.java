@@ -44,27 +44,31 @@ public enum Mods {
 
   public static final int SPEED_CHANGING =
       DOUBLE_TIME.getValue() | HALF_TIME.getValue() | NIGHTCORE.getValue();
+  private static final int KEY_MODS_MASK =
+      KEY1.value
+          | KEY2.value
+          | KEY3.value
+          | KEY4.value
+          | KEY5.value
+          | KEY6.value
+          | KEY7.value
+          | KEY8.value
+          | KEY9.value
+          | KEY_COOP.value;
+  public static final int OSU_SPECIFIC_MODS = SPUN_OUT.value | AUTOPILOT.value;
+  private static final int MANIA_SPECIFIC_MODS =
+      RANDOM.value | MIRROR.value | FADE_IN.value | KEY_MODS_MASK;
 
   private final int value;
   private final String displayName;
   private final String initial;
 
   public static List<Mods> fromBitmask(int bit) {
-    List<Mods> values =
-        Arrays.stream(values())
-            .sorted(Comparator.comparingLong(Mods::getValue))
-            .sorted(Comparator.reverseOrder())
-            .toList();
-    List<Mods> mods = new ArrayList<>();
+    if (bit == 0) return new ArrayList<>(List.of(NO_MOD));
 
-    while (bit > 0)
-      for (Mods mod : values)
-        if (mod.getValue() <= bit) {
-          mods.add(mod);
-          bit -= mod.getValue();
-        }
-
-    return mods;
+    return Arrays.stream(values())
+        .filter(mod -> mod != NO_MOD && (bit & mod.value) == mod.value)
+        .collect(Collectors.toList());
   }
 
   public static List<Mods> fromInitials(String[] initials) {
@@ -82,23 +86,100 @@ public enum Mods {
   }
 
   public static int toBitmask(List<Mods> mods) {
-    int bitmask = 0;
-    for (Mods mod : mods) {
-      bitmask |= mod.getValue();
+    if (mods == null) return 0;
+    return mods.stream().mapToInt(Mods::getValue).reduce(0, (a, b) -> a | b);
+  }
+
+  public static int filterInvalidModCombinations(int bitmask, Mode mode) {
+    int result = bitmask;
+
+    if ((result & (DOUBLE_TIME.value | NIGHTCORE.value)) == (DOUBLE_TIME.value | NIGHTCORE.value)) {
+      result &= ~DOUBLE_TIME.value;
     }
-    return bitmask;
+
+    if (((result & (DOUBLE_TIME.value | NIGHTCORE.value)) != 0)
+        && (result & HALF_TIME.value) != 0) {
+      result &= ~HALF_TIME.value;
+    }
+
+    if ((result & EASY.value) != 0 && (result & HARD_ROCK.value) != 0) {
+      result &= ~HARD_ROCK.value;
+    }
+
+    if ((result & (NO_FAIL.value | RELAX.value | AUTOPILOT.value)) != 0) {
+      result &= ~SUDDEN_DEATH.value;
+      result &= ~PERFECT.value;
+    }
+
+    if ((result & (RELAX.value | AUTOPILOT.value)) != 0) {
+      result &= ~NO_FAIL.value;
+    }
+
+    if ((result & PERFECT.value) != 0 && (result & SUDDEN_DEATH.value) != 0) {
+      result &= ~SUDDEN_DEATH.value;
+    }
+
+    if (mode.getValue() != Mode.OSU.getValue()) {
+      result &= ~OSU_SPECIFIC_MODS;
+    }
+
+    if (mode.getValue() != Mode.MANIA.getValue()) {
+      result &= ~MANIA_SPECIFIC_MODS;
+    }
+
+    if (mode.getValue() == Mode.OSU.getValue()) {
+      if ((result & AUTOPILOT.value) != 0) {
+        if ((result & (SPUN_OUT.value | RELAX.value)) != 0) {
+          result &= ~AUTOPILOT.value;
+        }
+      }
+    }
+
+    if (mode.getValue() == Mode.MANIA.getValue()) {
+      result &= ~RELAX.value;
+
+      if ((result & HIDDEN.value) != 0 && (result & FADE_IN.value) != 0) {
+        result &= ~FADE_IN.value;
+      }
+    }
+
+    int keyModsUsed = result & KEY_MODS_MASK;
+    if (Integer.bitCount(keyModsUsed) > 1) {
+      for (Mods mod : Mods.values()) {
+        if ((mod.value & KEY_MODS_MASK) != 0 && (keyModsUsed & mod.value) != 0) {
+          result &= ~(keyModsUsed & ~mod.value);
+          break;
+        }
+      }
+    }
+
+    return result;
   }
 
   public static List<Mods> filterInvalidModCombinations(List<Mods> mods, Mode mode) {
-    List<Mods> filteredMods = new ArrayList<>(mods);
+    int bitmask = toBitmask(mods);
+    int cleanBitmask = filterInvalidModCombinations(bitmask, mode);
+    return fromBitmask(cleanBitmask);
+  }
 
-    if (mode == Mode.MANIA && mods.contains(RELAX)) {
-      filteredMods.remove(RELAX);
-    } else if ((mode == Mode.TAIKO || mode == Mode.CATCH || mode == Mode.MANIA)
-        && mods.contains(AUTOPILOT)) {
-      filteredMods.remove(AUTOPILOT);
+  public static Mods getManiaKeyCount(List<Mods> mods) {
+    if (mods.contains(KEY9)) {
+      return KEY9;
+    } else if (mods.contains(KEY8)) {
+      return KEY8;
+    } else if (mods.contains(KEY7)) {
+      return KEY7;
+    } else if (mods.contains(KEY6)) {
+      return KEY6;
+    } else if (mods.contains(KEY5)) {
+      return KEY5;
+    } else if (mods.contains(KEY4)) {
+      return KEY4;
+    } else if (mods.contains(KEY3)) {
+      return KEY3;
+    } else if (mods.contains(KEY2)) {
+      return KEY2;
     }
-
-    return filteredMods;
+    return KEY1;
   }
 }

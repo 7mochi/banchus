@@ -23,7 +23,7 @@ public class Stat implements Cloneable {
   private int performancePoints;
   private int playCount;
   private int playTime;
-  private float accuracy;
+  private double accuracy;
   private int highestCombo;
   private int totalHits;
   private int replayViews;

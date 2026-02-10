@@ -15,7 +15,7 @@ import pe.nanamochi.banchus.repositories.db.StatRepository;
 public class StatService {
   private final StatRepository statRepository;
 
-  private static final float DECAY = 0.95f;
+  private static final double DECAY = 0.95;
 
   public List<Stat> createAllGamemodes(User user) {
     // 0 = standard
@@ -43,18 +43,18 @@ public class StatService {
     return statRepository.findByUserAndGamemode(user, gamemode);
   }
 
-  public float calculateWeightedAccuracy(List<Score> topScores) {
-    float result = 0f;
+  public double calculateWeightedAccuracy(List<Score> topScores) {
+    double result = 0;
     for (int i = 0; i < topScores.size(); i++) {
-      result += (float) (topScores.get(i).getAccuracy() * Math.pow(DECAY, i));
+      result += (topScores.get(i).getAccuracy() * Math.pow(DECAY, i));
     }
     return result;
   }
 
-  public float calculateWeightedPp(List<Score> topScores) {
-    float result = 0f;
+  public double calculateWeightedPp(List<Score> topScores) {
+    double result = 0;
     for (int i = 0; i < topScores.size(); i++) {
-      result += (float) (topScores.get(i).getPerformancePoints() * Math.pow(DECAY, i));
+      result += (topScores.get(i).getPerformancePoints() * Math.pow(DECAY, i));
     }
     return result;
   }

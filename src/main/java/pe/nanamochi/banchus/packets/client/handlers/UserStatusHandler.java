@@ -83,7 +83,7 @@ public class UserStatusHandler extends AbstractPacketHandler<UserStatusPacket> {
               session.getGamemode(),
               session.getBeatmapId(),
               ownStats.getRankedScore(),
-              ownStats.getAccuracy(),
+              (float) ownStats.getAccuracy(),
               ownStats.getPlayCount(),
               ownStats.getTotalScore(),
               globalRank,

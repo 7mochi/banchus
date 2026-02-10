@@ -66,7 +66,7 @@ public class StatusUpdateRequestHandler extends AbstractPacketHandler<StatusUpda
             session.getGamemode(),
             session.getBeatmapId(),
             ownStats.getRankedScore(),
-            ownStats.getAccuracy(),
+            (float) ownStats.getAccuracy(),
             ownStats.getPlayCount(),
             ownStats.getTotalScore(),
             ownGlobalRank,

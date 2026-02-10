@@ -1,5 +1,6 @@
 package pe.nanamochi.banchus.services.beatmap;
 
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
@@ -19,7 +20,7 @@ import pe.nanamochi.banchus.services.infra.FileStorageService;
 public class BeatmapService {
   private final BeatmapRepository beatmapRepository;
   private final BeatmapMapper beatmapMapper;
-  private final FileStorageService storage;
+  private final FileStorageService storageService;
   private final OsuApiService osuApiService;
   private final BeatmapsetService beatmapsetService;
 
@@ -49,8 +50,8 @@ public class BeatmapService {
   public byte[] getOrDownloadOsuFile(int beatmapId, String expectedMd5) {
     String fileKey = String.valueOf(beatmapId);
 
-    if (storage.exists(StorageConfig.OSU, fileKey)) {
-      byte[] localFile = storage.read(StorageConfig.OSU, fileKey);
+    if (storageService.exists(StorageConfig.OSU, fileKey)) {
+      byte[] localFile = storageService.read(StorageConfig.OSU, fileKey);
 
       if (localFile != null) {
         if (expectedMd5 == null || calculateMd5(localFile).equalsIgnoreCase(expectedMd5)) {
@@ -64,8 +65,12 @@ public class BeatmapService {
       return null;
     }
 
-    storage.write(StorageConfig.OSU, fileKey, downloaded);
+    storageService.write(StorageConfig.OSU, fileKey, downloaded);
     return downloaded;
+  }
+
+  public Path getBeatmapPath(int beatmapId) {
+    return storageService.getPath(StorageConfig.OSU, String.valueOf(beatmapId));
   }
 
   public Beatmap getOrCreateBeatmap(String beatmapMd5) {
@@ -130,7 +135,7 @@ public class BeatmapService {
         Beatmap localBeatmap = findByMd5(b.getFileMd5());
         if (localBeatmap != null) {
           localBeatmap.setLastUpdated(b.getLastUpdate());
-          localBeatmap.setStarRating(b.getDifficultyRating().floatValue());
+          localBeatmap.setStarRating(b.getDifficultyRating());
           update(localBeatmap);
 
           if (b.getFileMd5().equals(beatmap.getMd5())) {

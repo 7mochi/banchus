@@ -43,6 +43,7 @@ banchus:
   seasonal-backgrounds:
     urls: ${SEASONAL_BACKGROUND_URLS:}
   command-prefix: ${COMMAND_PREFIX:!}
+  pp-calculator-type: ${PP_CALCULATOR_TYPE:osu-native}
   osu-api:
     v1:
       key: ${OSU_API_V1_KEY}

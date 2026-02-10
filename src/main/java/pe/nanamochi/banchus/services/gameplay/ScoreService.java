@@ -1,9 +1,5 @@
 package pe.nanamochi.banchus.services.gameplay;
 
-import io.github.nanamochi.rosu_pp_jar.Mods;
-import io.github.nanamochi.rosu_pp_jar.Performance;
-import io.github.nanamochi.rosu_pp_jar.PerformanceAttributes;
-import io.github.nanamochi.rosu_pp_jar.RosuException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Part;
 import java.io.ByteArrayOutputStream;
@@ -15,6 +11,7 @@ import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pe.nanamochi.banchus.entities.commons.*;
 import pe.nanamochi.banchus.entities.db.*;
@@ -27,6 +24,7 @@ import pe.nanamochi.banchus.services.auth.SessionService;
 import pe.nanamochi.banchus.services.beatmap.BeatmapService;
 import pe.nanamochi.banchus.services.communication.ChannelMembersService;
 import pe.nanamochi.banchus.services.communication.ChannelService;
+import pe.nanamochi.banchus.services.gameplay.performance.CalculatorType;
 import pe.nanamochi.banchus.services.player.RankingService;
 import pe.nanamochi.banchus.services.player.StatService;
 import pe.nanamochi.banchus.services.protocol.PacketBundleService;
@@ -46,6 +44,10 @@ public class ScoreService {
   private final ReplayService replayService;
   private final StatService statService;
   private final BeatmapService beatmapService;
+  private final PerformanceService performanceService;
+
+  @Value("${banchus.pp-calculator-type}")
+  private String ppCalculatorType;
 
   public Score getScoreById(Integer id) {
     return scoreRepository.findById(id).orElse(null);
@@ -279,34 +281,19 @@ public class ScoreService {
     return new ParsedScoreDTO(score, replayBytes);
   }
 
-  public float calculatePp(byte[] osuFile, Score score) throws RosuException {
-    io.github.nanamochi.rosu_pp_jar.Beatmap rosuBeatmap =
-        io.github.nanamochi.rosu_pp_jar.Beatmap.fromBytes(osuFile);
-    // rosuBeatmap.convert(GameMode.fromValues) // TODO: implement fromValue in rosu_pp_jar
-    Performance performance = Performance.create(rosuBeatmap);
-    performance.setMods(Mods.fromBits(score.getMods()));
-    performance.setAccuracy((double) score.getAccuracy());
-    performance.setNGeki(score.getNumGekis());
-    performance.setNGeki(score.getNumKatus());
-    performance.setN300(score.getNum300s());
-    performance.setN100(score.getNum100s());
-    performance.setN50(score.getNum50s());
-    performance.setMisses(score.getNumMisses());
-    performance.setCombo(score.getHighestCombo());
-    PerformanceAttributes attributes = performance.calculate();
-
-    return attributes.pp().floatValue();
-  }
-
   public String processScoreSubmission(
       ParsedScoreDTO parsedScore, User user, Beatmap beatmap, Session session) throws Exception {
     Score score = parsedScore.getScore();
+    score.setMods(Mods.filterInvalidModCombinations(score.getMods(), score.getMode()));
     score.setBeatmap(beatmap);
+    score.updateAccuracy();
 
-    float pp =
-        calculatePp(
-            beatmapService.getOrDownloadOsuFile(beatmap.getId(), score.getBeatmap().getMd5()),
-            score);
+    beatmapService.getOrDownloadOsuFile(beatmap.getId(), beatmap.getMd5());
+    double pp =
+        performanceService.calculate(
+            beatmapService.getBeatmapPath(beatmap.getId()).toAbsolutePath().toString(),
+            score,
+            CalculatorType.fromAlias(ppCalculatorType));
 
     SubmissionStatus submissionStatus;
     Score previousBestScore = null;
@@ -352,17 +339,17 @@ public class ScoreService {
     int totalScoreCount = getUserBestScoresCount(user, score.getMode());
 
     // Calculate new overall accuracy
-    float weightedAccuracy = statService.calculateWeightedAccuracy(top100Scores);
-    float bonusAccuracy = 0.0f;
+    double weightedAccuracy = statService.calculateWeightedAccuracy(top100Scores);
+    double bonusAccuracy = 0.0;
     if (totalScoreCount > 0) {
-      bonusAccuracy = (float) (100.0f / (20 * (1 - Math.pow(0.95f, totalScoreCount))));
+      bonusAccuracy = 100.0 / (20 * (1 - Math.pow(0.95, totalScoreCount)));
     }
-    float totalAccuracy = (weightedAccuracy * bonusAccuracy) / 100.0f;
+    double totalAccuracy = (weightedAccuracy * bonusAccuracy) / 100.0;
 
     // Calculate new overall pp
-    float weightedPp = statService.calculateWeightedPp(top100Scores);
-    float bonusPp = (float) (416.6667f * (1 - Math.pow(0.9994f, totalScoreCount)));
-    float totalPp = Math.round(weightedPp + bonusPp);
+    double weightedPp = statService.calculateWeightedPp(top100Scores);
+    double bonusPp = (416.6667 * (1 - Math.pow(0.9994, totalScoreCount)));
+    double totalPp = Math.round(weightedPp + bonusPp);
 
     // Create a copy of the previous gamemode's stats.
     // We will use this to construct overall ranking charts for the client
@@ -427,7 +414,7 @@ public class ScoreService {
               score.getMode(),
               session.getBeatmapId(),
               modeStats.getRankedScore(),
-              modeStats.getAccuracy(),
+              (float) modeStats.getAccuracy(),
               modeStats.getPlayCount(),
               modeStats.getTotalScore(),
               ownGlobalRank,

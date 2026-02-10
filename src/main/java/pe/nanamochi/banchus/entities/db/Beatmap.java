@@ -63,23 +63,23 @@ public class Beatmap {
   @Column(name = "max_combo", nullable = false)
   private int maxCombo;
 
-  @Column(name = "bpm", columnDefinition = "real", nullable = false)
-  private float bpm;
+  @Column(name = "bpm", nullable = false)
+  private double bpm;
 
-  @Column(name = "cs", columnDefinition = "real", nullable = false)
-  private float cs;
+  @Column(name = "cs", nullable = false)
+  private double cs;
 
-  @Column(name = "ar", columnDefinition = "real", nullable = false)
-  private float ar;
+  @Column(name = "ar", nullable = false)
+  private double ar;
 
-  @Column(name = "od", columnDefinition = "real", nullable = false)
-  private float od;
+  @Column(name = "od", nullable = false)
+  private double od;
 
-  @Column(name = "hp", columnDefinition = "real", nullable = false)
-  private float hp;
+  @Column(name = "hp", nullable = false)
+  private double hp;
 
-  @Column(name = "star_rating", columnDefinition = "real", nullable = false)
-  private float starRating;
+  @Column(name = "star_rating", nullable = false)
+  private double starRating;
 
   @ManyToOne
   @JoinColumn(name = "beatmapset_id", nullable = false)

@@ -42,10 +42,10 @@ public class Score {
   private long score;
 
   @Column(name = "performance_points", nullable = false)
-  private float performancePoints;
+  private double performancePoints;
 
   @Column(name = "accuracy", nullable = false)
-  private float accuracy;
+  private double accuracy;
 
   @Column(name = "highest_combo", nullable = false)
   private int highestCombo;
@@ -99,12 +99,12 @@ public class Score {
 
   @PrePersist
   @PreUpdate
-  private void updateAccuracy() {
+  public void updateAccuracy() {
     this.accuracy = calculateAccuracy();
   }
 
-  public float calculateAccuracy() {
-    if (mode == null) return 0f;
+  public double calculateAccuracy() {
+    if (mode == null) return 0.0;
     return switch (mode) {
       case OSU -> calculateOsuAccuracy();
       case TAIKO -> calculateTaikoAccuracy();
@@ -113,36 +113,42 @@ public class Score {
     };
   }
 
-  private float calculateOsuAccuracy() {
+  private double calculateOsuAccuracy() {
     int totalNotes = this.getNum300s() + this.getNum100s() + this.getNum50s() + this.getNumMisses();
-    float accuracy =
-        (100.0f
-            * ((this.getNum300s() * 300.0f)
-                + (this.getNum100s() * 100.0f)
-                + (this.getNum50s() * 50.0f))
-            / (totalNotes * 300.0f));
+    if (totalNotes == 0) return 0.0;
+
+    double accuracy =
+        (100.0
+            * ((this.getNum300s() * 300.0)
+                + (this.getNum100s() * 100.0)
+                + (this.getNum50s() * 50.0))
+            / (totalNotes * 300.0));
     return clampAccuracy(accuracy);
   }
 
-  private float calculateTaikoAccuracy() {
+  private double calculateTaikoAccuracy() {
     int totalNotes = this.getNum300s() + this.getNum100s() + this.getNumMisses();
-    float accuracy = (100.0f * ((this.getNum100s() * 0.5f) + this.getNum300s()) / totalNotes);
+    if (totalNotes == 0) return 0.0;
+
+    double accuracy = (100.0 * ((this.getNum100s() * 0.5) + this.getNum300s()) / totalNotes);
     return clampAccuracy(accuracy);
   }
 
-  private float calculateCatchAccuracy() {
+  private double calculateCatchAccuracy() {
     int totalNotes =
         this.getNum300s()
             + this.getNum100s()
             + this.getNum50s()
             + this.getNumKatus()
             + this.getNumMisses();
-    float accuracy =
-        (100.0f * (this.getNum300s() + this.getNum100s() + this.getNum50s())) / totalNotes;
+    if (totalNotes == 0) return 0.0;
+
+    double accuracy =
+        (100.0 * (this.getNum300s() + this.getNum100s() + this.getNum50s())) / totalNotes;
     return clampAccuracy(accuracy);
   }
 
-  private float calculateManiaAccuracy() {
+  private double calculateManiaAccuracy() {
     int totalNotes =
         this.getNum300s()
             + this.getNum100s()
@@ -150,17 +156,19 @@ public class Score {
             + this.getNumGekis()
             + this.getNumKatus()
             + this.getNumMisses();
-    float accuracy =
-        (100.0f
-            * ((this.getNum50s() * 50.0f)
-                + (this.getNum100s() * 100.0f)
-                + (this.getNumKatus() * 200.0f)
-                + ((this.getNum300s() + this.getNumGekis()) * 300.0f))
-            / (totalNotes * 300.0f));
+    if (totalNotes == 0) return 0.0;
+
+    double accuracy =
+        (100.0
+            * ((this.getNum50s() * 50.0)
+                + (this.getNum100s() * 100.0)
+                + (this.getNumKatus() * 200.0)
+                + ((this.getNum300s() + this.getNumGekis()) * 300.0))
+            / (totalNotes * 300.0));
     return clampAccuracy(accuracy);
   }
 
-  private float clampAccuracy(float value) {
-    return Math.min(100f, Math.max(0f, value));
+  private double clampAccuracy(double value) {
+    return Math.min(100.0, Math.max(0, value));
   }
 }
