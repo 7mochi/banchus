@@ -10,11 +10,26 @@
 		<relativePath/>
 	</parent>
 
+	<groupId>pe.nanamochi</groupId>
+	<artifactId>banchus</artifactId>
+	<version>0.0.1</version>
+	<name>banchus</name>
+	<description>osu! Server</description>
+	<packaging>pom</packaging>
+
+	<modules>
+		<module>banchus-app</module>
+		<module>banchus-common</module>
+		<module>banchus-packet</module>
+	</modules>
+
 	<properties>
 		<java.version>25</java.version>
 		<spotless-maven-plugin.version>3.2.1</spotless-maven-plugin.version>
 		<git-build-hook.version>3.6.0</git-build-hook.version>
 		<spring-boot.version>4.1.0-M1</spring-boot.version>
+		<spring-dotenv.version>5.1.0</spring-dotenv.version>
+		<jackson.version>3.0-rc5</jackson.version>
 		<mariadb.version>3.5.7</mariadb.version>
 		<lombok.version>1.18.42</lombok.version>
 		<commons-compress.version>1.28.0</commons-compress.version>
@@ -28,18 +43,12 @@
 		<aws.sdk.version>2.41.24</aws.sdk.version>
 	</properties>
 
-	<groupId>pe.nanamochi</groupId>
-	<artifactId>banchus</artifactId>
-	<version>0.0.1</version>
-	<name>banchus</name>
-	<description>osu! Server</description>
-
 	<url/>
 
 	<licenses>
 		<license>
 			<name>MIT License</name>
-			<url>http://www.opensource.org/licenses/mit-license.php</url>
+			<url>https://www.opensource.org/licenses/mit-license.php</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
@@ -50,102 +59,24 @@
 		</developer>
 	</developers>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>me.paulschwarz</groupId>
+				<artifactId>spring-dotenv-bom</artifactId>
+				<version>${spring-dotenv.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-			<version>${spring-boot.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.springframework.boot</groupId>
-					<artifactId>spring-boot-starter-logging</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc</artifactId>
-			<version>${spring-boot.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-redis</artifactId>
-			<version>${spring-boot.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.mariadb.jdbc</groupId>
-			<artifactId>mariadb-java-client</artifactId>
-			<version>${mariadb.version}</version>
-			<scope>runtime</scope>
-		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<version>${lombok.version}</version>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
-			<version>${spring-boot.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc-test</artifactId>
-			<version>${spring-boot.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-log4j2</artifactId>
-			<version>${spring-boot.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-flyway</artifactId>
-			<version>${spring-boot.version}</version>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-compress</artifactId>
-			<version>${commons-compress.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcprov-jdk18on</artifactId>
-			<version>${bcprov.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.7mochi</groupId>
-			<artifactId>rosu-pp-jar</artifactId>
-			<version>${rosu-pp-jar.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.github.7mochi</groupId>
-			<artifactId>osu-native-jar</artifactId>
-			<version>${osu-native-jar.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.mapstruct</groupId>
-			<artifactId>mapstruct</artifactId>
-			<version>${org.mapstruct.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-mysql</artifactId>
-			<version>${flyway.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>software.amazon.awssdk</groupId>
-			<artifactId>s3</artifactId>
-			<version>${aws.sdk.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>software.amazon.awssdk</groupId>
-			<artifactId>http-auth-aws</artifactId>
-			<version>${aws.sdk.version}</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 
@@ -172,19 +103,6 @@
 							<version>${org.mapstruct.version}</version>
 						</path>
 					</annotationProcessorPaths>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-				<version>${spring-boot.version}</version>
-				<configuration>
-					<excludes>
-						<exclude>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</exclude>
-					</excludes>
 				</configuration>
 			</plugin>
 			<!-- Spotless plugin: keeps the code formatted following the google-java-styleguide -->

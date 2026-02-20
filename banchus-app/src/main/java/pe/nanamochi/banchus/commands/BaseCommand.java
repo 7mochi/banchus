@@ -1,0 +1,24 @@
+package pe.nanamochi.banchus.commands;
+
+import java.io.IOException;
+import java.util.Arrays;
+import pe.nanamochi.banchus.database.entity.User;
+import pe.nanamochi.banchus.domain.enums.ServerPrivileges;
+
+public abstract class BaseCommand {
+  protected boolean shouldExecute(
+      String prefix, String trigger, int userPrivileges, boolean isMultiplayer) {
+    Command command = this.getClass().getAnnotation(Command.class);
+    if (!trigger.startsWith(prefix + command.name())) {
+      return false;
+    }
+    if (command.privileges().length > 0) {
+      var userPrivs = ServerPrivileges.fromBitmask(userPrivileges);
+      boolean hasAny = Arrays.stream(command.privileges()).anyMatch(userPrivs::contains);
+      if (!hasAny) return false;
+    }
+    return !command.multiplayer() || isMultiplayer;
+  }
+
+  abstract String processCommand(User user, String trigger, String[] args) throws IOException;
+}
