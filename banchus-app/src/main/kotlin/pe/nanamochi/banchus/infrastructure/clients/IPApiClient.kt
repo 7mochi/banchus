@@ -13,7 +13,7 @@ class IPApiClient(private val restTemplate: RestTemplate) {
 
     fun fetchFromIP(ip: InetAddress): Geolocation {
         val hostAddress = ip.hostAddress
-        val url = "https://ip-api.com/json/$hostAddress"
+        val url = "http://ip-api.com/json/$hostAddress"
 
         return runCatching { restTemplate.getForObject<Geolocation>(url) }
             .getOrNull()
