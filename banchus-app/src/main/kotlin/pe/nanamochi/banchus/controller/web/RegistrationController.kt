@@ -2,17 +2,14 @@ package pe.nanamochi.banchus.controller.web
 
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
-import com.github.michaelbull.result.onSuccess
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import pe.nanamochi.banchus.domain.errors.CheckOk
 import pe.nanamochi.banchus.domain.errors.EmailTaken
 import pe.nanamochi.banchus.domain.errors.InvalidFormat
-import pe.nanamochi.banchus.domain.errors.UserCreated
 import pe.nanamochi.banchus.domain.errors.UsernameTaken
 import pe.nanamochi.banchus.service.RegistrationService
 
@@ -30,22 +27,6 @@ class RegistrationController(private val registrationService: RegistrationServic
     ): ResponseEntity<*> {
         return registrationService
             .registerUser(username, email, password, check)
-            .onSuccess { result ->
-                when (result) {
-                    is UserCreated ->
-                        log.debug(
-                            "User registered with username: {} and email: {}",
-                            result.user.username,
-                            result.user.email,
-                        )
-                    is CheckOk ->
-                        log.debug(
-                            "Check-only request for registration with username: {} and email: {}",
-                            username,
-                            email,
-                        )
-                }
-            }
             .map { ResponseEntity.ok("ok") }
             .getOrElse { domainErrors ->
                 val errorsMap = mutableMapOf<String, MutableList<String>>()

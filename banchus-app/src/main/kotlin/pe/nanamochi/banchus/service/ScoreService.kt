@@ -8,6 +8,10 @@ import com.github.michaelbull.result.toResultOr
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.transaction.Transactional
 import java.util.Base64
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.database.entity.Beatmap
 import pe.nanamochi.banchus.database.entity.Score
@@ -30,7 +34,6 @@ import pe.nanamochi.banchus.util.Rijndael
 @Service
 class ScoreService(
     private val scoreRepository: ScoreRepository,
-    private val sessionService: SessionService,
     private val chartService: ChartService,
     private val rankingService: RankingService,
     private val storageService: StorageService,
@@ -39,22 +42,44 @@ class ScoreService(
     private val performanceService: PerformanceService,
     private val presenceService: PresenceService,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    private val beatmapLocks = ConcurrentHashMap<Int, ReentrantLock>()
+
+    fun findById(id: Int): Result<Score, ScoreNotFound> {
+        return scoreRepository.findScoreById(id).toResultOr { ScoreNotFound }
+    }
+
     fun fetchLeaderboard(
         beatmap: Beatmap,
         mode: Mode?,
         mods: Int?,
         status: SubmissionStatus,
         country: CountryCode?,
-    ): List<Score> = scoreRepository.fetchBeatmapLeaderboard(beatmap, mode, mods, status, country)
+    ): List<Score> {
+        log.debug(
+            "Fetching leaderboard for beatmap {} with mode {}, mods {}, status {}, country {}",
+            beatmap.id,
+            mode,
+            mods,
+            status,
+            country,
+        )
 
-    fun fetchBest(beatmap: Beatmap, user: User): Result<Score, ScoreNotFound> =
-        scoreRepository
+        return scoreRepository.fetchBeatmapLeaderboard(beatmap, mode, mods, status, country)
+    }
+
+    fun fetchBest(beatmap: Beatmap, user: User): Result<Score, ScoreNotFound> {
+        log.debug("Fetching best score for user {} on beatmap {}", user.username, beatmap.id)
+
+        return scoreRepository
             .findFirstByBeatmapAndUserAndSubmissionStatusOrderByPerformancePointsDesc(
                 beatmap,
                 user,
                 SubmissionStatus.BEST,
             )
             .toResultOr { ScoreNotFound }
+    }
 
     fun parseScore(
         request: HttpServletRequest,
@@ -103,6 +128,8 @@ class ScoreService(
                 timeElapsed = scoreTime
             }
 
+        log.debug("Parsed score for user {} on beatmap {}", data[1].trim(), data[0])
+
         ParsedScore(
             score = scoreEntity,
             replayBytes = replayBytes,
@@ -113,6 +140,17 @@ class ScoreService(
 
     @Transactional
     fun processScoreSubmission(
+        parsedScore: ParsedScore,
+        user: User,
+        beatmap: Beatmap,
+        session: Session,
+    ): Result<String, DomainMessage> {
+        val lock = beatmapLocks.computeIfAbsent(beatmap.id) { ReentrantLock() }
+
+        return lock.withLock { executeScoreSubmission(parsedScore, user, beatmap, session) }
+    }
+
+    fun executeScoreSubmission(
         parsedScore: ParsedScore,
         user: User,
         beatmap: Beatmap,
@@ -166,11 +204,7 @@ class ScoreService(
         storageService.saveReplay(savedScore.id.toLong(), parsedScore.replayBytes).bind()
 
         // Update beatmap stats (playcount, passcount)
-        beatmap.apply {
-            playcount += 1
-            if (currentScore.passed) passcount += 1
-        }
-        beatmapService.update(beatmap).bind()
+        beatmapService.incrementStats(beatmap.id, currentScore.passed).bind()
 
         // Fetch and clone current mode stats
         val modeStats = statService.findByUserAndGamemode(user, savedScore.mode).bind()
@@ -189,6 +223,8 @@ class ScoreService(
         presenceService.broadcastStats(session, user, updatedModeStats, ownGlobalRank).bind()
 
         // TODO: If this score is #1, send it to the #announce channel
+
+        log.info("Processed score submission for user {} on beatmap {}.", user.username, beatmap.id)
 
         // Build beatmap ranking chart values for client
         chartService.buildCharts(

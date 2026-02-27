@@ -8,7 +8,6 @@ import pe.nanamochi.banchus.protocol.PacketWriter
 
 @Configuration
 class AppConfig {
-
     @Bean
     fun restTemplate(): RestTemplate {
         return RestTemplate()

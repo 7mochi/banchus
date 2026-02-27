@@ -1,7 +1,11 @@
 package pe.nanamochi.banchus.redis.entity
 
 import java.time.Instant
-import pe.nanamochi.banchus.domain.enums.*
+import pe.nanamochi.banchus.domain.enums.MatchStatus
+import pe.nanamochi.banchus.domain.enums.MatchTeamType
+import pe.nanamochi.banchus.domain.enums.Mode
+import pe.nanamochi.banchus.domain.enums.ScoringType
+import pe.nanamochi.banchus.domain.enums.SlotStatus
 
 data class MultiplayerMatch(
     var matchId: Int = 0,

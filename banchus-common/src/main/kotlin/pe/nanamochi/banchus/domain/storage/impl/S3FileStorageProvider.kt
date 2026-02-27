@@ -1,12 +1,14 @@
 package pe.nanamochi.banchus.domain.storage.impl
 
-import kotlin.io.path.*
+import org.slf4j.LoggerFactory
 import pe.nanamochi.banchus.domain.storage.FileStorageProvider
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.S3Client
 
 class S3FileStorageProvider(private val s3Client: S3Client, private val bucketName: String) :
     FileStorageProvider {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     override fun initialize(buckets: List<String>) {}
 
     override fun read(bucket: String, key: String): ByteArray? =
@@ -20,6 +22,7 @@ class S3FileStorageProvider(private val s3Client: S3Client, private val bucketNa
             { it.bucket(bucketName).key("$bucket/$key") },
             RequestBody.fromBytes(content),
         )
+        log.debug("File written to S3 storage: {}/{}", bucket, key)
     }
 
     override fun delete(bucket: String, key: String) {

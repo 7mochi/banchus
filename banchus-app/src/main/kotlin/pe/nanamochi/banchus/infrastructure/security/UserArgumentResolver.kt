@@ -25,7 +25,11 @@ class UserArgumentResolver(private val userService: UserService) : HandlerMethod
         binderFactory: WebDataBinderFactory?,
     ): User {
         val username = webRequest.getParameter("us") ?: webRequest.getParameter("u") ?: ""
-        val passwordMd5 = webRequest.getParameter("ha") ?: webRequest.getParameter("h") ?: ""
+        val passwordMd5 =
+            webRequest.getParameter("ha")
+                ?: webRequest.getParameter("p")
+                ?: webRequest.getParameter("h")
+                ?: ""
 
         return userService
             .login(username, passwordMd5)

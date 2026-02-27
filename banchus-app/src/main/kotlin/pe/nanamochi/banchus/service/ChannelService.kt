@@ -4,9 +4,12 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
+import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.toResultOr
 import java.util.UUID
+import org.slf4j.LoggerFactory
+import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.database.entity.Channel
 import pe.nanamochi.banchus.database.entity.Session
@@ -17,6 +20,7 @@ import pe.nanamochi.banchus.domain.errors.ChannelUserAlreadyIn
 import pe.nanamochi.banchus.domain.errors.DomainMessage
 import pe.nanamochi.banchus.domain.errors.SessionNotFound
 import pe.nanamochi.banchus.domain.errors.UserNotFound
+import pe.nanamochi.banchus.events.UserLogoutEvent
 import pe.nanamochi.banchus.packets.server.ChannelAvailableAutoJoinPacket
 import pe.nanamochi.banchus.packets.server.ChannelAvailablePacket
 import pe.nanamochi.banchus.packets.server.ChannelJoinSuccessPacket
@@ -35,6 +39,8 @@ class ChannelService(
     private val packetWriter: PacketWriter,
     private val userService: UserService,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     fun findByName(name: String): Result<Channel, ChannelNotFound> =
         channelRepository.findByName(name).toResultOr { ChannelNotFound }
 
@@ -78,11 +84,10 @@ class ChannelService(
     fun canWrite(channel: Channel, privileges: Int): Boolean =
         channel.writePrivileges == 0 || (privileges and channel.writePrivileges) != 0
 
-    // TODO: Bancho logic
     fun joinChannel(
         session: Session,
         channelName: String,
-        isAutoJoin: Boolean,
+        isAutoJoin: Boolean = false,
     ): Result<Unit, DomainMessage> = binding {
         val channel = findByName(channelName).bind()
         val privileges = session.user?.privileges ?: 0
@@ -93,10 +98,10 @@ class ChannelService(
 
         val channelId = channel.id!!
         val currentChannelMembers = getMemberIds(channelId)
-        val sessionId = session.id ?: Err(SessionNotFound).bind<UUID>()
+        val sessionId = session.id ?: Err(SessionNotFound).bind()
 
         if (currentChannelMembers.contains(sessionId)) {
-            Err(ChannelUserAlreadyIn).bind<Unit>()
+            Err(ChannelUserAlreadyIn).bind()
         }
 
         joinChannel(channel, session).bind()
@@ -128,7 +133,11 @@ class ChannelService(
         val infoPacketBundle =
             PacketBundle(
                 packetWriter.serialize(
-                    ChannelAvailablePacket(clientChannelName, topic, newUserCount)
+                    ChannelAvailablePacket(
+                        realName = clientChannelName,
+                        topic = topic,
+                        userCount = newUserCount,
+                    )
                 )
             )
 
@@ -144,6 +153,8 @@ class ChannelService(
                     .forEach { id -> packetBundleService.enqueue(id, infoPacketBundle) }
             }
         }
+
+        log.info("User {} has joined channel {}.", session.user?.username, channel.name)
     }
 
     fun leaveChannel(session: Session, channelName: String): Result<Unit, DomainMessage> = binding {
@@ -183,6 +194,26 @@ class ChannelService(
         currentChannelMembers
             .filter { it != sessionId }
             .forEach { memberId -> packetBundleService.enqueue(memberId, infoPacketBundle) }
+
+        log.info("User {} has left channel {}.", session.user?.username, channel.name)
+    }
+
+    fun leaveAllChannels(session: Session) {
+        channelRepository.findAll().forEach { channel ->
+            leaveChannel(session, channel.name).onFailure { error ->
+                log.trace(
+                    "Error leaving channel {} during departure cleanup for user {}: {}",
+                    channel.name,
+                    session.user?.username,
+                    error,
+                )
+            }
+        }
+    }
+
+    @EventListener
+    fun onUserLogout(event: UserLogoutEvent) {
+        leaveAllChannels(event.session)
     }
 
     fun broadcastMessage(
@@ -216,6 +247,8 @@ class ChannelService(
         getMemberIds(channelId)
             .filter { targetId -> targetId != senderId }
             .forEach { targetId -> packetBundleService.enqueue(targetId, bundle) }
+
+        log.debug("User {} sent message to channel {}", sender.user?.username, channel.name)
     }
 
     private fun resolveClientChannelName(realName: String): String =

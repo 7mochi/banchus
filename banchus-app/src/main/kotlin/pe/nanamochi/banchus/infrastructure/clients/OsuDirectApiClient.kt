@@ -40,6 +40,14 @@ class OsuDirectApiClient(private val restTemplate: RestTemplate) {
             builder.queryParam("status", displayMode.apiStatus)
         }
 
+        log.debug(
+            "osu!direct search request: query='{}', mode='{}', displayMode='{}', pageOffset={}",
+            query,
+            mode,
+            displayMode,
+            pageOffset,
+        )
+
         return runCatching {
                 restTemplate.getForObject<String>(builder.toUriString())?.let { formatResponse(it) }
             }

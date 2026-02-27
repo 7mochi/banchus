@@ -5,6 +5,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.mapError
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import pe.nanamochi.banchus.database.entity.User
@@ -29,6 +30,8 @@ class RegistrationService(
     private val userService: UserService,
     private val statService: StatService,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Transactional
     fun registerUser(
         username: String,
@@ -64,6 +67,12 @@ class RegistrationService(
                         .bind()
 
                 statService.createAllGamemodes(createdUser).bind()
+
+                log.debug(
+                    "User registered with username: {} and email: {}",
+                    createdUser.username,
+                    createdUser.email,
+                )
 
                 UserCreated(createdUser)
             }

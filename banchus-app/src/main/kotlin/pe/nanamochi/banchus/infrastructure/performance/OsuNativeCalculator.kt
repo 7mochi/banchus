@@ -66,28 +66,6 @@ class OsuNativeCalculator : PerformanceCalculator {
                             }
                         }
 
-                    // --- BLOQUE DE DEBUG PARA COMPARAR CON BD ---
-                    println(
-                        """
-                    [PERFORMANCE CALC]
-                    Score ID: ${score.id}
-                    Beatmap ID: ${score.beatmap?.id}
-                    Mode: ${score.mode}
-                    Mods: ${modNames.joinToString(", ")}
-                    Stats BD vs Input:
-                      - Acc: ${score.accuracy}% -> ${scoreInfo.accuracy}
-                      - Combo: ${score.highestCombo}
-                      - 300s: ${score.num300s}
-                      - 100s: ${score.num100s}
-                      - 50s: ${score.num50s}
-                      - Miss: ${score.numMisses}
-                      - Gekis(Perf): ${score.numGekis}
-                      - Katus(Good): ${score.numKatus}
-                """
-                            .trimIndent()
-                    )
-                    // --------------------------------------------
-
                     val diffAttrs = diffCalc.calculate(modsCollection)
                     perfCalc.calculate(ruleset, this, modsCollection, scoreInfo, diffAttrs).total
                 }

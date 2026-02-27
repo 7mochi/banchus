@@ -25,13 +25,17 @@ class DirectController(private val osuDirectApiService: OsuDirectApiClient) {
         @RequestParam("q") query: String,
         @RequestParam("m") mode: Int,
     ): ResponseEntity<String> {
-        log.debug("osu!direct search request: user=${user.username}, query='$query'")
-
         return osuDirectApiService.search(query, mode, displayMode, pageOffset)?.let {
             ResponseEntity.ok(it)
         }
             ?: run {
-                log.warn("osu!direct search failed for query: $query")
+                log.warn(
+                    "osu!direct search failed for query: query='{}', mode='{}', displayMode='{}', pageOffset={}",
+                    query,
+                    mode,
+                    displayMode,
+                    pageOffset,
+                )
                 ResponseEntity.ok("-1\nFailed to retrieve data from the beatmap mirror.")
             }
     }

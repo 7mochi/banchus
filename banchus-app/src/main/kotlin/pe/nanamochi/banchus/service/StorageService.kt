@@ -70,8 +70,11 @@ class StorageService(private val provider: FileStorageProvider) {
     fun getScreenshot(screenshotId: String): Result<ByteArray, FileNotFound> =
         provider.read(SCREENSHOTS, screenshotId.asPng()).toResultOr { FileNotFound }
 
-    fun saveScreenshot(content: ByteArray): Result<Unit, StorageError> = runStorageCatching {
-        Security.generateToken(6).also { id -> provider.write(SCREENSHOTS, id.asPng(), content) }
+    fun saveScreenshot(content: ByteArray): Result<String, StorageError> = runStorageCatching {
+        Security.generateToken(6).let { id ->
+            provider.write(SCREENSHOTS, id.asPng(), content)
+            id
+        }
     }
 
     private fun Any.asPng() = "$this.png"

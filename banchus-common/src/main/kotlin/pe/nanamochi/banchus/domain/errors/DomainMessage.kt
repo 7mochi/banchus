@@ -46,7 +46,21 @@ sealed interface MultiplayerError : DomainMessage
 
 data object MatchNotFound : MultiplayerError
 
+data object NotInMatch : MultiplayerError
+
+data object NotHost : MultiplayerError
+
 data object SlotNotFound : MultiplayerError
+
+data object SlotNotAvailable : MultiplayerError
+
+data object IncorrectPassword : MultiplayerError
+
+data object ChangeSlotNotAllowed : MultiplayerError
+
+sealed interface SpectatorError : DomainMessage
+
+data object InvalidSpectateTarget : SpectatorError
 
 sealed interface StatError : DomainMessage
 

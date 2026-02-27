@@ -13,6 +13,8 @@ import pe.nanamochi.banchus.domain.enums.SubmissionStatus
 
 @Repository
 interface ScoreRepository : JpaRepository<Score, Int> {
+    fun findScoreById(scoreId: Int): Score?
+
     @Query(
         """
         SELECT s

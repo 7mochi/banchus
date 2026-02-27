@@ -4,9 +4,11 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.getOrElse
+import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.orElse
 import com.github.michaelbull.result.toResultOr
+import jakarta.transaction.Transactional
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.database.entity.Beatmap
@@ -53,6 +55,10 @@ class BeatmapService(
             Err(BeatmapNotFound)
         }
 
+    @Transactional
+    fun incrementStats(id: Int, passed: Boolean): Result<Unit, DomainMessage> =
+        runDatabaseCatching { beatmapRepository.incrementStats(id, passed) }.map {}
+
     fun getOrCreateBeatmap(beatmapMd5: String): Result<Beatmap, DomainMessage> = binding {
         val localBeatmap =
             findByMd5(beatmapMd5).getOrElse { _ ->
@@ -86,6 +92,8 @@ class BeatmapService(
                     .find { it.md5.equals(beatmapMd5, ignoreCase = true) }
                     ?: Err(BeatmapNotFound).bind()
             }
+
+        log.debug("Found local beatmap for MD5 {}: {}", beatmapMd5, localBeatmap.id)
 
         updateBeatmapIfOutdated(localBeatmap).bind()
     }

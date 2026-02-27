@@ -6,12 +6,19 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.data.redis.connection.RedisConnectionFactory
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.serializer.GenericToStringSerializer
+import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializer
 import pe.nanamochi.banchus.redis.entity.MultiplayerMatch
 import pe.nanamochi.banchus.redis.entity.PacketBundle
+import tools.jackson.module.kotlin.jsonMapper
+import tools.jackson.module.kotlin.kotlinModule
 
 @Configuration
 class RedisConfig {
+    private fun <T : Any> createKotlinSerializer(type: Class<T>): RedisSerializer<T> {
+        val mapper = jsonMapper { addModule(kotlinModule()) }
+        return JacksonJsonRedisSerializer(mapper, type)
+    }
 
     @Bean
     fun multiplayerMatchRedisTemplate(
@@ -20,7 +27,7 @@ class RedisConfig {
         RedisTemplate<String, MultiplayerMatch>().apply {
             connectionFactory = factory
             keySerializer = RedisSerializer.string()
-            valueSerializer = RedisSerializer.json()
+            valueSerializer = createKotlinSerializer(MultiplayerMatch::class.java)
         }
 
     @Bean
@@ -30,7 +37,7 @@ class RedisConfig {
         RedisTemplate<String, PacketBundle>().apply {
             connectionFactory = factory
             keySerializer = RedisSerializer.string()
-            valueSerializer = RedisSerializer.json()
+            valueSerializer = createKotlinSerializer(PacketBundle::class.java)
         }
 
     @Bean

@@ -3,6 +3,7 @@ package pe.nanamochi.banchus.controller.web
 import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.mapBoth
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -23,6 +24,8 @@ class LeaderboardController(
     private val beatmapService: BeatmapService,
     private val scoreService: ScoreService,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @GetMapping("/osu-osz2-getscores.php", produces = [MediaType.TEXT_PLAIN_VALUE])
     fun getLeaderboard(
         @AuthenticatedUser user: User,
@@ -59,6 +62,9 @@ class LeaderboardController(
             }
             .mapBoth(
                 success = { ResponseEntity.ok(it) },
-                failure = { ResponseEntity.ok("-1|false") },
+                failure = {
+                    log.error("Error fetching leaderboard for beatmap {}: {}", beatmapMd5, it)
+                    ResponseEntity.ok("-1|false")
+                },
             )
 }
