@@ -40,6 +40,8 @@ data object UserNotFound : UserError
 
 data object UserSilenced : UserError
 
+data object UserRestricted : UserError
+
 data object InvalidCredentials : UserError
 
 sealed interface MultiplayerError : DomainMessage
@@ -105,3 +107,11 @@ data object CalculationFailed : PerformanceError
 sealed interface GeolocationError : DomainMessage
 
 data object ResolutionFailed : GeolocationError
+
+sealed interface SilenceError : DomainMessage
+
+data object SelfSilenceNotAllowed : SilenceError
+
+data object BotSilenceNotAllowed : SilenceError
+
+data object InvalidDuration : SilenceError

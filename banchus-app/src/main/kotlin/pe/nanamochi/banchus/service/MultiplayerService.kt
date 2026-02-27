@@ -312,7 +312,7 @@ class MultiplayerService(
                 multiplayerRepository
                     .findById(matchId)
                     .toResultOr {
-                        session.multiplayerMatchId = null
+                        session.multiplayerMatchId = -1
                         sessionService.update(session)
                         MatchNotFound
                     }
@@ -342,7 +342,7 @@ class MultiplayerService(
                 broadcastMatchUpdates(matchId, sendToLobby = true).bind()
             }
 
-            session.multiplayerMatchId = null
+            session.multiplayerMatchId = -1
             sessionService.update(session)
         }
     }
@@ -524,7 +524,7 @@ class MultiplayerService(
 
             delete(matchId)
 
-            session.multiplayerMatchId = null
+            session.multiplayerMatchId = -1
             sessionService.update(session)
 
             log.info(
@@ -827,7 +827,7 @@ class MultiplayerService(
                     PacketBundle(packetWriter.serialize(ChannelRevokedPacket("#multiplayer"))),
                 )
 
-                slotSession.multiplayerMatchId = null
+                slotSession.multiplayerMatchId = -1
                 sessionService.update(slotSession)
 
                 listOf(slotSession.id!!)
