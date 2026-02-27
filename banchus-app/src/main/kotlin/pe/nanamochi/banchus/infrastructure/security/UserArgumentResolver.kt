@@ -24,12 +24,14 @@ class UserArgumentResolver(private val userService: UserService) : HandlerMethod
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?,
     ): User {
-        val username = webRequest.getParameter("us") ?: webRequest.getParameter("u") ?: ""
+        val username =
+            listOf("u", "us")
+                .mapNotNull { webRequest.getParameter(it) }
+                .firstOrNull { it.isNotBlank() } ?: ""
         val passwordMd5 =
-            webRequest.getParameter("ha")
-                ?: webRequest.getParameter("p")
-                ?: webRequest.getParameter("h")
-                ?: ""
+            listOf("ha", "h", "p")
+                .mapNotNull { webRequest.getParameter(it) }
+                .firstOrNull { it.length == 32 } ?: ""
 
         return userService
             .login(username, passwordMd5)
