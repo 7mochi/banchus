@@ -101,3 +101,7 @@ sealed interface PerformanceError : DomainMessage
 data object CalculatorNotFound : PerformanceError
 
 data object CalculationFailed : PerformanceError
+
+sealed interface GeolocationError : DomainMessage
+
+data object ResolutionFailed : GeolocationError

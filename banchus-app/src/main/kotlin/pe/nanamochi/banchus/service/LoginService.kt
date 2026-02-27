@@ -10,8 +10,6 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.mapError
 import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.runCatching
-import com.github.michaelbull.result.toResultOr
-import java.net.InetAddress
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
@@ -26,7 +24,6 @@ import pe.nanamochi.banchus.domain.enums.Mode
 import pe.nanamochi.banchus.domain.enums.ServerPrivileges
 import pe.nanamochi.banchus.domain.errors.DatabaseError
 import pe.nanamochi.banchus.domain.errors.DomainMessage
-import pe.nanamochi.banchus.domain.errors.InternalError
 import pe.nanamochi.banchus.domain.errors.InvalidCredentials
 import pe.nanamochi.banchus.domain.errors.InvalidLoginFormat
 import pe.nanamochi.banchus.domain.errors.SessionNotFound
@@ -35,7 +32,6 @@ import pe.nanamochi.banchus.domain.errors.UserNotFound
 import pe.nanamochi.banchus.dto.Geolocation
 import pe.nanamochi.banchus.dto.LoginData
 import pe.nanamochi.banchus.dto.LoginResponse
-import pe.nanamochi.banchus.infrastructure.clients.IPApiClient
 import pe.nanamochi.banchus.packets.server.AccountRestrictedPacket
 import pe.nanamochi.banchus.packets.server.AnnouncePacket
 import pe.nanamochi.banchus.packets.server.ChannelAvailablePacket
@@ -59,7 +55,7 @@ class LoginService(
     private val rankingService: RankingService,
     private val channelService: ChannelService,
     private val packetBundleService: PacketBundleService,
-    private val ipApiService: IPApiClient,
+    private val geolocationService: GeolocationService,
     private val packetWriter: PacketWriter,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -67,12 +63,10 @@ class LoginService(
     fun handleLogin(rawData: String, headers: HttpHeaders): LoginResponse {
         return binding {
                 val loginData = parseLoginData(rawData).bind()
-                val ipRaw = headers.getFirst("X-Real-IP").toResultOr { InternalError }.bind()
-                val ipAddress =
-                    runCatching { InetAddress.getByName(ipRaw) }.mapError { InternalError }.bind()
+                val (_, geolocation) = geolocationService.resolve(headers)
                 val user = userService.login(loginData.username, loginData.passwordMd5).bind()
 
-                processSuccessfulLogin(user, loginData, ipAddress).bind()
+                processSuccessfulLogin(user, loginData, geolocation).bind()
             }
             .onSuccess {
                 log.info(
@@ -98,11 +92,9 @@ class LoginService(
     private fun processSuccessfulLogin(
         user: User,
         loginData: LoginData,
-        ip: InetAddress,
+        geolocation: Geolocation,
     ): Result<LoginResponse, DomainMessage> {
         return binding {
-            val geolocation =
-                if (ip.isLoopbackAddress) Geolocation.local() else ipApiService.fetchFromIP(ip)
             val ownSession =
                 sessionService
                     .create(
