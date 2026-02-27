@@ -5,12 +5,12 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.toResultOr
 import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
+import pe.nanamochi.banchus.core.BanchoPacket
 import pe.nanamochi.banchus.database.entity.Channel
 import pe.nanamochi.banchus.database.entity.Session
 import pe.nanamochi.banchus.database.repository.ChannelRepository
@@ -37,7 +37,7 @@ class ChannelService(
     private val membersRepository: ChannelMembersRepository,
     private val packetBundleService: PacketBundleService,
     private val packetWriter: PacketWriter,
-    private val userService: UserService,
+    private val sessionService: SessionService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -92,22 +92,17 @@ class ChannelService(
         val channel = findByName(channelName).bind()
         val privileges = session.user?.privileges ?: 0
 
-        if (!canRead(channel, privileges)) {
-            Err(ChannelInsufficientPrivileges).bind()
-        }
+        if (!canRead(channel, privileges)) Err(ChannelInsufficientPrivileges).bind()
 
         val channelId = channel.id!!
-        val currentChannelMembers = getMemberIds(channelId)
         val sessionId = session.id ?: Err(SessionNotFound).bind()
 
-        if (currentChannelMembers.contains(sessionId)) {
-            Err(ChannelUserAlreadyIn).bind()
-        }
+        if (getMemberIds(channelId).contains(sessionId)) Err(ChannelUserAlreadyIn).bind()
 
         joinChannel(channel, session).bind()
 
         val clientChannelName = resolveClientChannelName(channel.name)
-        val newUserCount = getMemberCount(channelId) + 1
+        val newUserCount = getMemberCount(channelId)
         val topic = channel.topic
 
         if (isAutoJoin) {
@@ -115,43 +110,22 @@ class ChannelService(
                 sessionId,
                 PacketBundle(
                     packetWriter.serialize(
-                        ChannelAvailableAutoJoinPacket(
-                            realName = clientChannelName,
-                            topic = topic,
-                            userCount = newUserCount,
-                        )
+                        ChannelAvailableAutoJoinPacket(clientChannelName, topic, newUserCount)
                     )
                 ),
             )
         }
-
         packetBundleService.enqueue(
             sessionId,
-            PacketBundle(packetWriter.serialize(ChannelJoinSuccessPacket(name = clientChannelName))),
+            PacketBundle(packetWriter.serialize(ChannelJoinSuccessPacket(clientChannelName))),
         )
 
-        val infoPacketBundle =
-            PacketBundle(
-                packetWriter.serialize(
-                    ChannelAvailablePacket(
-                        realName = clientChannelName,
-                        topic = topic,
-                        userCount = newUserCount,
-                    )
-                )
-            )
+        val infoPacket = ChannelAvailablePacket(clientChannelName, topic, newUserCount)
 
-        currentChannelMembers.forEach { memberId ->
-            packetBundleService.enqueue(memberId, infoPacketBundle)
-        }
-
-        if (!channel.temporary) {
-            findByName("#lobby").onSuccess { lobby ->
-                val lobbyId = lobby.id ?: return@onSuccess
-                getMemberIds(lobbyId)
-                    .filter { id -> id != sessionId && !currentChannelMembers.contains(id) }
-                    .forEach { id -> packetBundleService.enqueue(id, infoPacketBundle) }
-            }
+        if (channel.temporary) {
+            notifyChannelMembers(channelId, infoPacket)
+        } else {
+            announceChannelUpdate(channel, infoPacket)
         }
 
         log.info("User {} has joined channel {}.", session.user?.username, channel.name)
@@ -159,41 +133,30 @@ class ChannelService(
 
     fun leaveChannel(session: Session, channelName: String): Result<Unit, DomainMessage> = binding {
         val channel = findByName(channelName).bind()
+
+        if (channel.name == "#lobby" && session.receiveMatchUpdates) return@binding
+
         val channelId = channel.id!!
         val sessionId = session.id ?: Err(SessionNotFound).bind<UUID>()
 
-        val currentChannelMembers = getMemberIds(channelId)
-
-        if (!currentChannelMembers.contains(sessionId)) {
-            return@binding
-        }
+        if (!getMemberIds(channelId).contains(sessionId)) return@binding
 
         leaveChannel(channel, session).bind()
 
         val clientChannelName = resolveClientChannelName(channel.name)
-
         packetBundleService.enqueue(
             sessionId,
-            PacketBundle(
-                packetWriter.serialize(ChannelRevokedPacket(channelName = clientChannelName))
-            ),
+            PacketBundle(packetWriter.serialize(ChannelRevokedPacket(clientChannelName))),
         )
 
-        val newMemberCount = maxOf(0, getMemberCount(channelId) - 1)
-        val infoPacketBundle =
-            PacketBundle(
-                packetWriter.serialize(
-                    ChannelAvailablePacket(
-                        realName = clientChannelName,
-                        topic = channel.topic,
-                        userCount = newMemberCount,
-                    )
-                )
-            )
+        val newMemberCount = getMemberCount(channelId)
+        val infoPacket = ChannelAvailablePacket(clientChannelName, channel.topic, newMemberCount)
 
-        currentChannelMembers
-            .filter { it != sessionId }
-            .forEach { memberId -> packetBundleService.enqueue(memberId, infoPacketBundle) }
+        if (channel.temporary) {
+            notifyChannelMembers(channelId, infoPacket)
+        } else {
+            announceChannelUpdate(channel, infoPacket)
+        }
 
         log.info("User {} has left channel {}.", session.user?.username, channel.name)
     }
@@ -249,6 +212,23 @@ class ChannelService(
             .forEach { targetId -> packetBundleService.enqueue(targetId, bundle) }
 
         log.debug("User {} sent message to channel {}", sender.user?.username, channel.name)
+    }
+
+    private fun announceChannelUpdate(channel: Channel, packet: BanchoPacket.Server) {
+        val bundle = PacketBundle(packetWriter.serialize(packet))
+        sessionService.findAll().forEach { targetSession ->
+            val privs = targetSession.user?.privileges ?: 0
+            if (canRead(channel, privs)) {
+                packetBundleService.enqueue(targetSession.id!!, bundle)
+            }
+        }
+    }
+
+    private fun notifyChannelMembers(channelId: UUID, packet: BanchoPacket.Server) {
+        val bundle = PacketBundle(packetWriter.serialize(packet))
+        getMemberIds(channelId).forEach { memberId ->
+            packetBundleService.enqueue(memberId, bundle)
+        }
     }
 
     private fun resolveClientChannelName(realName: String): String =
