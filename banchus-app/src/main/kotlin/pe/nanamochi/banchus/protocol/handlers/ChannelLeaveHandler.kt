@@ -15,7 +15,6 @@ import pe.nanamochi.banchus.service.ChannelService
 @HandleClientPacket(type = PacketType.OSU_CHANNEL_LEAVE, checkForRestriction = true)
 class ChannelLeaveHandler(private val channelService: ChannelService) :
     AbstractPacketHandler<ChannelLeavePacket>(PacketType.OSU_CHANNEL_LEAVE) {
-
     private val log = LoggerFactory.getLogger(javaClass)
 
     override fun handle(
