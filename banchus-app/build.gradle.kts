@@ -18,7 +18,7 @@ dependencies {
     implementation(project(":banchus-common"))
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
@@ -28,7 +28,7 @@ dependencies {
     implementation("software.amazon.awssdk:s3:2.41.24")
     implementation("org.mapstruct:mapstruct:1.6.3")
     implementation("io.github.7mochi:rosu-pp-jar:0.2.0")
-    implementation("io.github.7mochi:osu-native-jar:0.0.7-dev")
+    implementation("io.github.7mochi:osu-native-jar:0.0.7")
     implementation("com.michael-bull.kotlin-result:kotlin-result:2.1.0")
 
     kapt("org.mapstruct:mapstruct-processor:1.6.3")
