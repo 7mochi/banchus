@@ -28,7 +28,10 @@ class GeolocationService(private val ipApiClient: IPApiClient) {
         val geolocation =
             when {
                 ipAddress.isLoopbackAddress || ipAddress.isSiteLocalAddress -> {
-                    log.debug("Local IP detected ({}). Skipping external geolocation resolution.", ipRaw)
+                    log.debug(
+                        "Local IP detected ({}). Skipping external geolocation resolution.",
+                        ipRaw,
+                    )
                     Geolocation.local()
                 }
                 else ->
