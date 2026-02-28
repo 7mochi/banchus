@@ -1,6 +1,8 @@
 package pe.nanamochi.banchus.protocol.handlers
 
 import java.io.ByteArrayOutputStream
+import java.time.Duration
+import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.core.PacketType
@@ -9,8 +11,6 @@ import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.packets.client.ExitPacket
 import pe.nanamochi.banchus.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.service.SessionService
-import java.time.Duration
-import java.time.Instant
 
 @Component
 @HandleClientPacket(type = PacketType.OSU_EXIT, checkForRestriction = true)
@@ -30,7 +30,7 @@ class ExitHandler(private val sessionService: SessionService) :
         if (sessionAge < Duration.ofSeconds(1)) {
             log.debug(
                 "Ignoring logout attempt < 1 second after login for user {}",
-                session.user?.username
+                session.user?.username,
             )
             return
         }

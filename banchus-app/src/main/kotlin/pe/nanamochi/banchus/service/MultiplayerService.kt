@@ -173,12 +173,16 @@ class MultiplayerService(
         return binding {
             val user = session.user ?: Err(UserNotFound).bind()
             user.isSilenced.toResultOr { Err(UserSilenced).bind() }
+
+            // If we are spectating someone, stop spectating them first
             if (session.spectatorHostSessionId != null) {
                 spectatorService.stopSpectating(session).bind()
             }
 
             val savedMatch =
                 create(packet.match.toMultiplayerMatch()).toResultOr { MatchNotFound }.bind()
+
+            // Create the multiplayer match in Redis
             val multiplayerChannel =
                 Channel(
                     name = "#mp_${savedMatch.matchId}",
@@ -188,6 +192,8 @@ class MultiplayerService(
                     autoJoin = false,
                     temporary = true,
                 )
+
+            // Create the multiplayer chat channel (#mp_ID)
             channelService.create(multiplayerChannel).bind()
 
             // Try to occupy the first slot (Usually ID 0)
@@ -219,6 +225,7 @@ class MultiplayerService(
             val user = session.user ?: Err(UserNotFound).bind()
             if (user.isSilenced) Err(UserSilenced).bind()
 
+            // Attempt to find the match we are trying to join
             val match = findById(packet.matchId).bind()
 
             if (
@@ -250,7 +257,7 @@ class MultiplayerService(
 
             val slot = findSlotById(match.matchId, slotId).bind()
 
-            // Update slot with user and session info, set status to NOT_READY
+            // Assign the user to the claimed slot
             slot.apply {
                 userId = user.id
                 this.sessionId = sessionId
@@ -258,14 +265,14 @@ class MultiplayerService(
             }
             updateSlot(match.matchId, slot).bind()
 
-            // Join the multiplayer match and update session
+            // Set the multiplayer match ID in the session
             session.multiplayerMatchId = match.matchId
             sessionService.update(session)
 
-            // Join the multiplayer channel
+            // Join the #multiplayer channel
             channelService.joinChannel(session, "#mp_${match.matchId}", true)
 
-            // Send the match data (with password) to the user
+            // Send the match data (with password) to the creator
             packetBundleService.enqueue(
                 sessionId,
                 PacketBundle(packetWriter.serialize(MatchJoinSuccessPacket(match.toMatch()))),
@@ -327,19 +334,23 @@ class MultiplayerService(
         match: MultiplayerMatch,
     ): Result<Unit, DomainMessage> {
         return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
             val sessionId = session.id ?: Err(SessionNotFound).bind()
             val matchId = match.matchId
 
             val slot = findSlotBySessionId(matchId, sessionId).bind()
-
             resetSlot(match, slot.slotId).bind()
 
             channelService.leaveChannel(session, "#mp_$matchId")
-            if (match.hostUserId == user.id) {
+
+            if (match.hostUserId == session.user?.id) {
                 handleHostLeaving(session, match).bind()
             } else {
-                broadcastMatchUpdates(matchId, sendToLobby = true).bind()
+                broadcastMatchUpdates(
+                        matchId,
+                        sendToLobby = true,
+                        extraSessionIds = listOf(sessionId),
+                    )
+                    .bind()
             }
 
             session.multiplayerMatchId = -1
@@ -390,6 +401,7 @@ class MultiplayerService(
 
             broadcastToMatch(match, MatchCompletePacket(), SlotStatus.COMPLETE.value)
 
+            // Reset all slots for next game
             match.slots.forEach { slot ->
                 val statusInt = slot.status.toInt()
                 if (

@@ -19,7 +19,6 @@ class LobbyPartHandler(
     private val sessionService: SessionService,
     private val channelService: ChannelService,
 ) : AbstractPacketHandler<LobbyPartPacket>(PacketType.OSU_LOBBY_PART) {
-
     private val log = LoggerFactory.getLogger(javaClass)
 
     override fun handle(
