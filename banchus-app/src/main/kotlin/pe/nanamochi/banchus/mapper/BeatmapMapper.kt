@@ -6,7 +6,7 @@ import org.mapstruct.ReportingPolicy
 import pe.nanamochi.banchus.database.entity.Beatmap
 import pe.nanamochi.banchus.domain.enums.BeatmapRankedStatus
 import pe.nanamochi.banchus.domain.enums.Mode
-import pe.nanamochi.banchus.dto.OsuApiBeatmap
+import pe.nanamochi.banchus.dto.external.OsuApiBeatmap
 
 @Mapper(
     componentModel = "spring",

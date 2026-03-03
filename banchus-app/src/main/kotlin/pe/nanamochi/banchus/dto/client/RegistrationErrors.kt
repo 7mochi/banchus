@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.dto
+package pe.nanamochi.banchus.dto.client
 
 typealias RegistrationErrors = Map<String, List<String>>
 

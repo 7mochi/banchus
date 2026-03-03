@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.dto
+package pe.nanamochi.banchus.dto.client
 
 data class LoginResponse(val token: String, val payload: ByteArray, val success: Boolean) {
     override fun equals(other: Any?): Boolean {

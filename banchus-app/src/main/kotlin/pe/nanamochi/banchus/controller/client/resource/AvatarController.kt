@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.controller.resource
+package pe.nanamochi.banchus.controller.client.resource
 
 import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.mapError
@@ -12,17 +12,17 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 import pe.nanamochi.banchus.service.StorageService
 
-@RestController("ResourceScreenshotController")
-@RequestMapping("/ss")
-class ScreenshotController(private val storageService: StorageService) {
-    @GetMapping("/{screenshotId}", produces = [MediaType.IMAGE_PNG_VALUE])
-    fun getScreenshot(@PathVariable screenshotId: String): ResponseEntity<ByteArray> {
-        val data =
+@RestController
+@RequestMapping("/")
+class AvatarController(private val storageService: StorageService) {
+    @GetMapping("/{userId}", produces = [MediaType.IMAGE_PNG_VALUE])
+    fun getAvatar(@PathVariable userId: String): ResponseEntity<ByteArray> {
+        val bytes =
             storageService
-                .getScreenshot(screenshotId)
-                .mapError { ResponseStatusException(HttpStatus.NOT_FOUND, "Screenshot not found.") }
+                .getAvatar(userId)
+                .mapError { ResponseStatusException(HttpStatus.NOT_FOUND) }
                 .getOrThrow { it }
 
-        return ResponseEntity.ok().body(data)
+        return ResponseEntity.ok().body(bytes)
     }
 }

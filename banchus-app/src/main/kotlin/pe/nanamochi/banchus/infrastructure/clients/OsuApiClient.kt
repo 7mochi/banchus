@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.util.UriComponentsBuilder
-import pe.nanamochi.banchus.dto.OsuApiBeatmap
+import pe.nanamochi.banchus.dto.external.OsuApiBeatmap
 
 @Service
 class OsuApiClient(private val restTemplate: RestTemplate) {

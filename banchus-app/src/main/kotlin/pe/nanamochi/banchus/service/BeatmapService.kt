@@ -17,7 +17,7 @@ import pe.nanamochi.banchus.database.repository.BeatmapRepository
 import pe.nanamochi.banchus.domain.errors.BeatmapNotFound
 import pe.nanamochi.banchus.domain.errors.DomainMessage
 import pe.nanamochi.banchus.domain.errors.InternalError
-import pe.nanamochi.banchus.dto.OsuApiBeatmap
+import pe.nanamochi.banchus.dto.external.OsuApiBeatmap
 import pe.nanamochi.banchus.infrastructure.clients.OsuApiClient
 import pe.nanamochi.banchus.mapper.BeatmapMapper
 import pe.nanamochi.banchus.util.runDatabaseCatching

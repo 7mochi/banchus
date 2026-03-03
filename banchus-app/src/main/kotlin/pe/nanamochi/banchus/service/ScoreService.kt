@@ -28,7 +28,7 @@ import pe.nanamochi.banchus.domain.errors.DomainMessage
 import pe.nanamochi.banchus.domain.errors.InternalError
 import pe.nanamochi.banchus.domain.errors.ScoreNotFound
 import pe.nanamochi.banchus.domain.errors.UserNotFound
-import pe.nanamochi.banchus.dto.ParsedScore
+import pe.nanamochi.banchus.dto.client.ParsedScore
 import pe.nanamochi.banchus.util.Rijndael
 
 @Service

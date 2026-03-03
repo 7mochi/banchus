@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.dto
+package pe.nanamochi.banchus.dto.client
 
 data class LoginData(
     val username: String,

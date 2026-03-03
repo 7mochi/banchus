@@ -6,6 +6,8 @@ import pe.nanamochi.banchus.database.entity.User
 
 @Repository
 interface UserRepository : JpaRepository<User, Int> {
+    fun findUserById(id: Int): User?
+
     fun findByUsername(username: String): User?
 
     fun findByEmail(email: String): User?

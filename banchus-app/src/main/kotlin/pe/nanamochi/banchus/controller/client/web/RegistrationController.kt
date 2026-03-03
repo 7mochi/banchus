@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.controller.web
+package pe.nanamochi.banchus.controller.client.web
 
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map

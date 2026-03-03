@@ -8,7 +8,7 @@ import pe.nanamochi.banchus.database.entity.Beatmapset
 import pe.nanamochi.banchus.database.repository.BeatmapsetRepository
 import pe.nanamochi.banchus.domain.errors.BeatmapsetNotFound
 import pe.nanamochi.banchus.domain.errors.DomainMessage
-import pe.nanamochi.banchus.dto.OsuApiBeatmap
+import pe.nanamochi.banchus.dto.external.OsuApiBeatmap
 import pe.nanamochi.banchus.mapper.BeatmapsetMapper
 import pe.nanamochi.banchus.util.runDatabaseCatching
 

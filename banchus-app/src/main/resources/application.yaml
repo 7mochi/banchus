@@ -40,6 +40,7 @@ logging:
     pe.nanamochi.banchus: ${LOG_LEVEL_BANCHUS:WARN}
 
 banchus:
+  domain-url: ${OSU_DOMAIN_URL:}
   menu-icon:
     image-url: ${MENU_ICON_IMAGE_URL}
     redirect-url: ${MENU_ICON_REDIRECT_URL}

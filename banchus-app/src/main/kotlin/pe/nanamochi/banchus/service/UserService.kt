@@ -14,6 +14,10 @@ import pe.nanamochi.banchus.util.runDatabaseCatching
 
 @Service
 class UserService(private val userRepository: UserRepository) {
+
+    fun findById(id: Int): Result<User, UserNotFound> =
+        userRepository.findUserById(id).toResultOr { UserNotFound }
+
     fun findByUsername(username: String): Result<User, UserNotFound> =
         userRepository.findByUsername(username).toResultOr { UserNotFound }
 

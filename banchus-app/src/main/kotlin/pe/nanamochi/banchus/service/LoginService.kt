@@ -29,9 +29,9 @@ import pe.nanamochi.banchus.domain.errors.InvalidLoginFormat
 import pe.nanamochi.banchus.domain.errors.SessionNotFound
 import pe.nanamochi.banchus.domain.errors.StatNotFound
 import pe.nanamochi.banchus.domain.errors.UserNotFound
-import pe.nanamochi.banchus.dto.Geolocation
-import pe.nanamochi.banchus.dto.LoginData
-import pe.nanamochi.banchus.dto.LoginResponse
+import pe.nanamochi.banchus.dto.client.LoginData
+import pe.nanamochi.banchus.dto.client.LoginResponse
+import pe.nanamochi.banchus.dto.external.Geolocation
 import pe.nanamochi.banchus.packets.server.AccountRestrictedPacket
 import pe.nanamochi.banchus.packets.server.AnnouncePacket
 import pe.nanamochi.banchus.packets.server.ChannelAvailablePacket

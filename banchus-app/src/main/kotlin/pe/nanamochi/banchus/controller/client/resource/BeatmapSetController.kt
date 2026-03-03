@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.controller.resource
+package pe.nanamochi.banchus.controller.client.resource
 
 import java.net.URI
 import org.slf4j.LoggerFactory

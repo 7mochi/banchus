@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.controller.web
+package pe.nanamochi.banchus.controller.client.web
 
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType

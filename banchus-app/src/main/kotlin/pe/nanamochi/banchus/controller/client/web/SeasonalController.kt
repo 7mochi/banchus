@@ -1,4 +1,4 @@
-package pe.nanamochi.banchus.controller.web
+package pe.nanamochi.banchus.controller.client.web
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.GetMapping

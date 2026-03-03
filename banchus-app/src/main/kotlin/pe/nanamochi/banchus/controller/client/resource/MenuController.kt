@@ -1,10 +1,10 @@
-package pe.nanamochi.banchus.controller.resource
+package pe.nanamochi.banchus.controller.client.resource
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import pe.nanamochi.banchus.dto.MenuContentResponse
+import pe.nanamochi.banchus.dto.client.MenuContentResponse
 
 @RestController
 @RequestMapping("/")
