@@ -1,109 +1,181 @@
 package pe.nanamochi.banchus.service
 
-import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
+import java.io.ByteArrayOutputStream
+import java.net.InetAddress
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.database.entity.Session
-import pe.nanamochi.banchus.database.entity.Stat
-import pe.nanamochi.banchus.database.entity.User
+import pe.nanamochi.banchus.components.Mods
+import pe.nanamochi.banchus.domain.enums.CountryCode
 import pe.nanamochi.banchus.domain.enums.Mode
-import pe.nanamochi.banchus.domain.enums.Mods
-import pe.nanamochi.banchus.domain.errors.DomainMessage
-import pe.nanamochi.banchus.domain.errors.UserNotFound
-import pe.nanamochi.banchus.mapper.BanchoUserMapper
-import pe.nanamochi.banchus.packets.client.UserStatusPacket
+import pe.nanamochi.banchus.domain.error.DomainMessage
+import pe.nanamochi.banchus.infrastructure.client.IPApiClient
+import pe.nanamochi.banchus.packets.client.ChangeStatusPacket
+import pe.nanamochi.banchus.packets.client.PresenceRequestPacket
+import pe.nanamochi.banchus.packets.client.UserStatsRequestPacket
+import pe.nanamochi.banchus.packets.server.UserQuitPacket
 import pe.nanamochi.banchus.packets.server.UserStatsPacket
 import pe.nanamochi.banchus.protocol.PacketWriter
-import pe.nanamochi.banchus.redis.entity.PacketBundle
+import pe.nanamochi.banchus.redis.entity.Presence
+import pe.nanamochi.banchus.redis.entity.Session
+import pe.nanamochi.banchus.redis.repository.PresenceRepository
+import pe.nanamochi.banchus.redis.stream.StreamName
+import pe.nanamochi.banchus.util.toBanchoUser
+import pe.nanamochi.banchus.util.userPanel
 
 @Service
 class PresenceService(
-    private val userMapper: BanchoUserMapper,
-    private val sessionService: SessionService,
-    private val statService: StatService,
     private val packetWriter: PacketWriter,
-    private val packetBundleService: PacketBundleService,
+    private val presenceRepository: PresenceRepository,
+    private val ipApiClient: IPApiClient,
+    private val statService: StatService,
+    private val leaderboardService: LeaderboardService,
+    private val streamService: StreamService,
 ) {
-    fun updateFromStatusPacket(
-        session: Session,
-        packet: UserStatusPacket,
-    ): Result<Unit, DomainMessage> = binding {
-        // TODO: Check privileges
+    fun create(presence: Presence): Presence = presenceRepository.create(presence)
 
-        // Convert from packet Mods/Mode to domain Mods/Mode
-        val gamemode = Mode.fromValue(packet.mode.value)
+    fun delete(userId: Int) = presenceRepository.delete(userId)
 
-        // Filter invalid mod combinations, this is a quirk of the osu! client,
-        // where it adjusts this value only after it sends the packet to the server,
-        // so we need to adjust
-        val filteredMods =
-            Mods.filterInvalidModCombinations(
-                pe.nanamochi.banchus.components.Mods.toBitmask(packet.mods),
-                gamemode,
-            )
+    fun update(presence: Presence) = presenceRepository.update(presence)
 
-        session.apply {
-            action = packet.action.value
-            infoText = packet.text
-            beatmapMd5 = packet.beatmapChecksum
-            mods = filteredMods.toInt()
-            this.gamemode = gamemode
-            beatmapId = packet.beatmapId
+    fun fetchOne(userId: Int) = presenceRepository.fetchOne(userId)
+
+    fun fetchUserIds() = presenceRepository.fetchUserIds()
+
+    fun fetchMultiple(userIds: List<Int>) = presenceRepository.fetchMultiple(userIds)
+
+    fun fetchAll(): List<Presence> = presenceRepository.fetchAll()
+
+    fun handleUserStatsRequest(
+        packet: UserStatsRequestPacket,
+        responseStream: ByteArrayOutputStream,
+    ) {
+        val presences = fetchMultiple(packet.userIds)
+
+        packet.userIds.zip(presences).forEach { (userId, presence) ->
+            presence?.let { p ->
+                if (p.globalRank > 0u) {
+                    responseStream.write(
+                        packetWriter.serialize(UserStatsPacket(user = p.toBanchoUser()))
+                    )
+                }
+            } ?: run { responseStream.write(packetWriter.serialize(UserQuitPacket(userId))) }
         }
-        val updatedSession = sessionService.update(session).bind()
-
-        // Send the stats update to all active osu sessions
-        broadcastStats(updatedSession).bind()
     }
 
-    fun broadcastStats(session: Session): Result<Unit, DomainMessage> = binding {
-        val user = session.user ?: Err(UserNotFound).bind()
-        val stats = statService.findByUserAndGamemode(user, session.gamemode).bind()
-
-        val bundle = createStatsBundle(session, stats).bind()
-        enqueueStats(session, user, bundle)
+    fun handlePresenceRequest(
+        packet: PresenceRequestPacket,
+        responseStream: ByteArrayOutputStream,
+    ) {
+        val presences = fetchMultiple(packet.userIds)
+        packet.userIds.zip(presences).forEach { (userId, presence) ->
+            presence?.let { p ->
+                responseStream.write(
+                    packetWriter.serializeAll(p.toBanchoUser().let { user -> p.userPanel() })
+                )
+            } ?: run { responseStream.write(packetWriter.serialize(UserQuitPacket(userId))) }
+        }
     }
 
-    fun broadcastStats(
+    fun handlePresenceRequestAll(responseStream: ByteArrayOutputStream) {
+        fetchAll().forEach { presence ->
+            responseStream.write(packetWriter.serializeAll(presence.userPanel()))
+        }
+    }
+
+    fun handleChangeStatus(
+        packet: ChangeStatusPacket,
         session: Session,
-        user: User,
-        stats: Stat,
-        rank: Int,
     ): Result<Unit, DomainMessage> = binding {
-        val bundle = createStatsBundle(session, stats, rank).bind()
-        enqueueStats(session, user, bundle)
-    }
+        var presence =
+            fetchOne(session.userId)
+                ?: run {
+                    val geolocation =
+                        ipApiClient.fetchFromIP(InetAddress.getByName(session.createIpAddress))
+                    create(
+                        Presence(
+                            userId = session.userId,
+                            username = session.username,
+                            privileges = session.privileges,
+                            countryCode = CountryCode.fromCode(geolocation.countryCode),
+                        )
+                    )
+                }
 
-    private fun enqueueStats(session: Session, user: User, bundle: PacketBundle) {
-        val sessionId = session.id ?: return
+        val refreshStats = presence.mode != packet.statusUpdate.mode.value
+        presence.action = packet.statusUpdate.status.value.toUByte()
+        presence.infoText = packet.statusUpdate.text
+        presence.beatmapMd5 = packet.statusUpdate.beatmapMd5
+        presence.beatmapId = packet.statusUpdate.beatmapId
+        presence.mods = Mods.toBitmask(packet.statusUpdate.mods).toInt()
+        presence.mode = packet.statusUpdate.mode.value
 
-        if (user.isRestricted) {
-            packetBundleService.enqueue(sessionId, bundle)
-        } else {
-            sessionService.findAll().forEach { target ->
-                target.id?.let { packetBundleService.enqueue(it, bundle) }
+        if (refreshStats) {
+            val stats = statService.fetchOne(session.userId, Mode.fromValue(presence.mode)).bind()
+            val globalRank =
+                leaderboardService.fetchGlobalRank(session.userId, Mode.fromValue(presence.mode))
+
+            presence.rankedScore = stats.rankedScore.toULong()
+            presence.totalScore = stats.totalScore.toULong()
+            presence.accuracy = stats.averageAccuracy
+            presence.playcount = stats.playCount.toUInt()
+            presence.performancePoints = stats.performancePoints.toUInt()
+            presence.globalRank = globalRank
+        }
+
+        presence = presenceRepository.update(presence)
+
+        presence.userPanel().forEach { packet ->
+            if (!session.isRestricted) {
+                streamService.broadcastMessage(StreamName.Main, packet)
             }
         }
     }
 
-    fun broadcastSelfStats(session: Session): Result<Unit, DomainMessage> = binding {
-        val user = session.user ?: Err(UserNotFound).bind()
-        val stats = statService.findByUserAndGamemode(user, session.gamemode).bind()
-        val bundle = createStatsBundle(session, stats).bind()
-
-        val sessionId = session.id ?: return@binding
-        packetBundleService.enqueue(sessionId, bundle)
-    }
-
-    private fun createStatsBundle(
+    fun handleRequestStatus(
         session: Session,
-        stats: Stat,
-        forcedRank: Int? = null,
-    ): Result<PacketBundle, DomainMessage> = binding {
-        val packetUser = userMapper.toPacketUser(session, stats, forcedRank).bind()
-        val statsPacket = UserStatsPacket(packetUser)
+        responseStream: ByteArrayOutputStream,
+    ): Result<Unit, DomainMessage> = binding {
+        val presence =
+            fetchOne(session.userId)
+                ?: Presence(
+                    userId = session.userId,
+                    username = session.username,
+                    privileges = session.privileges,
+                )
 
-        PacketBundle(packetWriter.serialize(statsPacket))
+        val stats = statService.fetchOne(session.userId, Mode.fromValue(presence.mode)).bind()
+        val globalRank =
+            leaderboardService.fetchGlobalRank(session.userId, Mode.fromValue(presence.mode))
+
+        if (
+            presence.rankedScore == stats.rankedScore.toULong() &&
+                presence.totalScore == stats.totalScore.toULong() &&
+                presence.accuracy == stats.averageAccuracy &&
+                presence.playcount == stats.playCount.toUInt() &&
+                presence.globalRank == globalRank &&
+                presence.performancePoints == stats.performancePoints.toUInt()
+        ) {
+            return@binding
+        }
+
+        presence.rankedScore = stats.rankedScore.toULong()
+        presence.totalScore = stats.totalScore.toULong()
+        presence.accuracy = stats.averageAccuracy
+        presence.playcount = stats.playCount.toUInt()
+        presence.performancePoints = stats.performancePoints.toUInt()
+        presence.globalRank = globalRank
+        presence.performancePoints = stats.performancePoints.toUInt()
+
+        val updatedPresence = presenceRepository.update(presence)
+
+        val userStatsPacket =
+            packetWriter.serialize(UserStatsPacket(updatedPresence.toBanchoUser()))
+
+        if (!session.isRestricted) {
+            streamService.broadcastData(StreamName.Main, userStatsPacket)
+        } else {
+            responseStream.write(userStatsPacket)
+        }
     }
 }

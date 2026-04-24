@@ -17,8 +17,8 @@ import pe.nanamochi.banchus.service.LoginService
 @RestController
 @RequestMapping("/")
 class BanchoController(
-    private val loginService: LoginService,
     private val banchoService: BanchoService,
+    private val loginService: LoginService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -40,7 +40,6 @@ class BanchoController(
     ): ResponseEntity<ByteArray> {
         val rawData = String(body, Charsets.UTF_8)
         val loginResponse = loginService.handleLogin(rawData, headers)
-
         return ResponseEntity.ok()
             .header("cho-token", loginResponse.token)
             .contentType(MediaType.APPLICATION_OCTET_STREAM)

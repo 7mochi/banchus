@@ -3,10 +3,9 @@ package pe.nanamochi.banchus.infrastructure.protocol
 import java.io.ByteArrayOutputStream
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import pe.nanamochi.banchus.core.BanchoPacket
+import pe.nanamochi.banchus.core.ClientPacket
 import pe.nanamochi.banchus.core.PacketType
-import pe.nanamochi.banchus.database.entity.Session
-import pe.nanamochi.banchus.protocol.AbstractPacketHandler
+import pe.nanamochi.banchus.redis.entity.Session
 
 @Component
 class PacketHandler(beans: List<AbstractPacketHandler<*>>) {
@@ -14,16 +13,12 @@ class PacketHandler(beans: List<AbstractPacketHandler<*>>) {
 
     private val handlers: Map<PacketType, AbstractPacketHandler<*>> = beans.associateBy { it.type }
 
-    fun handle(
-        packet: BanchoPacket.Client,
-        session: Session,
-        responseStream: ByteArrayOutputStream,
-    ) {
+    fun handle(packet: ClientPacket, session: Session, responseStream: ByteArrayOutputStream) {
         val handler = handlers[packet.type] ?: return
 
         val annotation =
             handler::class.annotations.find { it is HandleClientPacket } as? HandleClientPacket
-        if (annotation?.checkForRestriction == true && session.user?.isRestricted == true) {
+        if (annotation?.checkForRestriction == true && session.isRestricted == true) {
             return
         }
 
@@ -36,9 +31,9 @@ class PacketHandler(beans: List<AbstractPacketHandler<*>>) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <T : BanchoPacket.Client> dispatch(
+    private fun <T : ClientPacket> dispatch(
         handler: AbstractPacketHandler<T>,
-        packet: BanchoPacket.Client,
+        packet: ClientPacket,
         session: Session,
         responseStream: ByteArrayOutputStream,
     ) {

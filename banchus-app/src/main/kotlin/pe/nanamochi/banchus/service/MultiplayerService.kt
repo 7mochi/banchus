@@ -3,1046 +3,948 @@ package pe.nanamochi.banchus.service
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.binding
-import com.github.michaelbull.result.map
-import com.github.michaelbull.result.mapError
-import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.toResultOr
 import java.util.UUID
 import org.slf4j.LoggerFactory
-import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.components.Match
-import pe.nanamochi.banchus.components.MatchSlot
-import pe.nanamochi.banchus.components.MatchTeamType
-import pe.nanamochi.banchus.components.MatchType
-import pe.nanamochi.banchus.components.Mode
-import pe.nanamochi.banchus.components.ScoringType
+import pe.nanamochi.banchus.components.Mods
 import pe.nanamochi.banchus.components.SlotTeam
-import pe.nanamochi.banchus.core.BanchoPacket
-import pe.nanamochi.banchus.database.entity.Channel
-import pe.nanamochi.banchus.database.entity.Session
-import pe.nanamochi.banchus.domain.enums.MatchStatus
-import pe.nanamochi.banchus.domain.enums.Mods
-import pe.nanamochi.banchus.domain.enums.ServerPrivileges
+import pe.nanamochi.banchus.components.hasAny
+import pe.nanamochi.banchus.database.entity.ChannelName
+import pe.nanamochi.banchus.database.entity.MatchEvent
+import pe.nanamochi.banchus.database.entity.MatchEventType
+import pe.nanamochi.banchus.database.entity.MatchGame
+import pe.nanamochi.banchus.domain.enums.Mode
 import pe.nanamochi.banchus.domain.enums.SlotStatus
-import pe.nanamochi.banchus.domain.errors.ChangeSlotNotAllowed
-import pe.nanamochi.banchus.domain.errors.DomainMessage
-import pe.nanamochi.banchus.domain.errors.IncorrectPassword
-import pe.nanamochi.banchus.domain.errors.MatchNotFound
-import pe.nanamochi.banchus.domain.errors.MultiplayerError
-import pe.nanamochi.banchus.domain.errors.NotHost
-import pe.nanamochi.banchus.domain.errors.NotInMatch
-import pe.nanamochi.banchus.domain.errors.SessionNotFound
-import pe.nanamochi.banchus.domain.errors.SlotNotAvailable
-import pe.nanamochi.banchus.domain.errors.SlotNotFound
-import pe.nanamochi.banchus.domain.errors.UserNotFound
-import pe.nanamochi.banchus.domain.errors.UserSilenced
-import pe.nanamochi.banchus.events.UserLogoutEvent
+import pe.nanamochi.banchus.domain.error.DomainMessage
+import pe.nanamochi.banchus.domain.error.InvalidPassword
+import pe.nanamochi.banchus.domain.error.MatchNotFound
+import pe.nanamochi.banchus.domain.error.MultiplayerMatchFull
+import pe.nanamochi.banchus.domain.error.MultiplayerUnauthorized
+import pe.nanamochi.banchus.domain.error.NotInMatch
+import pe.nanamochi.banchus.domain.error.SlotNotFound
 import pe.nanamochi.banchus.packets.client.MatchChangeSettingsPacket
-import pe.nanamochi.banchus.packets.client.MatchChangeSlotPacket
-import pe.nanamochi.banchus.packets.client.MatchCreatePacket
-import pe.nanamochi.banchus.packets.client.MatchJoinPacket
-import pe.nanamochi.banchus.packets.client.MatchLockPacket
-import pe.nanamochi.banchus.packets.client.MatchScoreUpdatePacket
 import pe.nanamochi.banchus.packets.server.AnnouncePacket
-import pe.nanamochi.banchus.packets.server.ChannelRevokedPacket
 import pe.nanamochi.banchus.packets.server.MatchAllPlayersLoadedPacket
 import pe.nanamochi.banchus.packets.server.MatchCompletePacket
-import pe.nanamochi.banchus.packets.server.MatchDisbandPacket
 import pe.nanamochi.banchus.packets.server.MatchJoinFailPacket
-import pe.nanamochi.banchus.packets.server.MatchJoinSuccessPacket
 import pe.nanamochi.banchus.packets.server.MatchPlayerFailedPacket
 import pe.nanamochi.banchus.packets.server.MatchPlayerSkippedPacket
 import pe.nanamochi.banchus.packets.server.MatchSkipPacket
 import pe.nanamochi.banchus.packets.server.MatchStartPacket
-import pe.nanamochi.banchus.packets.server.MatchTransferHostPacket
 import pe.nanamochi.banchus.packets.server.MatchUpdatePacket
-import pe.nanamochi.banchus.protocol.PacketWriter
+import pe.nanamochi.banchus.packets.server.MessagePacket
+import pe.nanamochi.banchus.packets.server.NewMatchPacket
 import pe.nanamochi.banchus.redis.entity.MultiplayerMatch
-import pe.nanamochi.banchus.redis.entity.MultiplayerSlot
-import pe.nanamochi.banchus.redis.entity.PacketBundle
+import pe.nanamochi.banchus.redis.entity.MultiplayerMatchSlot
+import pe.nanamochi.banchus.redis.entity.Session
+import pe.nanamochi.banchus.redis.entity.SessionIdentity
 import pe.nanamochi.banchus.redis.repository.MultiplayerRepository
+import pe.nanamochi.banchus.redis.stream.StreamName
+import pe.nanamochi.banchus.util.asBancho
+import pe.nanamochi.banchus.util.userPanel
 
 @Service
 class MultiplayerService(
     private val multiplayerRepository: MultiplayerRepository,
+    private val matchEventService: MatchEventService,
+    private val userService: UserService,
+    private val streamService: StreamService,
     private val channelService: ChannelService,
     private val sessionService: SessionService,
-    private val packetWriter: PacketWriter,
-    private val packetBundleService: PacketBundleService,
-    private val spectatorService: SpectatorService,
+    private val matchGameService: MatchGameService,
+    private val matchService: MatchService,
+    private val presenceService: PresenceService,
+    private val statService: StatService,
+    private val leaderboardService: LeaderboardService,
+    private val chatService: ChatService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    // TODO: remove ? because is hard to fail, because its using .set() of redis
-    fun create(match: MultiplayerMatch): MultiplayerMatch? {
-        val matchId = multiplayerRepository.nextMatchId().toInt()
+    fun create(
+        hostSession: Session,
+        name: String,
+        password: String?,
+        beatmapName: String,
+        beatmapMd5: String,
+        beatmapId: Int,
+        mode: Mode,
+        maxPlayerCount: Int,
+    ): Result<MultiplayerMatch, DomainMessage> = binding {
+        multiplayerRepository.fetchSessionMatchId(hostSession.sessionId).let { matchId ->
+            leave(hostSession.identity(), matchId)
+        }
 
-        val defaultSlots =
-            MutableList(16) { index ->
-                MultiplayerSlot(
-                    slotId = index,
-                    userId = -1,
-                    status = SlotStatus.OPEN.value.toByte(),
-                    team = pe.nanamochi.banchus.domain.enums.SlotTeam.NEUTRAL,
-                    mods = Mods.NO_MOD.value,
-                )
-            }
+        val (mpMatch, slots) =
+            multiplayerRepository.create(
+                hostSession.identity(),
+                name,
+                password,
+                beatmapName,
+                beatmapMd5,
+                beatmapId,
+                mode.value,
+                maxPlayerCount,
+            )
 
-        return match
-            .apply {
-                this.matchId = matchId
-                this.slots = defaultSlots
-            }
-            .let { multiplayerRepository.create(it) }
+        val user = userService.fetchOneById(hostSession.userId).bind()
+
+        matchEventService.create(
+            MatchEvent(
+                match = matchService.fetchOneById(mpMatch.matchId).bind(),
+                eventType = MatchEventType.MATCH_CREATED,
+                user = user,
+            )
+        )
+
+        streamService.leave(hostSession.sessionId, StreamName.Lobby)
+        streamService.join(hostSession.sessionId, StreamName.Multiplayer(mpMatch.matchId))
+        channelService.join(hostSession, ChannelName.Multiplayer(mpMatch.matchId))
+
+        streamService.broadcastMessage(StreamName.Lobby, NewMatchPacket(mpMatch.asBancho(slots)))
+
+        mpMatch
     }
 
-    fun findById(id: Int): Result<MultiplayerMatch, MatchNotFound> =
-        multiplayerRepository.findById(id).toResultOr { MatchNotFound }
+    fun update(match: MultiplayerMatch): Result<MultiplayerMatch, DomainMessage> = binding {
+        fetchOne(match.matchId) ?: Err(MatchNotFound).bind()
+        val updatedMatch = multiplayerRepository.update(match, false)
 
-    fun findSlotBySessionId(
-        matchId: Int,
+        val slots = fetchAllSlots(match.matchId)
+        broadcastUpdate(match, slots)
+        updatedMatch
+    }
+
+    fun updateAllSlots(matchId: Long, slots: List<MultiplayerMatchSlot>) =
+        multiplayerRepository.updateAllSlots(matchId, slots)
+
+    fun delete(matchId: Long): Result<Unit, DomainMessage> = binding {
+        multiplayerRepository.delete(matchId)
+        channelService.close(ChannelName.Multiplayer(matchId))
+        streamService.clearStream(StreamName.Multiplayer(matchId))
+        streamService.clearStream(StreamName.Multiplaying(matchId))
+        matchEventService.create(
+            MatchEvent(
+                match = matchService.fetchOneById(matchId).bind(),
+                eventType = MatchEventType.MATCH_DISBANDED,
+                user = userService.fetchOneById(1).bind(), // BanchoBot
+            )
+        )
+    }
+
+    fun isReferee(matchId: Long, userId: Int) = multiplayerRepository.isReferee(matchId, userId)
+
+    fun fetchSessionMatchId(sessionId: UUID) = multiplayerRepository.fetchSessionMatchId(sessionId)
+
+    fun fetchOne(matchId: Long) = multiplayerRepository.fetchOne(matchId)
+
+    fun fetchAll() = multiplayerRepository.fetchAll()
+
+    fun fetchAllSlots(matchId: Long) = multiplayerRepository.fetchAllSlots(matchId)
+
+    fun fetchAllWithSlots(): List<Pair<MultiplayerMatch, List<MultiplayerMatchSlot>>> {
+        val matches = fetchAll()
+        val result = mutableListOf<Pair<MultiplayerMatch, List<MultiplayerMatchSlot>>>()
+        for (match in matches) {
+            val slots = fetchAllSlots(match.matchId)
+            if (slots.isEmpty()) {
+                delete(match.matchId)
+                continue
+            }
+            result.add(match to slots)
+        }
+        return result
+    }
+
+    fun fetchUserSlot(
+        matchId: Long,
+        userId: Int,
+    ): Result<Pair<Int, MultiplayerMatchSlot>, DomainMessage> = binding {
+        val slots = fetchAllSlots(matchId)
+
+        val (index, slot) =
+            slots.withIndex().find { (_, slot) -> slot.user?.userId == userId }
+                ?: Err(NotInMatch).bind()
+
+        Pair(index, slot)
+    }
+
+    fun fetchSessionSlot(
+        matchId: Long,
         sessionId: UUID,
-    ): Result<MultiplayerSlot, MultiplayerError> {
-        return findById(matchId).andThen { match ->
-            match.slots.find { it.sessionId == sessionId }.toResultOr { SlotNotFound }
-        }
+    ): Result<Pair<Int, MultiplayerMatchSlot>, DomainMessage> = binding {
+        val slots = fetchAllSlots(matchId)
+
+        val (index, slot) =
+            slots.withIndex().find { (_, slot) -> slot.user?.sessionId == sessionId }
+                ?: Err(NotInMatch).bind()
+
+        Pair(index, slot)
     }
 
-    fun findSlotById(matchId: Int, slotId: Int): Result<MultiplayerSlot, MultiplayerError> {
-        return findById(matchId).andThen { match ->
-            match.slots.find { it.slotId == slotId }.toResultOr { SlotNotFound }
-        }
-    }
-
-    fun fetchAll(): List<MultiplayerMatch> = multiplayerRepository.fetchAll()
-
-    fun fetchAllSlots(matchId: Int): List<MultiplayerSlot> =
-        multiplayerRepository.fetchAllSlots(matchId)
-
-    fun update(match: MultiplayerMatch) = multiplayerRepository.update(match)
-
-    fun delete(matchId: Int) = multiplayerRepository.delete(matchId)
-
-    fun allPlayersLoaded(matchId: Int): Result<Boolean, MultiplayerError> {
-        return findById(matchId).map { it.allLoaded() }
-    }
-
-    fun allPlayersSkipped(matchId: Int): Result<Boolean, MultiplayerError> {
-        return findById(matchId).map { it.allSkipped() }
-    }
-
-    fun allPlayersCompleted(matchId: Int): Result<Boolean, MultiplayerError> {
-        return findById(matchId).map { it.allCompleted() }
-    }
-
-    fun updateSlot(matchId: Int, updatedSlot: MultiplayerSlot): Result<Unit, DomainMessage> {
-        return binding {
-            val match = findById(matchId).bind()
-
-            val index =
-                match.slots.indexOfFirst { it.slotId == updatedSlot.slotId }.takeIf { it != -1 }
-                    ?: Err(SlotNotAvailable).bind()
-
-            match.slots[index] = updatedSlot
-            multiplayerRepository.update(match)
-        }
-    }
-
-    fun sendCurrentMatches(session: Session): Result<Unit, DomainMessage> {
-        return session.id
-            .toResultOr { SessionNotFound }
-            .map { sessionId ->
-                fetchAll().forEach { matchEntity ->
-                    val matchData = matchEntity.toMatch()
-                    val packet = MatchUpdatePacket(matchData)
-                    val payload = packetWriter.serializeAll(listOf(packet))
-
-                    packetBundleService.enqueue(sessionId, PacketBundle(payload))
-                }
-                log.info("Sent current matches to user {}", session.user?.username)
-            }
-    }
-
-    fun createMatchFromCreatePacket(
+    fun join(
         session: Session,
-        packet: MatchCreatePacket,
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
-            user.isSilenced.toResultOr { Err(UserSilenced).bind() }
+        matchId: Long,
+        password: String?,
+    ): Result<Pair<MultiplayerMatch, List<MultiplayerMatchSlot>>, DomainMessage> = binding {
+        if (session.isRestricted) {
+            Err(MultiplayerUnauthorized).bind()
+        }
 
-            // If we are spectating someone, stop spectating them first
-            if (session.spectatorHostSessionId != null) {
-                spectatorService.stopSpectating(session).bind()
+        multiplayerRepository.fetchSessionMatchId(session.sessionId)?.let { oldMatchId ->
+            leave(session.identity(), oldMatchId)
+        }
+
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        if (mpMatch.password != password) {
+            Err(InvalidPassword).bind()
+        }
+
+        val existingSlots = fetchAllSlots(matchId)
+        existingSlots
+            .find { s ->
+                s.user?.let { u -> u.userId == session.userId && u.sessionId != session.sessionId }
+                    ?: false
             }
+            ?.let { ghostSlot ->
+                val ghostSessionId = ghostSlot.user!!.sessionId
 
-            val savedMatch =
-                create(packet.match.toMultiplayerMatch()).toResultOr { MatchNotFound }.bind()
-
-            // Create the multiplayer match in Redis
-            val multiplayerChannel =
-                Channel(
-                    name = "#mp_${savedMatch.matchId}",
-                    topic = "Multiplayer match ${savedMatch.matchId}",
-                    readPrivileges = ServerPrivileges.UNRESTRICTED.value,
-                    writePrivileges = ServerPrivileges.UNRESTRICTED.value,
-                    autoJoin = false,
-                    temporary = true,
+                log.warn(
+                    "Evicting ghost slot for user ${ghostSlot.user!!.userId} in match $matchId"
                 )
 
-            // Create the multiplayer chat channel (#mp_ID)
-            channelService.create(multiplayerChannel).bind()
-
-            // Try to occupy the first slot (Usually ID 0)
-            val claimedSlot = claimFirstAvailableSlotId(savedMatch.matchId).bind()
-            joinMatchAndSlot(session, savedMatch, claimedSlot)
-
-            log.info(
-                "User {} created match {} ({})",
-                session.user?.username,
-                savedMatch.matchId,
-                savedMatch.matchName,
-            )
-        }
-    }
-
-    fun claimFirstAvailableSlotId(matchId: Int): Result<Int, DomainMessage> {
-        return findById(matchId).andThen { match ->
-            match.slots
-                .find { it.userId == -1 && it.status.toInt() == SlotStatus.OPEN.value }
-                ?.let { Ok(it.slotId) } ?: Err(SlotNotAvailable)
-        }
-    }
-
-    fun joinMatchFromJoinPacket(
-        session: Session,
-        packet: MatchJoinPacket,
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
-            if (user.isSilenced) Err(UserSilenced).bind()
-
-            // Attempt to find the match we are trying to join
-            val match = findById(packet.matchId).bind()
-
-            if (
-                !match.matchPassword.isNullOrBlank() && match.matchPassword != packet.matchPassword
-            ) {
-                Err(IncorrectPassword).bind()
-            }
-
-            val slotId = claimFirstAvailableSlotId(match.matchId).bind()
-            joinMatchAndSlot(session, match, slotId).bind()
-
-            log.info(
-                "User {} joined match {} ({})",
-                session.user?.username,
-                match.matchId,
-                match.matchName,
-            )
-        }
-    }
-
-    private fun joinMatchAndSlot(
-        session: Session,
-        match: MultiplayerMatch,
-        slotId: Int,
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-            val slot = findSlotById(match.matchId, slotId).bind()
-
-            // Assign the user to the claimed slot
-            slot.apply {
-                userId = user.id
-                this.sessionId = sessionId
-                status = SlotStatus.NOT_READY.value.toByte()
-            }
-            updateSlot(match.matchId, slot).bind()
-
-            // Set the multiplayer match ID in the session
-            session.multiplayerMatchId = match.matchId
-            sessionService.update(session)
-
-            // Join the #multiplayer channel
-            channelService.joinChannel(session, "#mp_${match.matchId}", true)
-
-            // Send the match data (with password) to the creator
-            packetBundleService.enqueue(
-                sessionId,
-                PacketBundle(packetWriter.serialize(MatchJoinSuccessPacket(match.toMatch()))),
-            )
-
-            // Broadcast match updates to all players
-            broadcastMatchUpdates(match.matchId, sendToLobby = true).bind()
-        }
-    }
-
-    fun startMatch(session: Session): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val user = session.user ?: Err(UserNotFound).bind()
-
-            val match = findById(matchId).bind()
-            if (match.hostUserId != user.id) {
-                Err(NotHost).bind()
-            }
-
-            match.status = MatchStatus.PLAYING
-            update(match)
-
-            match.slots.forEach { slot ->
-                if ((slot.status.toInt() and SlotStatus.CAN_START) != 0) {
-                    slot.status = SlotStatus.PLAYING.value.toByte()
-                    updateSlot(matchId, slot).bind()
-                }
-            }
-
-            broadcastToMatch(match, MatchStartPacket(match.toMatch()), SlotStatus.PLAYING.value)
-            broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-            broadcastToLobby(packetWriter.serialize(MatchStartPacket(match.toMatch()))).bind()
-
-            log.info("Match {} has started by user {}.", matchId, session.user?.username)
-        }
-    }
-
-    fun leaveMatch(session: Session): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-
-            val match =
-                multiplayerRepository
-                    .findById(matchId)
-                    .toResultOr {
-                        session.multiplayerMatchId = -1
-                        sessionService.update(session)
-                        MatchNotFound
-                    }
-                    .bind()
-
-            handleMatchPart(session, match).bind()
-        }
-    }
-
-    private fun handleMatchPart(
-        session: Session,
-        match: MultiplayerMatch,
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-            val matchId = match.matchId
-
-            val slot = findSlotBySessionId(matchId, sessionId).bind()
-            resetSlot(match, slot.slotId).bind()
-
-            channelService.leaveChannel(session, "#mp_$matchId")
-
-            if (match.hostUserId == session.user?.id) {
-                handleHostLeaving(session, match).bind()
-            } else {
-                broadcastMatchUpdates(
-                        matchId,
-                        sendToLobby = true,
-                        extraSessionIds = listOf(sessionId),
-                    )
-                    .bind()
-            }
-
-            session.multiplayerMatchId = -1
-            sessionService.update(session)
-        }
-    }
-
-    private fun handleHostLeaving(
-        session: Session,
-        match: MultiplayerMatch,
-    ): Result<Unit, DomainMessage> {
-        return match.slots
-            .find { it.userId != -1 }
-            ?.let { nextHostSlot ->
-                transferHost(session, match, nextHostSlot) // If the host left, pick a new host
-            } ?: disbandMatch(session, match) // No one is left in the match, close it
-    }
-
-    fun handleFailMatch(session: Session): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-            val slot = findSlotBySessionId(matchId, sessionId).bind()
-            val match = findById(matchId).bind()
-
-            broadcastToMatch(match, MatchPlayerFailedPacket(slot.slotId), SlotStatus.PLAYING.value)
-
-            log.info("User {} failed in match {}", session.user?.username, matchId)
-        }
-    }
-
-    fun handleCompleteMatch(session: Session): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-            val currentSlot = findSlotBySessionId(matchId, sessionId).bind()
-            currentSlot.status = SlotStatus.COMPLETE.value.toByte()
-            updateSlot(matchId, currentSlot).bind()
-
-            if (!allPlayersCompleted(matchId).bind()) return@binding
-
-            val match = findById(matchId).bind()
-
-            match.status = MatchStatus.WAITING
-            update(match)
-
-            broadcastToMatch(match, MatchCompletePacket(), SlotStatus.COMPLETE.value)
-
-            // Reset all slots for next game
-            match.slots.forEach { slot ->
-                val statusInt = slot.status.toInt()
-                if (
-                    statusInt and SlotStatus.PLAYING.value != 0 ||
-                        statusInt == SlotStatus.COMPLETE.value
-                ) {
-                    slot.apply {
-                        status = SlotStatus.NOT_READY.value.toByte()
-                        isLoaded = false
-                        isSkipped = false
-                    }
-                    updateSlot(matchId, slot).bind()
-                }
-            }
-
-            broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-
-            log.info("All players in match {} have completed the beatmap.", matchId)
-        }
-    }
-
-    fun handleLoadComplete(session: Session): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-            val slot = findSlotBySessionId(matchId, sessionId).bind()
-            slot.isLoaded = true
-            updateSlot(matchId, slot).bind()
-
-            if (allPlayersLoaded(matchId).bind()) {
-                val match = findById(matchId).bind()
-
-                broadcastToMatch(match, MatchAllPlayersLoadedPacket(), SlotStatus.PLAYING.value)
-            }
-
-            log.info("All players in match {} have loaded the beatmap.", matchId)
-        }
-    }
-
-    fun handleSkipRequest(session: Session): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-            val slot = findSlotBySessionId(matchId, sessionId).bind()
-            slot.isSkipped = true
-            updateSlot(matchId, slot).bind()
-
-            val match = findById(matchId).bind()
-
-            broadcastToMatch(match, MatchPlayerSkippedPacket(slot.slotId), SlotStatus.PLAYING.value)
-
-            if (allPlayersSkipped(matchId).bind()) {
-                broadcastToMatch(match, MatchSkipPacket(), SlotStatus.PLAYING.value)
-            }
-
-            log.info("User {} requested to skip in match {}.", session.user?.username, matchId)
-        }
-    }
-
-    fun handleScoreUpdated(
-        session: Session,
-        packet: MatchScoreUpdatePacket,
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-            val match = findById(matchId).bind()
-
-            val slot = findSlotBySessionId(matchId, sessionId).bind()
-
-            packet.frame.id = slot.slotId
-
-            broadcastToMatch(
-                match,
-                pe.nanamochi.banchus.packets.server.MatchScoreUpdatePacket(packet.frame),
-                SlotStatus.PLAYING.value,
-            )
-        }
-    }
-
-    private fun transferHost(
-        session: Session,
-        match: MultiplayerMatch,
-        newHostSlot: MultiplayerSlot,
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = match.matchId
-            val newHostId = newHostSlot.userId
-            val newHostSessionId = newHostSlot.sessionId ?: Err(SessionNotFound).bind()
-
-            match.hostUserId = newHostId
-            update(match)
-
-            // Notify new host
-            packetBundleService.enqueue(
-                newHostSessionId,
-                PacketBundle(packetWriter.serialize(MatchTransferHostPacket())),
-            )
-
-            // Broadcast updates
-            broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-
-            log.info(
-                "Match {} host {} has left. New host is user ID {}.",
-                matchId,
-                session.user?.username,
-                newHostId,
-            )
-        }
-    }
-
-    private fun disbandMatch(
-        session: Session,
-        match: MultiplayerMatch,
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val matchId = match.matchId
-            val channelName = "#mp_$matchId"
-
-            broadcastToLobby(packetWriter.serialize(MatchDisbandPacket(matchId))).bind()
-
-            val matchChannel = channelService.findByName(channelName).bind()
-
-            channelService.getMemberIds(matchChannel.id!!).forEach { memberSessionId ->
-                val memberSession = sessionService.findById(memberSessionId).bind()
-                channelService.leaveChannel(memberSession, channelName)
-            }
-            channelService.delete(matchChannel)
-
-            delete(matchId)
-
-            session.multiplayerMatchId = -1
-            sessionService.update(session)
-
-            log.info(
-                "Match {} disbanded as the host {} has left and no players remain.",
-                matchId,
-                session.user?.username,
-            )
-        }
-    }
-
-    fun handleUserDeparture(session: Session): Result<Unit, DomainMessage> {
-        val matchId = session.multiplayerMatchId?.takeIf { it != -1 } ?: return Ok(Unit)
-
-        return binding {
-            val match =
-                findById(matchId)
-                    .mapError {
-                        log.debug("Match {} not found during departure cleanup.", matchId)
-                        return@binding
-                    }
-                    .bind()
-
-            handleMatchPart(session, match).onFailure { error ->
-                log.debug(
-                    "Error handling match part for user {} in match {} during departure cleanup: {}",
-                    session.user?.username,
-                    matchId,
-                    error,
-                )
-            }
-        }
-    }
-
-    @EventListener
-    fun onUserLogout(event: UserLogoutEvent) {
-        handleUserDeparture(event.session)
-    }
-
-    fun changeMods(session: Session, mods: Int): Result<Unit, DomainMessage> {
-        return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-            val match = findById(matchId).bind()
-            val isHost = match.hostUserId == user.id
-
-            val speedChangingMask = Mods.SPEED_CHANGING.toInt()
-
-            // In freemod mode, split mods between match (speed-changing) and slot
-            // (non-speed-changing)
-            if (match.freemodsEnabled) {
-                if (isHost) {
-                    // Apply the speed changing mods to the match
-                    match.mods = (mods and speedChangingMask).toUInt()
-                    update(match)
-                }
-
-                val slot = findSlotBySessionId(matchId, sessionId).bind()
-
-                // And apply the non-speed changing mods to the slot
-                slot.mods = (mods and speedChangingMask.inv()).toUInt()
-                updateSlot(matchId, slot).bind()
-
-                // Set the session's mode if needed
-                if (session.gamemode != match.mode) {
-                    session.gamemode = match.mode
-                    sessionService.update(session)
-                }
-
-                broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-            } else if (isHost) {
-                // In non-freemod mode, only host can change mods and applies to all
-                match.mods = mods.toUInt()
-                update(match)
-
-                // Set all sessions' mode if needed
-                if (session.gamemode != match.mode) {
-                    fetchAllSlots(matchId)
-                        .filter { it.userId != -1 && it.sessionId != null }
-                        .forEach { slot ->
-                            val slotSession = sessionService.findById(slot.sessionId!!).bind()
-                            slotSession.gamemode = match.mode
-                            slotSession.mods = mods
-                            sessionService.update(slotSession)
-                        }
-                }
-                broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-            } else {
-                Err(NotHost).bind()
-            }
-
-            log.info(
-                "User {} changed mods to {} in match {}",
-                session.user?.username,
-                Mods.fromBitmask(mods.toUInt()),
-                matchId,
-            )
-        }
-    }
-
-    fun changePassword(session: Session, password: String?): Result<Unit, DomainMessage> {
-        return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-
-            val match = findById(matchId).bind()
-
-            // Only the host can change the password
-            if (match.hostUserId != user.id) Err(NotHost).bind()
-
-            match.matchPassword = password
-            update(match)
-
-            broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-
-            log.info(
-                "User {} changed the match password in match {}",
-                session.user?.username,
-                matchId,
-            )
-        }
-    }
-
-    fun changeSettings(
-        session: Session,
-        packet: MatchChangeSettingsPacket,
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val match = findById(matchId).bind()
-
-            // Only the host can change match settings
-            if (match.hostUserId != user.id) Err(NotHost).bind()
-
-            val newSettings = packet.match
-            var needSlotUpdates = false
-            val slots = fetchAllSlots(matchId)
-
-            val teamTypeChanged = newSettings.teamType.value != match.teamType.value
-            val isVersus =
-                newSettings.teamType == MatchTeamType.TEAM_VS ||
-                    newSettings.teamType == MatchTeamType.TAG_TEAM_VS
-
-            // If we switch to a versus mode, split all players into teams
-            if (teamTypeChanged && isVersus) {
-                needSlotUpdates = true
-                var teamIndex = 0
-                slots.forEach { slot ->
-                    if (slot.userId == -1) return@forEach
-
-                    slot.team =
-                        if (teamIndex % 2 != 0) pe.nanamochi.banchus.domain.enums.SlotTeam.BLUE
-                        else pe.nanamochi.banchus.domain.enums.SlotTeam.RED
-                    teamIndex++
-                }
-            }
-
-            // Copy bancho behavior
-            // If freemod is activated, transfer match mods to slots
-            // If freemod is disabled, clear slot mods
-            if (newSettings.freemodsEnabled != match.freemodsEnabled) {
-                needSlotUpdates = true
-                var modsToApply = 0u
-
-                if (newSettings.freemodsEnabled) {
-                    val speedMask = Mods.SPEED_CHANGING
-                    modsToApply = match.mods and speedMask.inv()
-                }
-
-                slots.filter { it.userId != -1 }.forEach { it.mods = modsToApply }
-            }
-
-            // Update slots if needed
-            if (needSlotUpdates) {
-                slots.filter { it.userId != -1 }.forEach { updateSlot(matchId, it).bind() }
-            }
-
-            match.apply {
-                matchName = newSettings.name
-                matchPassword = newSettings.password
-                beatmapName = newSettings.beatmapName
-                beatmapId = newSettings.beatmapId
-                beatmapMd5 = newSettings.beatmapMd5
-                mode = pe.nanamochi.banchus.domain.enums.Mode.fromValue(newSettings.mode.value)
-
-                // Handle mod transfer logic if freemod was just enabled
-                if (newSettings.freemodsEnabled && !freemodsEnabled) {
-                    val speedMask = Mods.SPEED_CHANGING
-                    mods = mods and speedMask
-                } else {
-                    mods = newSettings.mods
-                }
-
-                scoringType =
-                    pe.nanamochi.banchus.domain.enums.ScoringType.fromValue(
-                        newSettings.scoringType.value
-                    )
-                teamType =
-                    pe.nanamochi.banchus.domain.enums.MatchTeamType.fromValue(
-                        newSettings.teamType.value
-                    )
-                freemodsEnabled = newSettings.freemodsEnabled
-                randomSeed = newSettings.randomSeed.toInt()
-            }
-
-            update(match)
-            broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-
-            log.info("User {} changed settings in match {}.", session.user?.username, matchId)
-        }
-    }
-
-    fun changeSlot(session: Session, packet: MatchChangeSlotPacket): Result<Unit, DomainMessage> {
-        return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
-            if (user.isSilenced) Err(UserSilenced).bind()
-
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val match = findById(matchId).bind()
-
-            val currentSlot = findSlotBySessionId(matchId, session.id!!).bind()
-            val targetSlot = findSlotById(matchId, packet.slotId).bind()
-
-            if (SlotStatus.fromValue(targetSlot.status.toInt()) != SlotStatus.OPEN) {
-                Err(SlotNotAvailable).bind()
-            }
-
-            transferSlotData(currentSlot, targetSlot)
-            updateSlot(matchId, targetSlot).bind()
-            resetSlot(match, currentSlot.slotId).bind()
-            broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-
-            log.info(
-                "User {} moved from slot {} to slot {} in match {}.",
-                session.user?.username,
-                currentSlot.slotId,
-                targetSlot.slotId,
-                matchId,
-            )
-        }
-    }
-
-    fun changeSlotStatus(session: Session, newStatus: SlotStatus): Result<Unit, DomainMessage> {
-        return binding {
-            val user = session.user ?: Err(UserNotFound).bind()
-            if (user.isSilenced) Err(UserSilenced).bind()
-
-            val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-            val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-            val slot = findSlotBySessionId(matchId, sessionId).bind()
-            val currentStatus = SlotStatus.fromValue(slot.status.toInt())
-
-            val allowed =
-                when (newStatus) {
-                    SlotStatus.READY,
-                    SlotStatus.NO_BEATMAP -> currentStatus == SlotStatus.NOT_READY
-                    SlotStatus.NOT_READY -> currentStatus == SlotStatus.READY
-                    else -> false
-                }
-
-            if (!allowed) {
-                Err(ChangeSlotNotAllowed).bind()
-            }
-
-            slot.status = newStatus.value.toByte()
-            updateSlot(matchId, slot).bind()
-
-            broadcastMatchUpdates(matchId, sendToLobby = true).bind()
-
-            log.info(
-                "User {} changed slot status to {} in match {}.",
-                session.user?.username,
-                newStatus,
-                matchId,
-            )
-        }
-    }
-
-    fun lockSlot(session: Session, packet: MatchLockPacket): Result<Unit, DomainMessage> = binding {
-        val user = session.user ?: Err(UserNotFound).bind()
-        val matchId = session.multiplayerMatchId ?: Err(NotInMatch).bind()
-        val match = findById(matchId).bind()
-
-        // Only the host can edit slots
-        if (match.hostUserId != user.id) Err(NotHost).bind()
-
-        val slot = findSlotById(matchId, packet.slotId).bind()
-
-        // If the slot is occupied, kick the player
-        val extraSessions =
-            if (slot.userId != -1 && slot.userId != user.id) {
-                val slotSession = sessionService.findPrimaryByUserId(slot.userId).bind()
-
-                channelService.leaveChannel(slotSession, "#mp_${match.matchId}")
-                packetBundleService.enqueue(
-                    slotSession.id!!,
-                    PacketBundle(packetWriter.serialize(ChannelRevokedPacket("#multiplayer"))),
+                streamService.broadcastMessage(
+                    StreamName.User(ghostSessionId),
+                    MatchJoinFailPacket(),
                 )
 
-                slotSession.multiplayerMatchId = -1
-                sessionService.update(slotSession)
+                val updatedSlots =
+                    existingSlots.map { slot ->
+                        if (slot.user?.sessionId == ghostSessionId) {
+                            slot.apply { clear() }
+                        } else slot
+                    }
+                multiplayerRepository.updateAllSlots(matchId, updatedSlots)
 
-                listOf(slotSession.id!!)
-            } else if (slot.userId == user.id) {
-                Err(SlotNotAvailable).bind()
-            } else {
-                emptyList()
+                streamService.leave(ghostSessionId, StreamName.Multiplayer(matchId))
+                streamService.leave(ghostSessionId, StreamName.Multiplaying(matchId))
+                channelService.leave(ghostSessionId, ChannelName.Multiplayer(matchId))
             }
 
-        // Toggle lock status
-        // If currently locked, unlock; otherwise, lock
-        toggleSlotLock(matchId, packet.slotId).bind()
+        streamService.leave(session.sessionId, StreamName.Lobby)
+        val slotsAfterJoin =
+            multiplayerRepository.join(session.identity(), matchId)
+                ?: Err(MultiplayerMatchFull).bind()
 
-        // Broadcast updates to all players
-        broadcastMatchUpdates(matchId, sendToLobby = true, extraSessionIds = extraSessions).bind()
-
-        log.info(
-            "User {} changed lock status of slot {} in match {}.",
-            session.user?.username,
-            packet.slotId,
-            matchId,
-        )
-    }
-
-    private fun transferSlotData(from: MultiplayerSlot, to: MultiplayerSlot) {
-        to.apply {
-            userId = from.userId
-            sessionId = from.sessionId
-            status = from.status
-            team = from.team
-            mods = from.mods
-            isLoaded = from.isLoaded
-            isSkipped = from.isSkipped
-        }
-    }
-
-    private fun resetSlot(match: MultiplayerMatch, slotId: Int): Result<Unit, DomainMessage> {
-        val slot = match.slots.find { it.slotId == slotId } ?: return Err(SlotNotFound)
-
-        slot.apply {
-            userId = -1
-            sessionId = null
-            status = SlotStatus.OPEN.value.toByte()
-            team = pe.nanamochi.banchus.domain.enums.SlotTeam.NEUTRAL
-            mods = 0u
-            isLoaded = false
-            isSkipped = false
-        }
-
-        return updateSlot(match.matchId, slot)
-    }
-
-    fun toggleSlotLock(matchId: Int, slotId: Int): Result<Unit, DomainMessage> = binding {
-        val match = findById(matchId).bind()
-        val slot = match.slots.find { it.slotId == slotId } ?: Err(SlotNotFound).bind()
-
-        val wasLocked = SlotStatus.fromValue(slot.status.toInt()) == SlotStatus.LOCKED
-
-        resetSlot(match, slotId).bind()
-
-        // Reset and lock/unlock slot
-        if (!wasLocked) {
-            slot.status = SlotStatus.LOCKED.value.toByte()
-            updateSlot(matchId, slot).bind()
-        }
-
-        log.info(
-            "Slot {} in match {} has been {} by the host.",
-            slotId,
-            matchId,
-            if (wasLocked) "unlocked" else "locked",
-        )
-    }
-
-    fun broadcastToMatch(
-        match: MultiplayerMatch,
-        packet: BanchoPacket.Server,
-        slotStatusFlag: Int,
-    ) {
-        val payload = packetWriter.serialize(packet)
-        val bundle = PacketBundle(payload)
-
-        match.slots.forEach { slot ->
-            if (slot.userId != -1 && (slot.status.toInt() and slotStatusFlag) != 0) {
-                slot.sessionId?.let { id -> packetBundleService.enqueue(id, bundle) }
-            }
-        }
-    }
-
-    fun broadcastMatchUpdates(
-        matchId: Int,
-        sendToLobby: Boolean,
-        extraSessionIds: List<UUID> = emptyList(),
-    ): Result<Unit, DomainMessage> {
-        return binding {
-            val match = findById(matchId).bind()
-            val matchData = match.toMatch()
-
-            val packetWithPassword = MatchUpdatePacket(match = matchData, shouldSendPassword = true)
-            val payloadWithPassword = packetWriter.serialize(packetWithPassword)
-            val bundleWithPassword = PacketBundle(payloadWithPassword)
-
-            extraSessionIds.forEach { id -> packetBundleService.enqueue(id, bundleWithPassword) }
-
-            broadcastToMatch(match, packetWithPassword, SlotStatus.HAS_PLAYER)
-
-            if (sendToLobby) {
-                val lobbyPayload =
-                    packetWriter.serialize(
-                        MatchUpdatePacket(match = matchData, shouldSendPassword = false)
-                    )
-                broadcastToLobby(lobbyPayload).bind()
-            }
-        }
-    }
-
-    fun broadcastToLobby(data: ByteArray): Result<Unit, DomainMessage> {
-        return binding {
-            val lobby = channelService.findByName("#lobby").bind()
-            channelService.getMemberIds(lobby.id!!).toList().forEach { id ->
-                packetBundleService.enqueue(id, PacketBundle(data))
-            }
-        }
-    }
-
-    fun sendMatchJoinFail(session: Session, announceMessage: String?) {
-        val sessionId = session.id ?: return
-
-        packetBundleService.enqueue(
-            sessionId,
-            PacketBundle(packetWriter.serialize(MatchJoinFailPacket())),
-        )
-
-        announceMessage?.let { message ->
-            packetBundleService.enqueue(
-                sessionId,
-                PacketBundle(packetWriter.serialize(AnnouncePacket(message))),
+        matchEventService.create(
+            MatchEvent(
+                match = matchService.fetchOneById(matchId).bind(),
+                eventType = MatchEventType.MATCH_USER_JOINED,
+                user = userService.fetchOneById(session.userId).bind(),
             )
-        }
-    }
-
-    private fun MultiplayerMatch.toMatch(): Match {
-        return Match(
-            id = this.matchId,
-            inProgress = this.status == MatchStatus.PLAYING,
-            type = MatchType.STANDARD,
-            mods = this.mods,
-            name = this.matchName,
-            password = this.matchPassword,
-            beatmapName = this.beatmapName,
-            beatmapId = this.beatmapId,
-            beatmapMd5 = this.beatmapMd5,
-            hostId = this.hostUserId,
-            mode = Mode.fromValue(this.mode.value),
-            scoringType = ScoringType.fromValue(this.scoringType.value),
-            teamType = MatchTeamType.fromValue(this.teamType.value),
-            freemodsEnabled = this.freemodsEnabled,
-            randomSeed = this.randomSeed.toUInt(),
-            slots = this.slots.map { it.toSlot(this.freemodsEnabled) },
         )
+        streamService.join(session.sessionId, StreamName.Multiplayer(matchId))
+        channelService.join(session, ChannelName.Multiplayer(matchId))
+
+        broadcastUpdate(mpMatch, slotsAfterJoin)
+
+        Pair(mpMatch, slotsAfterJoin)
     }
 
-    private fun MultiplayerSlot.toSlot(matchFreemods: Boolean): MatchSlot {
-        return MatchSlot(
-            userId = this.userId,
-            status = this.status,
-            team = SlotTeam.fromValue(this.team.value),
-            mods = if (matchFreemods) this.mods else 0u,
-        )
-    }
+    fun leave(session: SessionIdentity, matchId: Long? = null): Result<Unit, DomainMessage> =
+        binding {
+            val matchId =
+                matchId
+                    ?: multiplayerRepository.fetchSessionMatchId(session.sessionId)
+                    ?: return@binding
 
-    private fun Match.toMultiplayerMatch(): MultiplayerMatch {
-        return MultiplayerMatch(
-            matchName = this.name,
-            matchPassword = this.password,
-            beatmapName = this.beatmapName,
-            beatmapId = this.beatmapId,
-            beatmapMd5 = this.beatmapMd5,
-            hostUserId = this.hostId,
-            mode = pe.nanamochi.banchus.domain.enums.Mode.fromValue(this.mode.value),
-            mods = this.mods,
-            scoringType =
-                pe.nanamochi.banchus.domain.enums.ScoringType.fromValue(this.scoringType.value),
-            teamType =
-                pe.nanamochi.banchus.domain.enums.MatchTeamType.fromValue(this.teamType.value),
-            freemodsEnabled = this.freemodsEnabled,
-            randomSeed = this.randomSeed.toInt(),
-            status = if (this.inProgress) MatchStatus.PLAYING else MatchStatus.WAITING,
-            slots =
-                this.slots
-                    .mapIndexed { index, matchSlot ->
-                        MultiplayerSlot(
-                            slotId = index,
-                            userId = matchSlot.userId,
-                            status = matchSlot.status,
-                            team =
-                                pe.nanamochi.banchus.domain.enums.SlotTeam.fromValue(
-                                    matchSlot.team.value
-                                ),
-                            mods = matchSlot.mods,
+            val mpMatch = fetchOne(matchId) ?: return@binding
+
+            val (userCount, slots) =
+                multiplayerRepository.leave(session.sessionId, matchId) ?: return@binding
+
+            matchEventService.create(
+                MatchEvent(
+                    match = matchService.fetchOneById(matchId).bind(),
+                    eventType = MatchEventType.MATCH_USER_LEFT,
+                    user = userService.fetchOneById(session.userId).bind(),
+                )
+            )
+
+            streamService.leave(session.sessionId, StreamName.Multiplayer(matchId))
+            streamService.leave(session.sessionId, StreamName.Multiplaying(matchId))
+            channelService.leave(session.sessionId, ChannelName.Multiplayer(matchId))
+
+            if (userCount == 0) {
+                delete(matchId)
+            } else {
+                if (mpMatch.hostUserId == session.userId) {
+                    val nextHost = slots.firstNotNullOfOrNull { it.user }
+
+                    if (nextHost != null) {
+                        mpMatch.hostUserId = nextHost.userId
+                        multiplayerRepository.update(mpMatch, false)
+
+                        matchEventService.create(
+                            MatchEvent(
+                                match = matchService.fetchOneById(matchId).bind(),
+                                eventType = MatchEventType.MATCH_HOST_ASSIGNMENT,
+                                user = userService.fetchOneById(nextHost.userId).bind(),
+                            )
                         )
                     }
-                    .toMutableList(),
+                }
+
+                broadcastUpdate(mpMatch, slots)
+            }
+        }
+
+    fun updateBancho(
+        matchId: Long,
+        packet: MatchChangeSettingsPacket,
+        checkHost: Int? = null,
+    ): Result<MultiplayerMatch, DomainMessage> = binding {
+        val mpMatch = multiplayerRepository.fetchOne(matchId).toResultOr { MatchNotFound }.bind()
+
+        checkHost?.let { hostId ->
+            val isRef = isReferee(matchId, hostId)
+            if (mpMatch.hostUserId != hostId && !isRef) {
+                Err(MultiplayerUnauthorized).bind()
+            }
+        }
+
+        val updateName = mpMatch.name != packet.match.name
+        val updatePrivate = mpMatch.password?.isEmpty() != packet.match.password?.isEmpty()
+
+        mpMatch.name = packet.match.name
+        mpMatch.password = packet.match.password
+
+        if (mpMatch.beatmapName != packet.match.beatmapName) {
+            mpMatch.beatmapName = packet.match.beatmapName
+            mpMatch.beatmapMd5 = packet.match.beatmapMd5
+        }
+        mpMatch.beatmapId = packet.match.beatmapId
+
+        val slots = multiplayerRepository.fetchAllSlots(matchId).toMutableList()
+        val newMode = Mode.fromValue(packet.match.mode.value)
+        if (newMode.value != mpMatch.mode) {
+            val userIds = slots.mapNotNull { it.user?.userId }
+            updateMatchMembersPresences(userIds, newMode)
+        }
+
+        mpMatch.mode = newMode.value
+        mpMatch.winCondition = packet.match.scoringType.value.toUByte()
+        mpMatch.teamType = packet.match.teamType.value.toUByte()
+        mpMatch.randomSeed = packet.match.randomSeed.toInt()
+
+        val freemodChanged = mpMatch.freemodEnabled != packet.match.freemodsEnabled
+        if (freemodChanged) {
+            mpMatch.freemodEnabled = packet.match.freemodsEnabled
+
+            if (mpMatch.freemodEnabled) {
+                val currentMods = Mods.fromBitmask(mpMatch.mods)
+                val (slotMods, matchMods) = splitMods(currentMods)
+
+                mpMatch.mods = Mods.toBitmask(matchMods)
+
+                val slotModsBitmask = Mods.toBitmask(slotMods)
+                slots.forEach { slot ->
+                    if (slot.user != null) {
+                        slot.mods = slotModsBitmask
+                    }
+                }
+                multiplayerRepository.updateAllSlots(matchId, slots)
+            }
+        }
+
+        val updatedMatch = multiplayerRepository.update(mpMatch, updateName || updatePrivate)
+        broadcastUpdate(updatedMatch, slots)
+
+        updatedMatch
+    }
+
+    fun transferHostToSlot(
+        matchId: Long,
+        slotId: Int,
+        checkHost: Int?,
+    ): Result<Unit, DomainMessage> = binding {
+        if (slotId !in 0..15) Err(SlotNotFound).bind()
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+
+        checkHost?.let { hostId ->
+            val isReferee = isReferee(matchId, hostId)
+            val isCurrentHost = mpMatch.hostUserId == hostId
+
+            if (!isReferee && !isCurrentHost) {
+                Err(MultiplayerUnauthorized).bind()
+            }
+        }
+
+        val slots = fetchAllSlots(matchId)
+        val newHostUserId = slots.getOrNull(slotId)?.user?.userId ?: Err(SlotNotFound).bind()
+
+        mpMatch.hostUserId = newHostUserId
+        multiplayerRepository.update(mpMatch, false)
+        broadcastUpdate(mpMatch, slots)
+
+        matchEventService.create(
+            MatchEvent(
+                match = matchService.fetchOneById(matchId).bind(),
+                eventType = MatchEventType.MATCH_HOST_ASSIGNMENT,
+                user = userService.fetchOneById(newHostUserId).bind(),
+            )
         )
+    }
+
+    fun transferHostToUser(
+        matchId: Long,
+        userId: Int,
+        checkReferee: Int?,
+    ): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+
+        checkReferee?.let { refereeId ->
+            val isReferee = isReferee(matchId, refereeId)
+            val isCurrentHost = mpMatch.hostUserId == refereeId
+
+            if (!isReferee && !isCurrentHost) {
+                Err(MultiplayerUnauthorized).bind()
+            }
+        }
+
+        val slots = fetchAllSlots(matchId)
+        slots.find { it.user?.userId == userId } ?: Err(NotInMatch).bind()
+
+        mpMatch.hostUserId = userId
+        multiplayerRepository.update(mpMatch, false)
+        broadcastUpdate(mpMatch, slots)
+
+        matchEventService.create(
+            MatchEvent(
+                match = matchService.fetchOneById(matchId).bind(),
+                eventType = MatchEventType.MATCH_HOST_ASSIGNMENT,
+                user = userService.fetchOneById(userId).bind(),
+            )
+        )
+    }
+
+    fun clearHost(matchId: Long): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        val slots = fetchAllSlots(matchId)
+        mpMatch.hostUserId = 0
+        multiplayerRepository.update(mpMatch, false)
+        broadcastUpdate(mpMatch, slots)
+    }
+
+    fun swapSlots(matchId: Long, fromSlotId: Int, toSlotId: Int): Result<Unit, DomainMessage> =
+        binding {
+            val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+            val slots = fetchAllSlots(matchId).toMutableList()
+
+            val fromSlot = slots[fromSlotId]
+            val toSlot = slots[toSlotId]
+
+            slots[fromSlotId] = toSlot
+            slots[toSlotId] = fromSlot
+
+            multiplayerRepository.updateSlots(
+                matchId,
+                listOf(fromSlotId to toSlot, toSlotId to fromSlot),
+            )
+            broadcastUpdate(mpMatch, slots)
+        }
+
+    fun swapSessionSlots(
+        matchId: Long,
+        targetSlotId: Int,
+        sessionId: UUID,
+    ): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        val slots = fetchAllSlots(matchId).toMutableList()
+
+        val (userSlotId, userSlot) =
+            slots.withIndex().find { (_, slot) -> slot.user?.sessionId == sessionId }
+                ?: Err(NotInMatch).bind()
+
+        val targetSlot = slots[targetSlotId]
+        slots[targetSlotId] = userSlot
+        slots[userSlotId] = targetSlot
+
+        multiplayerRepository.updateSlots(
+            matchId,
+            listOf(userSlotId to targetSlot, targetSlotId to userSlot),
+        )
+        broadcastUpdate(mpMatch, slots)
+    }
+
+    fun setSessionSlotStatus(
+        matchId: Long,
+        sessionId: UUID,
+        status: SlotStatus,
+        checkHost: Int? = null,
+    ): Result<Unit, DomainMessage> = binding {
+        val (slotId, _) = fetchSessionSlot(matchId, sessionId).bind()
+        setSlotStatus(matchId, slotId, status, checkHost).bind()
+    }
+
+    fun setSlotStatus(
+        matchId: Long,
+        slotId: Int,
+        status: SlotStatus,
+        checkHost: Int?,
+    ): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+
+        checkHost?.let { hostId ->
+            val isRef = isReferee(matchId, hostId)
+            val isHost = mpMatch.hostUserId == hostId
+            if (!isRef && !isHost) {
+                Err(MultiplayerUnauthorized).bind()
+            }
+        }
+
+        val slots = fetchAllSlots(matchId)
+        val slot = slots.getOrNull(slotId) ?: Err(SlotNotFound).bind()
+
+        val isLocking = status == SlotStatus.LOCKED
+        val isCurrentlyLocked = slot.status == SlotStatus.LOCKED
+
+        slot.user?.let { slotUser ->
+            if (isLocking) {
+                slot.apply { clear() }
+
+                sessionService.fetchOne(slotUser.sessionId)?.let { session ->
+                    leave(session.identity(), matchId)
+                    streamService.broadcastMessage(
+                        StreamName.User(session.sessionId),
+                        MatchJoinFailPacket(),
+                    )
+                    streamService.broadcastMessage(
+                        StreamName.User(session.sessionId),
+                        AnnouncePacket("You have been kicked out of the match!"),
+                    )
+                }
+            }
+        }
+
+        if (isCurrentlyLocked && isLocking) {
+            slot.status = SlotStatus.NONE
+        } else {
+            slot.status = status
+        }
+
+        multiplayerRepository.updateSlot(matchId, slotId, slot)
+
+        val updatedSlots = fetchAllSlots(matchId)
+        broadcastUpdate(mpMatch, updatedSlots)
+    }
+
+    fun setUserTeam(matchId: Long, userId: Int, team: SlotTeam): Result<Unit, DomainMessage> =
+        binding {
+            val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+            val slots = fetchAllSlots(matchId)
+
+            val (slotId, slot) =
+                slots.withIndex().find { (_, s) -> s.user?.userId == userId }
+                    ?: Err(NotInMatch).bind()
+
+            slot.team = team.value.toUByte()
+            multiplayerRepository.updateSlot(matchId, slotId, slot)
+            val updatedSlots = fetchAllSlots(matchId)
+            broadcastUpdate(mpMatch, updatedSlots)
+        }
+
+    fun switchTeams(matchId: Long, sessionId: UUID): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        val slots = fetchAllSlots(matchId)
+
+        val (slotId, slot) =
+            slots.withIndex().find { (_, s) -> s.user?.sessionId == sessionId }
+                ?: Err(NotInMatch).bind()
+
+        val team = SlotTeam.fromValue(slot.team.toInt())
+        slot.team =
+            when (team) {
+                    SlotTeam.NEUTRAL -> SlotTeam.BLUE
+                    SlotTeam.BLUE -> SlotTeam.RED
+                    SlotTeam.RED -> SlotTeam.BLUE
+                }
+                .value
+                .toUByte()
+        multiplayerRepository.updateSlot(matchId, slotId, slot)
+
+        val updatedSlots = fetchAllSlots(matchId) // TODO: is correct?
+        broadcastUpdate(mpMatch, updatedSlots)
+    }
+
+    fun changeMods(
+        matchId: Long,
+        mods: List<Mods>,
+        slotUser: SessionIdentity?,
+    ): Result<Unit, DomainMessage> = binding {
+        val mpMatch = multiplayerRepository.fetchOne(matchId).toResultOr { MatchNotFound }.bind()
+
+        slotUser?.let { user ->
+            val isHost = mpMatch.hostUserId == user.userId
+            val isRef = isReferee(matchId, user.userId)
+
+            if (!isHost && !mpMatch.freemodEnabled && !isRef) {
+                Err(MultiplayerUnauthorized).bind<Unit>()
+            }
+        }
+
+        val matchMode = Mode.fromValue(mpMatch.mode)
+        val slots = multiplayerRepository.fetchAllSlots(matchId).toMutableList()
+
+        if (mpMatch.freemodEnabled) {
+            val (newSlotMods, matchMods) = splitMods(mods)
+            mpMatch.mods = Mods.toBitmask(matchMods)
+
+            slotUser?.let { user ->
+                val slotIndex = slots.indexOfFirst { it.user?.sessionId == user.sessionId }
+                if (slotIndex == -1) Err(NotInMatch).bind<Unit>()
+
+                val slot = slots[slotIndex]
+                val oldSlotMods = slot.mods
+                slot.mods = Mods.toBitmask(newSlotMods)
+
+                multiplayerRepository.updateSlot(matchId, slotIndex, slot)
+
+                val affectedMods = oldSlotMods xor Mods.toBitmask(newSlotMods)
+                val reloadStats = affectedMods.hasAny(Mods.RELAX.value or Mods.AUTOPILOT.value)
+                if (reloadStats) {
+                    updateMatchMembersPresences(listOf(user.userId), matchMode)
+                }
+            }
+                ?: run {
+                    mpMatch.mode = matchMode.value
+
+                    val updateUsers =
+                        slots.mapNotNull { slot ->
+                            slot.user?.let { user ->
+                                val oldSlotMods = slot.mods
+                                slot.mods = Mods.toBitmask(newSlotMods)
+                                val affected = oldSlotMods xor Mods.toBitmask(newSlotMods)
+                                if (affected.hasAny(Mods.RELAX.value or Mods.AUTOPILOT.value))
+                                    user.userId
+                                else null
+                            }
+                        }
+
+                    updateMatchMembersPresences(updateUsers, matchMode)
+                    multiplayerRepository.updateAllSlots(matchId, slots)
+                }
+        } else {
+            mpMatch.mods = Mods.toBitmask(mods)
+
+            val userIds = slots.mapNotNull { it.user?.userId }
+            updateMatchMembersPresences(userIds, matchMode)
+        }
+
+        multiplayerRepository.update(mpMatch, false)
+        broadcastUpdate(mpMatch, slots)
+
+        Ok(Unit)
+    }
+
+    fun splitMods(mods: List<Mods>): Pair<List<Mods>, List<Mods>> {
+        val modsValue = Mods.toBitmask(mods)
+        val speedModsMask = Mods.HALF_TIME.value or Mods.DOUBLE_TIME.value or Mods.NIGHTCORE.value
+
+        val matchModsValue = modsValue and speedModsMask
+        val matchMods = Mods.fromBitmask(matchModsValue)
+
+        val slotModsValue = modsValue and matchModsValue.inv()
+        val slotMods = Mods.fromBitmask(slotModsValue)
+
+        return Pair(slotMods, matchMods)
+    }
+
+    fun invitePlayerToMatch(
+        matchId: Long,
+        sender: Session,
+        targetUserId: Int,
+    ): Result<Unit, DomainMessage> = binding {
+        val mpMatch = multiplayerRepository.fetchOne(matchId).toResultOr { MatchNotFound }.bind()
+
+        val inviteText = mpMatch.createInviteMessage()
+        val targetSessions = sessionService.fetchByUserId(targetUserId)
+
+        targetSessions.forEach { targetSession ->
+            val message =
+                MessagePacket(
+                    sender = sender.username,
+                    senderId = sender.userId,
+                    content = inviteText,
+                    target = targetSession.username,
+                )
+            // chatService.broadcastPrivateMessage(targetSession.sessionId, ircMessage)
+        }
+
+        Ok(Unit)
+    }
+
+    fun startGame(matchId: Long, checkHost: Int?): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        checkHost?.let { hostId ->
+            val isRef = isReferee(matchId, hostId)
+            val isHost = mpMatch.hostUserId == hostId
+            if (!isRef && !isHost) {
+                Err(MultiplayerUnauthorized).bind()
+            }
+        }
+        mpMatch.inProgress = true
+        val slots = fetchAllSlots(matchId)
+        slots.forEach { slot ->
+            val status = slot.status
+            slot.user?.let { slotUser ->
+                if (status == SlotStatus.READY || status == SlotStatus.NOT_READY) {
+                    slot.status = SlotStatus.PLAYING
+                    streamService.join(slotUser.sessionId, StreamName.Multiplaying(matchId))
+                } else {
+                    streamService.leave(slotUser.sessionId, StreamName.Multiplaying(matchId))
+                }
+            }
+        }
+
+        val game =
+            matchGameService
+                .create(
+                    MatchGame(
+                        match = matchService.fetchOneById(matchId).bind(),
+                        beatmapId = mpMatch.beatmapId,
+                        mode = Mode.fromValue(mpMatch.mode),
+                        mods = mpMatch.mods.toInt(),
+                        winCondition = mpMatch.winCondition.toInt(),
+                        teamType = mpMatch.teamType.toInt(),
+                    )
+                )
+                .bind()
+        matchEventService.create(
+            MatchEvent(
+                match = matchService.fetchOneById(matchId).bind(),
+                eventType = MatchEventType.MATCH_GAME_PLAYTHROUGH,
+                gameId = game.id,
+                user = userService.fetchOneById(1).bind(), // BanchoBot
+            )
+        )
+        mpMatch.lastGameId = game.id
+        multiplayerRepository.update(mpMatch, false)
+        multiplayerRepository.updateAllSlots(matchId, slots)
+
+        streamService.broadcastMessage(StreamName.Lobby, MatchUpdatePacket(mpMatch.asBancho(slots)))
+        streamService.broadcastMessage(
+            StreamName.Multiplayer(matchId),
+            MatchStartPacket(mpMatch.asBancho(slots)),
+        )
+    }
+
+    fun endGame(matchId: Long): Result<Unit, DomainMessage> = binding {
+        streamService.broadcastMessage(StreamName.Multiplaying(matchId), MatchCompletePacket())
+        matchGameService.gameEnded(matchId)
+
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        val slots = fetchAllSlots(matchId)
+        mpMatch.inProgress = false
+        slots.forEach { slot -> slot.user?.let { slot.status = SlotStatus.NOT_READY } }
+
+        multiplayerRepository.update(mpMatch, false)
+        multiplayerRepository.updateAllSlots(matchId, slots)
+        broadcastUpdate(mpMatch, slots)
+    }
+
+    fun lockMatch(matchId: Long): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        val slots = fetchAllSlots(matchId)
+        slots.forEach { slot ->
+            if (slot.user == null) {
+                slot.status = SlotStatus.LOCKED
+            }
+        }
+        multiplayerRepository.updateAllSlots(matchId, slots)
+        broadcastUpdate(mpMatch, slots)
+    }
+
+    fun unlockMatch(matchId: Long): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        val slots = fetchAllSlots(matchId)
+        slots.forEach { slot ->
+            if (slot.status == SlotStatus.LOCKED) {
+                slot.status = SlotStatus.NONE
+            }
+        }
+        multiplayerRepository.updateAllSlots(matchId, slots)
+        broadcastUpdate(mpMatch, slots)
+    }
+
+    fun resizeMatch(matchId: Long, newSize: Int): Result<Unit, DomainMessage> = binding {
+        val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
+        val slots = fetchAllSlots(matchId).toMutableList()
+
+        val players = slots.filter { it.user != null }
+        slots.forEachIndexed { i, slot ->
+            slot.clear()
+            if (i >= newSize) {
+                slot.status = SlotStatus.LOCKED
+            } else {
+                slot.status = SlotStatus.NONE
+            }
+        }
+
+        players.take(newSize).forEachIndexed { i, playerSlot -> slots[i] = playerSlot }
+
+        multiplayerRepository.updateAllSlots(matchId, slots)
+        broadcastUpdate(mpMatch, slots)
+    }
+
+    fun playerLoaded(session: Session): Result<Boolean, DomainMessage> = binding {
+        val matchId =
+            multiplayerRepository.fetchSessionMatchId(session.sessionId) ?: Err(NotInMatch).bind()
+
+        val (allLoaded, _) =
+            changePlayingState(
+                    matchId = matchId,
+                    slotSessionId = session.sessionId,
+                    mutation = { it.loaded = true },
+                    predicate = { it.loaded },
+                )
+                .bind()
+
+        if (allLoaded) {
+            streamService.broadcastMessage(
+                StreamName.Multiplaying(matchId),
+                MatchAllPlayersLoadedPacket(),
+            )
+        }
+
+        allLoaded
+    }
+
+    fun skipRequested(session: Session): Result<Boolean, DomainMessage> = binding {
+        val matchId =
+            multiplayerRepository.fetchSessionMatchId(session.sessionId) ?: Err(NotInMatch).bind()
+
+        val (allSkipped, slotId) =
+            changePlayingState(
+                    matchId = matchId,
+                    slotSessionId = session.sessionId,
+                    mutation = { it.skipped = true },
+                    predicate = { it.skipped },
+                )
+                .bind()
+
+        val packet = if (allSkipped) MatchSkipPacket() else MatchPlayerSkippedPacket(slotId)
+
+        streamService.broadcastMessage(StreamName.Multiplaying(matchId), packet)
+
+        allSkipped
+    }
+
+    fun playerFailed(session: Session): Result<Boolean, DomainMessage> = binding {
+        val matchId =
+            multiplayerRepository.fetchSessionMatchId(session.sessionId) ?: Err(NotInMatch).bind()
+
+        val (allFailed, slotId) =
+            changePlayingState(
+                    matchId = matchId,
+                    slotSessionId = session.sessionId,
+                    mutation = { it.failed = true },
+                    predicate = { it.failed },
+                )
+                .bind()
+
+        streamService.broadcastMessage(
+            StreamName.Multiplaying(matchId),
+            MatchPlayerFailedPacket(slotId),
+        )
+
+        allFailed
+    }
+
+    fun playerCompleted(session: Session): Result<Boolean, DomainMessage> = binding {
+        val matchId =
+            multiplayerRepository.fetchSessionMatchId(session.sessionId) ?: Err(NotInMatch).bind()
+
+        val (allCompleted, _) =
+            changePlayingState(
+                    matchId = matchId,
+                    slotSessionId = session.sessionId,
+                    mutation = { it.completed = true },
+                    predicate = { it.completed },
+                )
+                .bind()
+
+        if (allCompleted) {
+            endGame(matchId).bind()
+        }
+
+        allCompleted
+    }
+
+    fun updateMatchMembersPresences(
+        userIds: List<Int>,
+        newMode: Mode,
+    ): Result<Unit, DomainMessage> = binding {
+        userIds.forEach { userId ->
+            val presence = presenceService.fetchOne(userId) ?: return@forEach
+            presence.mode = newMode.value
+
+            val stats = statService.fetchOne(userId, newMode).bind()
+            val globalRank = leaderboardService.fetchGlobalRank(userId, newMode)
+
+            presence.rankedScore = stats.rankedScore.toULong()
+            presence.totalScore = stats.totalScore.toULong()
+            presence.accuracy = stats.averageAccuracy
+            presence.playcount = stats.playCount.toUInt()
+            presence.performancePoints = stats.performancePoints.toUInt()
+            presence.globalRank = globalRank
+
+            val updatedPresence = presenceService.update(presence)
+
+            updatedPresence.userPanel().forEach { packet ->
+                streamService.broadcastMessage(StreamName.Main, packet)
+            }
+        }
+    }
+
+    private fun changePlayingState(
+        matchId: Long,
+        slotSessionId: UUID,
+        mutation: (MultiplayerMatchSlot) -> Unit,
+        predicate: (MultiplayerMatchSlot) -> Boolean,
+    ): Result<Pair<Boolean, Int>, DomainMessage> = binding {
+        val slots = fetchAllSlots(matchId)
+        var playerSlotIndex: Int? = null
+
+        slots.withIndex().forEach { (index, slot) ->
+            if (slot.user?.sessionId == slotSessionId) {
+                mutation(slot)
+                slot.loaded = true
+                playerSlotIndex = index
+            }
+        }
+
+        val finalId = playerSlotIndex ?: Err(NotInMatch).bind()
+
+        multiplayerRepository.updateSlot(matchId, finalId, slots[finalId])
+
+        val allCompleted =
+            slots
+                .filter { it.user != null && it.status == SlotStatus.PLAYING }
+                .all { predicate(it) }
+
+        allCompleted to finalId
+    }
+
+    fun broadcastUpdate(mpMatch: MultiplayerMatch, slots: List<MultiplayerMatchSlot>) {
+        val matchUpdate = MatchUpdatePacket(match = mpMatch.asBancho(slots))
+        streamService.broadcastMessage(StreamName.Lobby, matchUpdate)
+        streamService.broadcastMessage(StreamName.Multiplayer(mpMatch.matchId), matchUpdate)
+    }
+
+    fun MultiplayerMatch.createInviteMessage(): String {
+        val pwdPart = if (!password.isNullOrEmpty()) "/$password" else ""
+        return "I've invited you to join my multiplayer match: [osump://$matchId$pwdPart $name]"
     }
 }

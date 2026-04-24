@@ -12,10 +12,10 @@ import java.net.InetAddress
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.domain.errors.GeolocationError
-import pe.nanamochi.banchus.domain.errors.ResolutionFailed
+import pe.nanamochi.banchus.domain.error.GeolocationError
+import pe.nanamochi.banchus.domain.error.ResolutionFailed
 import pe.nanamochi.banchus.dto.external.Geolocation
-import pe.nanamochi.banchus.infrastructure.clients.IPApiClient
+import pe.nanamochi.banchus.infrastructure.client.IPApiClient
 
 @Service
 class GeolocationService(private val ipApiClient: IPApiClient) {

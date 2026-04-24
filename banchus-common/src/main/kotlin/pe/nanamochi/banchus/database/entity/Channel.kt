@@ -2,22 +2,16 @@ package pe.nanamochi.banchus.database.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EntityListeners
 import jakarta.persistence.Id
-import jakarta.persistence.Index
 import jakarta.persistence.Table
-import java.time.Instant
 import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.UuidGenerator
 import org.hibernate.type.SqlTypes
-import org.springframework.data.annotation.CreatedDate
-import org.springframework.data.annotation.LastModifiedDate
-import org.springframework.data.jpa.domain.support.AuditingEntityListener
+import pe.nanamochi.banchus.redis.stream.StreamName
 
 @Entity
-@Table(name = "channels", indexes = [Index(name = "channels_name_idx", columnList = "name")])
-@EntityListeners(AuditingEntityListener::class)
+@Table(name = "channels")
 class Channel(
     @Id
     @JdbcTypeCode(SqlTypes.VARCHAR)
@@ -25,15 +19,75 @@ class Channel(
     @Column(name = "id", nullable = false, length = 36, updatable = false)
     var id: UUID? = null,
     @Column(name = "name", nullable = false, length = 96, unique = true) var name: String = "",
-    @Column(name = "topic", nullable = false, length = 256) var topic: String = "",
+    @Column(name = "description", nullable = false, length = 256) var description: String = "",
     @Column(name = "read_privileges", nullable = false) var readPrivileges: Int = 0,
     @Column(name = "write_privileges", nullable = false) var writePrivileges: Int = 0,
-    @Column(name = "auto_join", nullable = false) var autoJoin: Boolean = false,
-    @Column(name = "temporary", nullable = false) var temporary: Boolean = false,
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    var createdAt: Instant = Instant.now(),
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    var updatedAt: Instant = Instant.now(),
-)
+    @Column(name = "status", nullable = false) var status: Boolean = false,
+) {
+    fun canRead(privileges: Int): Boolean =
+        readPrivileges == 0 || (privileges and readPrivileges) != 0
+
+    fun canWrite(privileges: Int): Boolean =
+        writePrivileges == 0 || (privileges and writePrivileges) != 0
+
+    companion object {
+        fun spectator() =
+            Channel(name = "#spectator", description = "Spectator channel", status = true)
+
+        fun multiplayer() =
+            Channel(name = "#multiplayer", description = "Multiplayer channel", status = false)
+    }
+}
+
+sealed class ChannelName {
+    abstract fun resolve(): String
+
+    fun getMessageStream(): StreamName = StreamName.Channel(this.resolve())
+
+    fun getUpdateStream(): StreamName {
+        return when (this) {
+            is Spectator -> StreamName.Spectator(this.sessionId)
+            is Multiplayer -> StreamName.Multiplayer(this.matchId.toLong())
+            is Chat -> {
+                when (this.name) {
+                    "#plus",
+                    "#supporter",
+                    "#premium" -> StreamName.Donator
+                    "#staff" -> StreamName.Staff
+                    "#devlog" -> StreamName.Developer
+                    else -> StreamName.Main
+                }
+            }
+        }
+    }
+
+    data class Spectator(val sessionId: UUID) : ChannelName() {
+        override fun resolve(): String = "#spectator_$sessionId"
+    }
+
+    data class Multiplayer(val matchId: Long) : ChannelName() {
+        override fun resolve(): String = "#multiplayer_$matchId"
+    }
+
+    data class Chat(val name: String) : ChannelName() {
+        override fun resolve(): String = name
+    }
+
+    companion object {
+        fun from(name: String): ChannelName {
+            return when {
+                name.startsWith("#spectator_") -> {
+                    val idPart = name.removePrefix("#spectator_")
+                    runCatching { UUID.fromString(idPart) }
+                        .map { Spectator(it) }
+                        .getOrElse { Chat(name) }
+                }
+                name.startsWith("#multiplayer_") -> {
+                    val idPart = name.removePrefix("#multiplayer_")
+                    idPart.toLongOrNull()?.let { Multiplayer(it) } ?: Chat(name)
+                }
+                else -> Chat(name)
+            }
+        }
+    }
+}

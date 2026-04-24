@@ -1,8 +1,8 @@
 package pe.nanamochi.banchus.packets.server
 
 import java.io.OutputStream
-import pe.nanamochi.banchus.core.BanchoPacket
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.core.ServerPacket
 import pe.nanamochi.banchus.io.DataWriter
 
 class MessagePacket(
@@ -10,7 +10,7 @@ class MessagePacket(
     var content: String = "",
     var target: String = "",
     var senderId: Int = 0,
-) : BanchoPacket(), BanchoPacket.Server {
+) : ServerPacket() {
     override val type = PacketType.BANCHO_MESSAGE
 
     override fun write(writer: DataWriter, out: OutputStream) {

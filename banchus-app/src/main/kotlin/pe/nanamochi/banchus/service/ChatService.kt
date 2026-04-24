@@ -1,61 +1,39 @@
 package pe.nanamochi.banchus.service
 
-import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
-import com.github.michaelbull.result.get
-import com.github.michaelbull.result.onSuccess
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.database.entity.Session
-import pe.nanamochi.banchus.domain.errors.DomainMessage
-import pe.nanamochi.banchus.domain.errors.UserNotFound
-import pe.nanamochi.banchus.domain.errors.UserSilenced
-import pe.nanamochi.banchus.infrastructure.commands.CommandProcessor
+import pe.nanamochi.banchus.database.entity.Target
+import pe.nanamochi.banchus.domain.error.DomainMessage
+import pe.nanamochi.banchus.packets.client.MessagePacket
+import pe.nanamochi.banchus.redis.entity.Session
 
 @Service
 class ChatService(
-    @Value($$"${banchus.command-prefix:!}") private val commandPrefix: String,
     private val channelService: ChannelService,
-    private val commandProcessor: CommandProcessor,
+    private val messageService: MessageService,
+    private val streamService: StreamService,
 ) {
-    fun handleIncomingMessage(
+    fun handleIncomingPublicChatMessage(
+        packet: MessagePacket,
         session: Session,
-        targetName: String,
-        content: String,
     ): Result<Unit, DomainMessage> = binding {
-        val user = session.user ?: Err(UserNotFound).bind()
+        val channelName = channelService.getChannelName(session, packet.target).bind()
+        val target = Target.Channel(channelName)
 
-        if (user.isSilenced) {
-            Err(UserSilenced).bind()
-        }
-
-        val realChannelName = channelService.resolveRealChannelName(targetName, session).bind()
-
-        if (content.startsWith(commandPrefix)) {
-            processChatCommand(session, targetName, realChannelName, content)
+        val result = messageService.send(session, target, packet.content).bind()
+        if (result.response.isNotEmpty() && result.response.isNotBlank()) {
+            // TODO: bot response, to implement commands
         } else {
-            channelService.broadcastMessage(session, targetName, content).bind()
-        }
-    }
-
-    private fun processChatCommand(
-        session: Session,
-        targetName: String,
-        realChannelName: String,
-        content: String,
-    ) {
-        val channel = channelService.findByName(realChannelName).get()
-        val user = session.user ?: return
-
-        commandProcessor.handle(commandPrefix, content, user, channel).onSuccess { result ->
-            val recipients =
-                if (content.startsWith("${commandPrefix}help")) {
-                    setOf(session.id!!)
-                } else {
-                    channel?.id?.let { channelService.getMemberIds(it) } ?: setOf(session.id!!)
-                }
-            channelService.sendBanchoBotMessage(targetName, result, recipients)
+            val messageStream = channelName.getMessageStream()
+            val message =
+                pe.nanamochi.banchus.packets.server.MessagePacket(
+                    sender = session.username,
+                    content = result.message.content,
+                    target = packet.target,
+                    senderId = session.userId,
+                )
+            streamService.broadcastMessage(messageStream, message, listOf(session.sessionId))
         }
     }
 }

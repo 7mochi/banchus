@@ -2,8 +2,6 @@ package pe.nanamochi.banchus.database.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -21,12 +19,17 @@ class User(
     var id: Int = 0,
     @Column(name = "username", length = 32, nullable = false, unique = true)
     var username: String = "",
+    @Column(name = "safe_username", length = 32, nullable = false, unique = true)
+    var safeUsername: String = "",
     @Column(name = "email", length = 64, nullable = false, unique = true) var email: String = "",
-    @Column(name = "password_md5", length = 32, nullable = false) var passwordMd5: String = "",
+    @Column(name = "password_bcrypt", length = 60, nullable = false)
+    var passwordBcrypt: String = "",
+    @Column(name = "registration_time", nullable = false)
+    var registrationTime: Instant = Instant.now(),
+    @Column(name = "latest_activity", nullable = false) var latestActivity: Instant = Instant.now(),
     @Column(name = "country", length = 2, nullable = false)
-    @Enumerated(EnumType.ORDINAL)
     var country: CountryCode = CountryCode.XX,
-    @Column(name = "silence_end") var silenceEnd: Instant? = null,
+    @Column(name = "silence_end", nullable = true) var silenceEnd: Instant? = null,
     @Column(name = "privileges", nullable = false) var privileges: Int = 1,
 ) {
     val isSilenced: Boolean
@@ -34,4 +37,16 @@ class User(
 
     val isRestricted: Boolean
         get() = !ServerPrivileges.fromBitmask(privileges).contains(ServerPrivileges.UNRESTRICTED)
+
+    val isDonor: Boolean
+        get() = ServerPrivileges.fromBitmask(privileges).contains(ServerPrivileges.DONATOR)
+
+    val isStaff: Boolean
+        get() = ServerPrivileges.fromBitmask(privileges).contains(ServerPrivileges.CHAT_MODERATOR)
+
+    val isDeveloper: Boolean
+        get() = ServerPrivileges.fromBitmask(privileges).contains(ServerPrivileges.SUPER_ADMIN)
+
+    val isTournamentStaff: Boolean
+        get() = ServerPrivileges.fromBitmask(privileges).contains(ServerPrivileges.TOURNAMENT_STAFF)
 }

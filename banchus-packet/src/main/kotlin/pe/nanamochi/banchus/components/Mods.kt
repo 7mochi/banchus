@@ -50,3 +50,7 @@ enum class Mods(val value: UInt) {
         }
     }
 }
+
+fun UInt.hasAny(mask: UInt): Boolean {
+    return (this and mask) != 0u
+}

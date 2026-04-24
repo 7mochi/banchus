@@ -2,12 +2,11 @@ package pe.nanamochi.banchus.packets.server
 
 import java.io.OutputStream
 import pe.nanamochi.banchus.components.ReplayFrameBundle
-import pe.nanamochi.banchus.core.BanchoPacket
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.core.ServerPacket
 import pe.nanamochi.banchus.io.DataWriter
 
-class SpectateFramesPacket(var replayFrameBundle: ReplayFrameBundle? = null) :
-    BanchoPacket(), BanchoPacket.Server {
+class SpectateFramesPacket(var replayFrameBundle: ReplayFrameBundle? = null) : ServerPacket() {
     override val type = PacketType.BANCHO_SPECTATE_FRAMES
 
     override fun write(writer: DataWriter, out: OutputStream) {

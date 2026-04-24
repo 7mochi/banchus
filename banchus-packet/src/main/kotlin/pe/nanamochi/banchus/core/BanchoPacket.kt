@@ -7,16 +7,12 @@ import pe.nanamochi.banchus.io.DataWriter
 
 abstract class BanchoPacket {
     abstract val type: PacketType
+}
 
-    interface Client {
-        val type: PacketType
+abstract class ClientPacket : BanchoPacket() {
+    abstract fun read(reader: DataReader, ins: InputStream)
+}
 
-        fun read(reader: DataReader, ins: InputStream)
-    }
-
-    interface Server {
-        val type: PacketType
-
-        fun write(writer: DataWriter, out: OutputStream)
-    }
+abstract class ServerPacket : BanchoPacket() {
+    abstract fun write(writer: DataWriter, out: OutputStream)
 }

@@ -5,8 +5,9 @@ import com.github.michaelbull.result.orElse
 import com.github.michaelbull.result.toResultOr
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.domain.errors.FileNotFound
-import pe.nanamochi.banchus.domain.errors.StorageError
+import pe.nanamochi.banchus.domain.enums.StorageBucket
+import pe.nanamochi.banchus.domain.error.FileNotFound
+import pe.nanamochi.banchus.domain.error.StorageError
 import pe.nanamochi.banchus.domain.storage.FileStorageProvider
 import pe.nanamochi.banchus.util.Security
 import pe.nanamochi.banchus.util.runStorageCatching
@@ -15,24 +16,15 @@ import pe.nanamochi.banchus.util.runStorageCatching
 class StorageService(private val provider: FileStorageProvider) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    companion object {
-        const val AVATARS = "avatars_files"
-        const val BEATMAPS = "osu_beatmap_files"
-        const val REPLAYS = "replays_files"
-        const val SCREENSHOTS = "screenshots_files"
-
-        private val ALL_BUCKETS = listOf(AVATARS, BEATMAPS, REPLAYS, SCREENSHOTS)
-    }
-
     fun initStorage() {
-        provider.initialize(ALL_BUCKETS)
+        provider.initialize(StorageBucket.entries.map { it })
 
-        if (!provider.exists(AVATARS, "default.png")) {
+        if (!provider.exists(StorageBucket.AVATARS, "default.png")) {
             javaClass
                 .getResourceAsStream("/images/default.png")
                 ?.use { it.readAllBytes() }
                 ?.let { bytes ->
-                    provider.write(AVATARS, "default.png", bytes)
+                    provider.write(StorageBucket.AVATARS, "default.png", bytes)
                     log.info("Default avatar initialized successfully.")
                 } ?: log.warn("System resource /images/default.png not found!")
         }
@@ -40,39 +32,42 @@ class StorageService(private val provider: FileStorageProvider) {
 
     fun getAvatar(userId: String): Result<ByteArray, FileNotFound> =
         provider
-            .read(AVATARS, userId.asPng())
+            .read(StorageBucket.AVATARS, userId.asPng())
             .toResultOr { FileNotFound }
-            .orElse { provider.read(AVATARS, "default.png").toResultOr { FileNotFound } }
+            .orElse {
+                provider.read(StorageBucket.AVATARS, "default.png").toResultOr { FileNotFound }
+            }
 
     fun saveAvatar(userId: String, content: ByteArray): Result<Unit, StorageError> =
         runStorageCatching {
-            provider.write(AVATARS, userId.asPng(), content)
+            provider.write(StorageBucket.AVATARS, userId.asPng(), content)
         }
 
     fun getBeatmap(beatmapId: Int): Result<ByteArray, FileNotFound> =
-        provider.read(BEATMAPS, beatmapId.asOsu()).toResultOr { FileNotFound }
+        provider.read(StorageBucket.BEATMAPS, beatmapId.asOsu()).toResultOr { FileNotFound }
 
     fun saveBeatmap(beatmapId: Int, content: ByteArray): Result<Unit, StorageError> =
         runStorageCatching {
-            provider.write(BEATMAPS, beatmapId.asOsu(), content)
+            provider.write(StorageBucket.BEATMAPS, beatmapId.asOsu(), content)
         }
 
-    fun beatmapExists(beatmapId: Int): Boolean = provider.exists(BEATMAPS, beatmapId.asOsu())
+    fun beatmapExists(beatmapId: Int): Boolean =
+        provider.exists(StorageBucket.BEATMAPS, beatmapId.asOsu())
 
     fun getReplay(scoreId: Long): Result<ByteArray, FileNotFound> =
-        provider.read(REPLAYS, scoreId.asOsr()).toResultOr { FileNotFound }
+        provider.read(StorageBucket.REPLAYS, scoreId.asOsr()).toResultOr { FileNotFound }
 
     fun saveReplay(scoreId: Long, content: ByteArray): Result<Unit, StorageError> =
         runStorageCatching {
-            provider.write(REPLAYS, scoreId.asOsr(), content)
+            provider.write(StorageBucket.REPLAYS, scoreId.asOsr(), content)
         }
 
     fun getScreenshot(screenshotId: String): Result<ByteArray, FileNotFound> =
-        provider.read(SCREENSHOTS, screenshotId.asPng()).toResultOr { FileNotFound }
+        provider.read(StorageBucket.SCREENSHOTS, screenshotId.asPng()).toResultOr { FileNotFound }
 
     fun saveScreenshot(content: ByteArray): Result<String, StorageError> = runStorageCatching {
         Security.generateToken(6).let { id ->
-            provider.write(SCREENSHOTS, id.asPng(), content)
+            provider.write(StorageBucket.SCREENSHOTS, id.asPng(), content)
             id
         }
     }

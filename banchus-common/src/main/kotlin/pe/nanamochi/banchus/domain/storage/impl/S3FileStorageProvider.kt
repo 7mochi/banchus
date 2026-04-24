@@ -1,6 +1,7 @@
 package pe.nanamochi.banchus.domain.storage.impl
 
 import org.slf4j.LoggerFactory
+import pe.nanamochi.banchus.domain.enums.StorageBucket
 import pe.nanamochi.banchus.domain.storage.FileStorageProvider
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.S3Client
@@ -9,29 +10,31 @@ class S3FileStorageProvider(private val s3Client: S3Client, private val bucketNa
     FileStorageProvider {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    override fun initialize(buckets: List<String>) {}
+    override fun initialize(buckets: List<StorageBucket>) {}
 
-    override fun read(bucket: String, key: String): ByteArray? =
+    override fun read(bucket: StorageBucket, key: String): ByteArray? =
         runCatching {
-                s3Client.getObject { it.bucket(bucketName).key("$bucket/$key") }.readAllBytes()
+                s3Client
+                    .getObject { it.bucket(bucketName).key("${bucket.value}/$key") }
+                    .readAllBytes()
             }
             .getOrNull()
 
-    override fun write(bucket: String, key: String, content: ByteArray) {
+    override fun write(bucket: StorageBucket, key: String, content: ByteArray) {
         s3Client.putObject(
-            { it.bucket(bucketName).key("$bucket/$key") },
+            { it.bucket(bucketName).key("${bucket.value}/$key") },
             RequestBody.fromBytes(content),
         )
         log.debug("File written to S3 storage: {}/{}", bucket, key)
     }
 
-    override fun delete(bucket: String, key: String) {
-        s3Client.deleteObject { it.bucket(bucketName).key("$bucket/$key") }
+    override fun delete(bucket: StorageBucket, key: String) {
+        s3Client.deleteObject { it.bucket(bucketName).key("${bucket.value}/$key") }
     }
 
-    override fun exists(bucket: String, key: String): Boolean =
+    override fun exists(bucket: StorageBucket, key: String): Boolean =
         runCatching {
-                s3Client.headObject { it.bucket(bucketName).key("$bucket/$key") }
+                s3Client.headObject { it.bucket(bucketName).key("${bucket.value}/$key") }
                 true
             }
             .getOrDefault(false)

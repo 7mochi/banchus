@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import pe.nanamochi.banchus.database.entity.User
 import pe.nanamochi.banchus.domain.enums.BeatmapDirectDisplayMode
-import pe.nanamochi.banchus.infrastructure.clients.OsuDirectApiClient
+import pe.nanamochi.banchus.infrastructure.client.OsuDirectApiClient
 import pe.nanamochi.banchus.infrastructure.security.AuthenticatedUser
 
 @RestController
