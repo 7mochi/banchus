@@ -38,7 +38,6 @@ import pe.nanamochi.banchus.packets.server.MatchStartPacket
 import pe.nanamochi.banchus.packets.server.MatchUpdatePacket
 import pe.nanamochi.banchus.packets.server.MessagePacket
 import pe.nanamochi.banchus.packets.server.NewMatchPacket
-import pe.nanamochi.banchus.protocol.PacketWriter
 import pe.nanamochi.banchus.redis.entity.MultiplayerMatch
 import pe.nanamochi.banchus.redis.entity.MultiplayerMatchSlot
 import pe.nanamochi.banchus.redis.entity.Session
@@ -62,7 +61,6 @@ class MultiplayerService(
     private val statService: StatService,
     private val leaderboardService: LeaderboardService,
     private val chatService: ChatService,
-    private val packetWriter: PacketWriter,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -142,6 +140,8 @@ class MultiplayerService(
     }
 
     fun addReferee(matchId: Long, userId: Int) = multiplayerRepository.addReferee(matchId, userId)
+
+    fun getReferees(matchId: Long) = multiplayerRepository.getReferees(matchId)
 
     fun isReferee(matchId: Long, userId: Int) = multiplayerRepository.isReferee(matchId, userId)
 

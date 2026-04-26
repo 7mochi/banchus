@@ -32,7 +32,7 @@ class ChatService(
                 packetWriter.serialize(
                     pe.nanamochi.banchus.packets.server.MessagePacket(
                         sender = Presence.BOT_NAME,
-                        content = result.response, // TODO:3
+                        content = result.response,
                         target = packet.target,
                         senderId = Presence.BOT_ID,
                     )
