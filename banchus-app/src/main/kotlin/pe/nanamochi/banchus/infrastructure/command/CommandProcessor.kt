@@ -6,7 +6,6 @@ import com.github.michaelbull.result.Result
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.database.entity.Target
-import pe.nanamochi.banchus.domain.error.ChannelNotFound
 import pe.nanamochi.banchus.domain.error.DomainMessage
 import pe.nanamochi.banchus.domain.error.InternalError
 import pe.nanamochi.banchus.redis.entity.Session
@@ -21,38 +20,50 @@ class CommandProcessor(private val commands: List<BaseCommand>) {
         session: Session,
         target: Target,
     ): Result<String, DomainMessage> {
-        val parts =
-            message.trim().split(Regex("\\s+")).takeIf { it.isNotEmpty() }
-                ?: return Err(InternalError)
+        val trimmedMessage = message.trim()
 
-        when (target) {
-            is Target.Channel -> {
-                val trigger = parts[0]
-                println("Channel resolved: ${target.channelName.resolve()}")
-                val isMultiplayer = target.channelName.resolve().startsWith("#multiplayer_")
-
-                val command =
-                    commands.find {
-                        it.shouldExecute(prefix, message, session.privileges, isMultiplayer)
-                    } ?: return Err(ChannelNotFound)
-
-                val args = parts.drop(1).toTypedArray()
-
-                return runCatching { command.processCommand(session, trigger, args) }
-                    .fold(
-                        onSuccess = { response ->
-                            if (response.isNullOrBlank()) Err(InternalError) else Ok(response)
-                        },
-                        onFailure = { e ->
-                            log.error("Command execution failed: $trigger", e)
-                            Ok("Error: ${e.message ?: "An unknown error occurred."}")
-                        },
-                    )
-            }
-
-            else -> {
-                return Err(InternalError)
-            }
+        if (!trimmedMessage.startsWith(prefix)) {
+            return Ok("")
         }
+
+        val parts = trimmedMessage.removePrefix(prefix).split(Regex("\\s+"))
+            .takeIf { it.isNotEmpty() } ?: return Err(InternalError)
+
+        val trigger = parts[0].lowercase()
+        val args = parts.drop(1).toTypedArray()
+
+        return when (target) {
+            is Target.Channel -> {
+                val channelName = target.channelName.resolve()
+                val isMultiplayer = channelName.startsWith("#multiplayer_")
+
+                val command = commands.find { cmd ->
+                    val annotation = cmd::class.annotations.filterIsInstance<Command>().firstOrNull()
+                    annotation?.let {
+                        it.name.lowercase() == trigger && cmd.shouldExecute(session.privileges, isMultiplayer)
+                    } ?: false
+                } ?: return Err(InternalError)
+                executeCommand(command, session, trigger, args)
+            }
+            else -> Ok("")
+        }
+    }
+
+    private fun executeCommand(
+        command: BaseCommand,
+        session: Session,
+        trigger: String,
+        args: Array<String>,
+    ): Result<String, DomainMessage> {
+        return runCatching { command.processCommand(session, trigger, args) }
+            .fold(
+                onSuccess = { response ->
+                    if (response.isNullOrBlank()) Err(InternalError) else Ok(response)
+                },
+                onFailure = { e ->
+                    log.error("Command execution failed: $trigger", e)
+                    Ok("Error: ${e.message ?: "An unknown error occurred."}")
+                },
+            )
     }
 }

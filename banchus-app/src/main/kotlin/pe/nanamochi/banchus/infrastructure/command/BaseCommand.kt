@@ -11,14 +11,7 @@ abstract class BaseCommand {
             )
     }
 
-    fun shouldExecute(
-        prefix: String,
-        message: String,
-        userPrivileges: Int,
-        isMultiplayer: Boolean,
-    ): Boolean {
-        if (!message.startsWith("$prefix${config.name}")) return false
-
+    fun shouldExecute(userPrivileges: Int, isMultiplayer: Boolean): Boolean {
         if (config.privileges.isNotEmpty()) {
             val userPrivs = ServerPrivileges.fromBitmask(userPrivileges)
             val hasPermission = config.privileges.any { it in userPrivs }
