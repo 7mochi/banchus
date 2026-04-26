@@ -7,6 +7,8 @@ import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.onFailure
 import java.time.Instant
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.database.entity.Message
 import pe.nanamochi.banchus.database.entity.MessageSendResult
@@ -21,6 +23,7 @@ import pe.nanamochi.banchus.domain.error.MessageUserAutoSilenced
 import pe.nanamochi.banchus.domain.error.RelationshipNotFound
 import pe.nanamochi.banchus.domain.error.UserNotFound
 import pe.nanamochi.banchus.domain.error.UserSilenced
+import pe.nanamochi.banchus.infrastructure.command.CommandProcessor
 import pe.nanamochi.banchus.redis.entity.Session
 import pe.nanamochi.banchus.util.runDatabaseCatching
 
@@ -30,10 +33,12 @@ private const val CHAT_TIMEOUT_SECONDS = 5 * 60
 
 @Service
 class MessageService(
+    @Value($$"${banchus.command-prefix:!}") private val commandPrefix: String,
     private val messageRepository: MessageRepository,
     private val userService: UserService,
     private val channelService: ChannelService,
     private val relationshipService: RelationshipService,
+    @Lazy private val commandProcessor: CommandProcessor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -99,12 +104,9 @@ class MessageService(
                 )
             )
 
-        // val response = commands.tryHandleCommand(session, messageContent, target) // TODO:
-        // Implement command handling
-        MessageSendResult(
-            message = message,
-            response = "", // TODO: Implement command handling
-        )
+        val response =
+            commandProcessor.handle(commandPrefix, messageContent, session, target).bind()
+        MessageSendResult(message = message, response = response)
     }
 
     fun getTargetInfo(sender: Session, target: Target): Result<TargetInfo, DomainMessage> =

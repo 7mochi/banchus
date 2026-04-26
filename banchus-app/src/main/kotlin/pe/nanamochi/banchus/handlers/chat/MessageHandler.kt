@@ -22,7 +22,8 @@ class MessageHandler(private val chatService: ChatService) :
         session: Session,
         responseStream: ByteArrayOutputStream,
     ) {
-        chatService.handleIncomingPublicChatMessage(packet, session).onFailure { error ->
+        chatService.handleIncomingPublicChatMessage(packet, session, responseStream).onFailure {
+            error ->
             log.warn("Message delivery failed for user {}: {}", session.username, error)
         }
     }

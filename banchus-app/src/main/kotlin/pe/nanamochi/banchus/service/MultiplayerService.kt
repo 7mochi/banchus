@@ -133,6 +133,8 @@ class MultiplayerService(
         )
     }
 
+    fun addReferee(matchId: Long, userId: Int) = multiplayerRepository.addReferee(matchId, userId)
+
     fun isReferee(matchId: Long, userId: Int) = multiplayerRepository.isReferee(matchId, userId)
 
     fun fetchSessionMatchId(sessionId: UUID) = multiplayerRepository.fetchSessionMatchId(sessionId)
