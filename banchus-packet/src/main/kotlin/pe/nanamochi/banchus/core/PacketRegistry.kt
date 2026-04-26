@@ -26,6 +26,7 @@ import pe.nanamochi.banchus.packets.client.MatchReadyPacket
 import pe.nanamochi.banchus.packets.client.MatchScoreUpdatePacket
 import pe.nanamochi.banchus.packets.client.MatchSkipPacket
 import pe.nanamochi.banchus.packets.client.MatchStartPacket
+import pe.nanamochi.banchus.packets.client.MatchTransferHostPacket
 import pe.nanamochi.banchus.packets.client.MessagePacket
 import pe.nanamochi.banchus.packets.client.PartLobbyPacket
 import pe.nanamochi.banchus.packets.client.PongPacket
@@ -71,6 +72,7 @@ object PacketRegistry {
         register(PacketType.OSU_MATCH_SCORE_UPDATE, ::MatchScoreUpdatePacket)
         register(PacketType.OSU_MATCH_SKIP, ::MatchSkipPacket)
         register(PacketType.OSU_MATCH_START, ::MatchStartPacket)
+        register(PacketType.OSU_MATCH_TRANSFER_HOST, ::MatchTransferHostPacket)
         register(PacketType.OSU_MESSAGE, ::MessagePacket)
         register(PacketType.OSU_PONG, ::PongPacket)
         register(PacketType.OSU_PRESENCE_REQUEST, ::PresenceRequestPacket)
