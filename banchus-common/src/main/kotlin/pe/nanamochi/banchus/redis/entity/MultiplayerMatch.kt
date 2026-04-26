@@ -2,6 +2,7 @@ package pe.nanamochi.banchus.redis.entity
 
 import kotlin.toUShort
 import pe.nanamochi.banchus.domain.enums.SlotStatus
+import pe.nanamochi.banchus.domain.enums.SlotTeam
 
 data class MultiplayerMatch(
     var matchId: Long = 0,
@@ -28,7 +29,7 @@ data class MultiplayerMatch(
 
 data class MultiplayerMatchSlot(
     var status: SlotStatus = SlotStatus.OPEN,
-    var team: UByte = 0u,
+    var team: SlotTeam = SlotTeam.NEUTRAL,
     var mods: UInt = 0u,
     var user: SessionIdentity? = null,
     var loaded: Boolean = false,
@@ -38,7 +39,7 @@ data class MultiplayerMatchSlot(
 ) {
     fun prepare(identity: SessionIdentity) {
         this.status = SlotStatus.NOT_READY
-        this.team = 0u
+        this.team = SlotTeam.NEUTRAL
         this.mods = 0u
         this.user = identity
         this.loaded = false
@@ -49,7 +50,7 @@ data class MultiplayerMatchSlot(
 
     fun clear() {
         this.status = SlotStatus.OPEN
-        this.team = 0u
+        this.team = SlotTeam.NEUTRAL
         this.mods = 0u
         this.user = null
         this.loaded = false

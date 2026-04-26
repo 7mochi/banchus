@@ -8,6 +8,7 @@ import com.github.michaelbull.result.toResultOr
 import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import pe.nanamochi.banchus.components.MatchTeamType
 import pe.nanamochi.banchus.components.Mods
 import pe.nanamochi.banchus.components.SlotTeam
 import pe.nanamochi.banchus.components.hasAny
@@ -308,7 +309,6 @@ class MultiplayerService(
         checkHost: Int? = null,
     ): Result<MultiplayerMatch, DomainMessage> = binding {
         val mpMatch = multiplayerRepository.fetchOne(matchId).toResultOr { MatchNotFound }.bind()
-
         checkHost?.let { hostId ->
             val isRef = isReferee(matchId, hostId)
             if (mpMatch.hostUserId != hostId && !isRef) {
@@ -319,20 +319,53 @@ class MultiplayerService(
         val updateName = mpMatch.name != packet.match.name
         val updatePrivate = mpMatch.password?.isEmpty() != packet.match.password?.isEmpty()
 
-        mpMatch.name = packet.match.name
-        mpMatch.password = packet.match.password
-
+        if (!mpMatch.password.equals(packet.match.name)) {
+            mpMatch.password = packet.match.password
+        }
+        if (updateName) {
+            mpMatch.name = packet.match.name
+        }
         if (mpMatch.beatmapName != packet.match.beatmapName) {
             mpMatch.beatmapName = packet.match.beatmapName
             mpMatch.beatmapMd5 = packet.match.beatmapMd5
         }
         mpMatch.beatmapId = packet.match.beatmapId
 
+        val matchMods = mpMatch.mods
         val slots = multiplayerRepository.fetchAllSlots(matchId).toMutableList()
         val newMode = Mode.fromValue(packet.match.mode.value)
         if (newMode.value != mpMatch.mode) {
+            // Update stats for all match members when mode changes
             val userIds = slots.mapNotNull { it.user?.userId }
             updateMatchMembersPresences(userIds, newMode)
+        }
+
+        var needSlotUpdates = false
+        val teamTypeChanged = mpMatch.teamType != packet.match.teamType.value.toUByte()
+        val isVersus = packet.match.teamType == MatchTeamType.TEAM_VS || packet.match.teamType == MatchTeamType.TAG_TEAM_VS
+        // If we switch to a versus mode, split all players into teams
+        if (teamTypeChanged && isVersus) {
+            needSlotUpdates = true
+            var teamIndex = 0
+            slots.forEach { slot ->
+                if (slot.user?.userId == -1) return@forEach
+
+                slot.team =
+                    if (teamIndex % 2 != 0) pe.nanamochi.banchus.domain.enums.SlotTeam.BLUE
+                    else pe.nanamochi.banchus.domain.enums.SlotTeam.RED
+                teamIndex++
+            }
+        }
+
+        if (mpMatch.freemodEnabled != packet.match.freemodsEnabled) {
+            needSlotUpdates = true
+            mpMatch.freemodEnabled = packet.match.freemodsEnabled
+            if (mpMatch.freemodEnabled) {
+                val (slotMods, matchMods) = splitMods(Mods.fromBitmask(matchMods))
+                mpMatch.mods = Mods.toBitmask(matchMods)
+                val slotModsBitmask = Mods.toBitmask(slotMods)
+                slots.forEach { slot -> slot.user?.let { slot.mods = slotModsBitmask } }
+            }
         }
 
         mpMatch.mode = newMode.value
@@ -340,29 +373,13 @@ class MultiplayerService(
         mpMatch.teamType = packet.match.teamType.value.toUByte()
         mpMatch.randomSeed = packet.match.randomSeed.toInt()
 
-        val freemodChanged = mpMatch.freemodEnabled != packet.match.freemodsEnabled
-        if (freemodChanged) {
-            mpMatch.freemodEnabled = packet.match.freemodsEnabled
-
-            if (mpMatch.freemodEnabled) {
-                val currentMods = Mods.fromBitmask(mpMatch.mods)
-                val (slotMods, matchMods) = splitMods(currentMods)
-
-                mpMatch.mods = Mods.toBitmask(matchMods)
-
-                val slotModsBitmask = Mods.toBitmask(slotMods)
-                slots.forEach { slot ->
-                    if (slot.user != null) {
-                        slot.mods = slotModsBitmask
-                    }
-                }
-                multiplayerRepository.updateAllSlots(matchId, slots)
-            }
+        // Update slots if needed
+        if (needSlotUpdates) {
+            multiplayerRepository.updateAllSlots(matchId, slots)
         }
 
         val updatedMatch = multiplayerRepository.update(mpMatch, updateName || updatePrivate)
         broadcastUpdate(updatedMatch, slots)
-
         updatedMatch
     }
 
@@ -551,7 +568,7 @@ class MultiplayerService(
                 slots.withIndex().find { (_, s) -> s.user?.userId == userId }
                     ?: Err(NotInMatch).bind()
 
-            slot.team = team.value.toUByte()
+            slot.team = pe.nanamochi.banchus.domain.enums.SlotTeam.fromValue(team.value.toUByte())
             multiplayerRepository.updateSlot(matchId, slotId, slot)
             val updatedSlots = fetchAllSlots(matchId)
             broadcastUpdate(mpMatch, updatedSlots)
@@ -565,15 +582,15 @@ class MultiplayerService(
             slots.withIndex().find { (_, s) -> s.user?.sessionId == sessionId }
                 ?: Err(NotInMatch).bind()
 
-        val team = SlotTeam.fromValue(slot.team.toInt())
         slot.team =
-            when (team) {
-                    SlotTeam.NEUTRAL -> SlotTeam.BLUE
-                    SlotTeam.BLUE -> SlotTeam.RED
-                    SlotTeam.RED -> SlotTeam.BLUE
-                }
-                .value
-                .toUByte()
+            when (slot.team) {
+                pe.nanamochi.banchus.domain.enums.SlotTeam.NEUTRAL ->
+                    pe.nanamochi.banchus.domain.enums.SlotTeam.BLUE
+                pe.nanamochi.banchus.domain.enums.SlotTeam.BLUE ->
+                    pe.nanamochi.banchus.domain.enums.SlotTeam.RED
+                pe.nanamochi.banchus.domain.enums.SlotTeam.RED ->
+                    pe.nanamochi.banchus.domain.enums.SlotTeam.BLUE
+            }
         multiplayerRepository.updateSlot(matchId, slotId, slot)
 
         val updatedSlots = fetchAllSlots(matchId) // TODO: is correct?

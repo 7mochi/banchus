@@ -32,7 +32,7 @@ fun List<MultiplayerMatchSlot>.asBancho() =
         MatchSlot(
             userId = slot.user?.userId ?: 0,
             status = slot.status.value.toByte(),
-            team = SlotTeam.fromValue(slot.team.toInt()),
+            team = SlotTeam.fromValue(slot.team.value.toInt()),
             mods = slot.mods,
         )
     }

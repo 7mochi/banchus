@@ -57,6 +57,7 @@ class MultiplayerRepository(
             List(MULTIPLAYER_MAX_SIZE) { i ->
                 MultiplayerMatchSlot().apply {
                     when {
+                        // Place the host into the first slot
                         i == 0 -> prepare(host)
                         i >= maxPlayerCount -> status = SlotStatus.LOCKED
                         else -> status = SlotStatus.OPEN
