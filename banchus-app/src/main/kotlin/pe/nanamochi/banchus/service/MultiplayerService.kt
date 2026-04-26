@@ -29,6 +29,7 @@ import pe.nanamochi.banchus.packets.client.MatchChangeSettingsPacket
 import pe.nanamochi.banchus.packets.server.AnnouncePacket
 import pe.nanamochi.banchus.packets.server.MatchAllPlayersLoadedPacket
 import pe.nanamochi.banchus.packets.server.MatchCompletePacket
+import pe.nanamochi.banchus.packets.server.MatchDisbandPacket
 import pe.nanamochi.banchus.packets.server.MatchJoinFailPacket
 import pe.nanamochi.banchus.packets.server.MatchPlayerFailedPacket
 import pe.nanamochi.banchus.packets.server.MatchPlayerSkippedPacket
@@ -37,6 +38,7 @@ import pe.nanamochi.banchus.packets.server.MatchStartPacket
 import pe.nanamochi.banchus.packets.server.MatchUpdatePacket
 import pe.nanamochi.banchus.packets.server.MessagePacket
 import pe.nanamochi.banchus.packets.server.NewMatchPacket
+import pe.nanamochi.banchus.protocol.PacketWriter
 import pe.nanamochi.banchus.redis.entity.MultiplayerMatch
 import pe.nanamochi.banchus.redis.entity.MultiplayerMatchSlot
 import pe.nanamochi.banchus.redis.entity.Session
@@ -60,6 +62,7 @@ class MultiplayerService(
     private val statService: StatService,
     private val leaderboardService: LeaderboardService,
     private val chatService: ChatService,
+    private val packetWriter: PacketWriter,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -131,6 +134,10 @@ class MultiplayerService(
                 eventType = MatchEventType.MATCH_DISBANDED,
                 user = userService.fetchOneById(1).bind(), // BanchoBot
             )
+        )
+        streamService.broadcastMessage(
+            StreamName.Lobby,
+            MatchDisbandPacket(matchId = matchId.toInt()),
         )
     }
 
@@ -342,7 +349,9 @@ class MultiplayerService(
 
         var needSlotUpdates = false
         val teamTypeChanged = mpMatch.teamType != packet.match.teamType.value.toUByte()
-        val isVersus = packet.match.teamType == MatchTeamType.TEAM_VS || packet.match.teamType == MatchTeamType.TAG_TEAM_VS
+        val isVersus =
+            packet.match.teamType == MatchTeamType.TEAM_VS ||
+                packet.match.teamType == MatchTeamType.TAG_TEAM_VS
         // If we switch to a versus mode, split all players into teams
         if (teamTypeChanged && isVersus) {
             needSlotUpdates = true
