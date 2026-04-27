@@ -310,7 +310,7 @@ class MultiplayerService(
             }
         }
 
-    fun updateBancho(
+    fun changeSettings(
         matchId: Long,
         packet: MatchChangeSettingsPacket,
         checkHost: Int? = null,
@@ -326,7 +326,7 @@ class MultiplayerService(
         val updateName = mpMatch.name != packet.match.name
         val updatePrivate = mpMatch.password?.isEmpty() != packet.match.password?.isEmpty()
 
-        if (!mpMatch.password.equals(packet.match.name)) {
+        if (!mpMatch.password.equals(packet.match.password)) {
             mpMatch.password = packet.match.password
         }
         if (updateName) {

@@ -19,7 +19,7 @@ class MatchChangeSettingsHandler(private val multiplayerService: MultiplayerServ
         responseStream: ByteArrayOutputStream,
     ) {
         multiplayerService.fetchSessionMatchId(session.sessionId)?.let { matchId ->
-            multiplayerService.updateBancho(matchId, packet, session.userId)
+            multiplayerService.changeSettings(matchId, packet, session.userId)
         }
     }
 }
