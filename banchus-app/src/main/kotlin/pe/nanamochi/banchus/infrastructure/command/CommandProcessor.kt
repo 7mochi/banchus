@@ -26,8 +26,9 @@ class CommandProcessor(private val commands: List<BaseCommand>) {
             return Ok("")
         }
 
-        val parts = trimmedMessage.removePrefix(prefix).split(Regex("\\s+"))
-            .takeIf { it.isNotEmpty() } ?: return Err(InternalError)
+        val parts =
+            trimmedMessage.removePrefix(prefix).split(Regex("\\s+")).takeIf { it.isNotEmpty() }
+                ?: return Err(InternalError)
 
         val trigger = parts[0].lowercase()
         val args = parts.drop(1).toTypedArray()
@@ -37,12 +38,15 @@ class CommandProcessor(private val commands: List<BaseCommand>) {
                 val channelName = target.channelName.resolve()
                 val isMultiplayer = channelName.startsWith("#multiplayer_")
 
-                val command = commands.find { cmd ->
-                    val annotation = cmd::class.annotations.filterIsInstance<Command>().firstOrNull()
-                    annotation?.let {
-                        it.name.lowercase() == trigger && cmd.shouldExecute(session.privileges, isMultiplayer)
-                    } ?: false
-                } ?: return Err(InternalError)
+                val command =
+                    commands.find { cmd ->
+                        val annotation =
+                            cmd::class.annotations.filterIsInstance<Command>().firstOrNull()
+                        annotation?.let {
+                            it.name.lowercase() == trigger &&
+                                cmd.shouldExecute(session.privileges, isMultiplayer)
+                        } ?: false
+                    } ?: return Err(InternalError)
                 executeCommand(command, session, trigger, args)
             }
             else -> Ok("")
