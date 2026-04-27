@@ -79,14 +79,10 @@ class MessageService(
         target: Target,
         messageContent: String,
     ): Result<MessageSendResult, DomainMessage> = binding {
-        if (session.isSilenced) {
-            Err(UserSilenced)
-        }
+        if (session.isSilenced) Err(UserSilenced)
 
         val messageContent = messageContent.trim()
-        if (messageContent.isEmpty() && messageContent.length > 500) {
-            Err(MessageInvalidLength)
-        }
+        if (messageContent.isEmpty() && messageContent.length > 500) Err(MessageInvalidLength)
 
         checkSpam(session).bind()
         val targetInfo = getTargetInfo(session, target).bind()

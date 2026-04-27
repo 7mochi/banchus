@@ -21,10 +21,7 @@ class CommandProcessor(private val commands: List<BaseCommand>) {
         target: Target,
     ): Result<String, DomainMessage> {
         val trimmedMessage = message.trim()
-
-        if (!trimmedMessage.startsWith(prefix)) {
-            return Ok("")
-        }
+        if (!trimmedMessage.startsWith(prefix)) return Ok("")
 
         val parts =
             trimmedMessage.removePrefix(prefix).split(Regex("\\s+")).takeIf { it.isNotEmpty() }
