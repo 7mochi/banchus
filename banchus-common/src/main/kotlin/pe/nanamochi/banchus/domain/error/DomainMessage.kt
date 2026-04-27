@@ -78,6 +78,10 @@ sealed interface SpectatorError : DomainMessage
 
 data object InvalidSpectateTarget : SpectatorError
 
+sealed interface CommandError : DomainMessage
+
+data object CommandNotFound : CommandError
+
 sealed interface StatError : DomainMessage
 
 data object StatNotFound : StatError

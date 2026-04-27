@@ -6,6 +6,7 @@ import com.github.michaelbull.result.Result
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.database.entity.Target
+import pe.nanamochi.banchus.domain.error.CommandNotFound
 import pe.nanamochi.banchus.domain.error.DomainMessage
 import pe.nanamochi.banchus.domain.error.InternalError
 import pe.nanamochi.banchus.redis.entity.Session
@@ -43,7 +44,7 @@ class CommandProcessor(private val commands: List<BaseCommand>) {
                             it.name.lowercase() == trigger &&
                                 cmd.shouldExecute(session.privileges, isMultiplayer)
                         } ?: false
-                    } ?: return Err(InternalError)
+                    } ?: return Err(CommandNotFound)
                 executeCommand(command, session, trigger, args)
             }
             else -> Ok("")
