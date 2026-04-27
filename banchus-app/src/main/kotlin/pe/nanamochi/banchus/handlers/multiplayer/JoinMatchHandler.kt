@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.core.PacketType
 import pe.nanamochi.banchus.domain.error.InvalidPassword
+import pe.nanamochi.banchus.domain.error.MultiplayerMatchFull
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.packets.client.JoinMatchPacket
@@ -49,19 +50,17 @@ class JoinMatchHandler(
             }
             .onFailure { error ->
                 log.warn("User ${session.username} failed to join match ${packet.matchId}: $error")
-                when (error) {
-                    InvalidPassword ->
-                        streamService.broadcastMessage(
-                            StreamName.User(session.sessionId),
-                            MatchJoinFailPacket(),
-                        )
-                    else -> {
-                        streamService.broadcastMessage(
-                            StreamName.User(session.sessionId),
-                            AnnouncePacket("An unexpected error occurred."),
-                        )
+
+                val errorMessage =
+                    when (error) {
+                        InvalidPassword -> "You have entered an invalid password for this match."
+                        MultiplayerMatchFull -> "The match has no free space left."
+                        else -> "An unexpected error occurred."
                     }
-                }
+                val streamName = StreamName.User(session.sessionId)
+
+                streamService.broadcastMessage(streamName, MatchJoinFailPacket())
+                streamService.broadcastMessage(streamName, AnnouncePacket(errorMessage))
             }
     }
 }
