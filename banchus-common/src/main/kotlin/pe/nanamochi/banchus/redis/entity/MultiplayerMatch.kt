@@ -59,3 +59,7 @@ data class MultiplayerMatchSlot(
         this.completed = false
     }
 }
+
+fun List<MultiplayerMatchSlot>.resetToNotReady() {
+    this.forEach { slot -> slot.user?.let { slot.status = SlotStatus.NOT_READY } }
+}

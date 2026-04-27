@@ -42,6 +42,7 @@ import pe.nanamochi.banchus.redis.entity.MultiplayerMatch
 import pe.nanamochi.banchus.redis.entity.MultiplayerMatchSlot
 import pe.nanamochi.banchus.redis.entity.Session
 import pe.nanamochi.banchus.redis.entity.SessionIdentity
+import pe.nanamochi.banchus.redis.entity.resetToNotReady
 import pe.nanamochi.banchus.redis.repository.MultiplayerRepository
 import pe.nanamochi.banchus.redis.stream.StreamName
 import pe.nanamochi.banchus.util.asBancho
@@ -316,6 +317,8 @@ class MultiplayerService(
         checkHost: Int? = null,
     ): Result<MultiplayerMatch, DomainMessage> = binding {
         val mpMatch = multiplayerRepository.fetchOne(matchId).toResultOr { MatchNotFound }.bind()
+        val slots = multiplayerRepository.fetchAllSlots(matchId).toMutableList()
+
         checkHost?.let { hostId ->
             val isRef = isReferee(matchId, hostId)
             if (mpMatch.hostUserId != hostId && !isRef) {
@@ -323,72 +326,91 @@ class MultiplayerService(
             }
         }
 
+        var needSlotUpdates = false
+        var changeSlotsNotReady = false
+
+        val beatmapChanged = mpMatch.beatmapMd5 != packet.match.beatmapMd5
+        val freemodChanged = mpMatch.freemodEnabled != packet.match.freemodsEnabled
+
+        if (beatmapChanged || freemodChanged) {
+            changeSlotsNotReady = true
+        }
+
         val updateName = mpMatch.name != packet.match.name
         val updatePrivate = mpMatch.password?.isEmpty() != packet.match.password?.isEmpty()
 
-        if (!mpMatch.password.equals(packet.match.password)) {
+        if (!mpMatch.password.equals(packet.match.password))
             mpMatch.password = packet.match.password
-        }
-        if (updateName) {
-            mpMatch.name = packet.match.name
-        }
-        if (mpMatch.beatmapName != packet.match.beatmapName) {
+        if (updateName) mpMatch.name = packet.match.name
+
+        if (beatmapChanged) {
             mpMatch.beatmapName = packet.match.beatmapName
             mpMatch.beatmapMd5 = packet.match.beatmapMd5
+            mpMatch.beatmapId = packet.match.beatmapId
         }
-        mpMatch.beatmapId = packet.match.beatmapId
 
-        val matchMods = mpMatch.mods
-        val slots = multiplayerRepository.fetchAllSlots(matchId).toMutableList()
         val newMode = Mode.fromValue(packet.match.mode.value)
         if (newMode.value != mpMatch.mode) {
+            mpMatch.mode = newMode.value
+            changeSlotsNotReady = true
+
             // Update stats for all match members when mode changes
             val userIds = slots.mapNotNull { it.user?.userId }
             updateMatchMembersPresences(userIds, newMode)
         }
 
-        var needSlotUpdates = false
-        val teamTypeChanged = mpMatch.teamType != packet.match.teamType.value.toUByte()
-        val isVersus =
-            packet.match.teamType == MatchTeamType.TEAM_VS ||
-                packet.match.teamType == MatchTeamType.TAG_TEAM_VS
-        // If we switch to a versus mode, split all players into teams
-        if (teamTypeChanged && isVersus) {
-            needSlotUpdates = true
-            var teamIndex = 0
-            slots.forEach { slot ->
-                if (slot.user?.userId == -1) return@forEach
-
-                slot.team =
-                    if (teamIndex % 2 != 0) pe.nanamochi.banchus.domain.enums.SlotTeam.BLUE
-                    else pe.nanamochi.banchus.domain.enums.SlotTeam.RED
-                teamIndex++
-            }
-        }
-
-        if (mpMatch.freemodEnabled != packet.match.freemodsEnabled) {
-            needSlotUpdates = true
+        if (freemodChanged) {
             mpMatch.freemodEnabled = packet.match.freemodsEnabled
             if (mpMatch.freemodEnabled) {
-                val (slotMods, matchMods) = splitMods(Mods.fromBitmask(matchMods))
+                val (slotMods, matchMods) = splitMods(Mods.fromBitmask(mpMatch.mods))
                 mpMatch.mods = Mods.toBitmask(matchMods)
                 val slotModsBitmask = Mods.toBitmask(slotMods)
-                slots.forEach { slot -> slot.user?.let { slot.mods = slotModsBitmask } }
+
+                slots.forEach { slot ->
+                    slot.user?.let {
+                        slot.mods = slotModsBitmask
+                        needSlotUpdates = true
+                    }
+                }
             }
         }
 
-        mpMatch.mode = newMode.value
+        val teamTypeChanged = mpMatch.teamType != packet.match.teamType.value.toUByte()
+        if (teamTypeChanged) {
+            mpMatch.teamType = packet.match.teamType.value.toUByte()
+            val isVersus =
+                packet.match.teamType == MatchTeamType.TEAM_VS ||
+                    packet.match.teamType == MatchTeamType.TAG_TEAM_VS
+
+            // If we switch to a versus mode, split all players into teams
+            if (isVersus) {
+                needSlotUpdates = true
+                var teamIndex = 0
+                slots.forEach { slot ->
+                    if (slot.user?.userId == -1) return@forEach
+
+                    slot.team =
+                        if (teamIndex % 2 != 0) pe.nanamochi.banchus.domain.enums.SlotTeam.BLUE
+                        else pe.nanamochi.banchus.domain.enums.SlotTeam.RED
+                    teamIndex++
+                }
+            }
+        }
+
         mpMatch.winCondition = packet.match.scoringType.value.toUByte()
-        mpMatch.teamType = packet.match.teamType.value.toUByte()
         mpMatch.randomSeed = packet.match.randomSeed.toInt()
 
-        // Update slots if needed
-        if (needSlotUpdates) {
-            multiplayerRepository.updateAllSlots(matchId, slots)
+        if (changeSlotsNotReady) {
+            needSlotUpdates = true
+            slots.resetToNotReady()
         }
+
+        // Update slots if needed
+        if (needSlotUpdates) multiplayerRepository.updateAllSlots(matchId, slots)
 
         val updatedMatch = multiplayerRepository.update(mpMatch, updateName || updatePrivate)
         broadcastUpdate(updatedMatch, slots)
+
         updatedMatch
     }
 
@@ -671,6 +693,7 @@ class MultiplayerService(
         }
 
         multiplayerRepository.update(mpMatch, false)
+        slots.resetToNotReady()
         broadcastUpdate(mpMatch, slots)
 
         Ok(Unit)
@@ -775,7 +798,7 @@ class MultiplayerService(
         val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
         val slots = fetchAllSlots(matchId)
         mpMatch.inProgress = false
-        slots.forEach { slot -> slot.user?.let { slot.status = SlotStatus.NOT_READY } }
+        slots.resetToNotReady()
 
         multiplayerRepository.update(mpMatch, false)
         multiplayerRepository.updateAllSlots(matchId, slots)
