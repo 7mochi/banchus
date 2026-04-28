@@ -1,3 +1,53 @@
+CREATE TABLE beatmaps
+(
+    id              INT          NOT NULL,
+    mode            INT          NOT NULL,
+    md5             VARCHAR(32)  NOT NULL,
+    status          VARCHAR(32)  NOT NULL,
+    version         VARCHAR(128) NOT NULL,
+    submission_date datetime     NOT NULL,
+    last_updated    datetime     NOT NULL,
+    playcount       BIGINT       NOT NULL,
+    passcount       BIGINT       NOT NULL,
+    total_length    INT          NOT NULL,
+    drain_length    INT          NOT NULL,
+    count_normal    INT          NOT NULL,
+    count_slider    INT          NOT NULL,
+    count_spinner   INT          NOT NULL,
+    max_combo       INT          NOT NULL,
+    bpm             REAL         NOT NULL,
+    cs              REAL         NOT NULL,
+    ar              REAL         NOT NULL,
+    od              REAL         NOT NULL,
+    hp              REAL         NOT NULL,
+    star_rating     REAL         NOT NULL,
+    beatmapset_id   INT          NOT NULL,
+    CONSTRAINT pk_beatmaps PRIMARY KEY (id)
+);
+
+CREATE TABLE beatmapsets
+(
+    id                INT           NOT NULL,
+    title             VARCHAR(128)  NULL,
+    title_unicode     VARCHAR(128)  NULL,
+    artist            VARCHAR(128)  NULL,
+    artist_unicode    VARCHAR(128)  NULL,
+    source            VARCHAR(128)  NULL,
+    source_unicode    VARCHAR(128)  NULL,
+    creator           VARCHAR(128)  NULL,
+    tags              VARCHAR(1024) NULL,
+    submission_status VARCHAR(32)   NOT NULL,
+    has_video         BIT(1)        NOT NULL,
+    has_storyboard    BIT(1)        NOT NULL,
+    submission_date   datetime      NOT NULL,
+    approved_date     datetime      NULL,
+    last_updated      datetime      NOT NULL,
+    total_playcount   BIGINT        NOT NULL,
+    language_id       INT           NOT NULL,
+    genre_id          INT           NOT NULL,
+    CONSTRAINT pk_beatmapsets PRIMARY KEY (id)
+);
+
 CREATE TABLE channels
 (
     id               VARCHAR(36)  NOT NULL PRIMARY KEY DEFAULT (UUID()),
@@ -123,6 +173,7 @@ CREATE TABLE match_events
     CONSTRAINT fk_match_events_on_user FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
+CREATE INDEX beatmaps_md5_idx ON beatmaps (md5);
 CREATE INDEX idx_users_safe_name ON users (safe_username);
 CREATE INDEX idx_stats_user_mode ON stats (user_id, mode);
 CREATE INDEX idx_hw_md5_lookup ON hardware_logs (adapters_md5, uninstall_md5, disk_signature_md5);
