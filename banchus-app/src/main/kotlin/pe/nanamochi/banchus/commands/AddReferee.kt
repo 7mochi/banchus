@@ -13,7 +13,7 @@ import pe.nanamochi.banchus.service.UserService
 
 @Component
 @Command(
-    name = "referee",
+    name = "addref",
     documentation = "Add a referee to the current match.",
     multiplayer = true,
 )
