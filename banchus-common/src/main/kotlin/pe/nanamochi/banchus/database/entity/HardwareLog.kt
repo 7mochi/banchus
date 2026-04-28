@@ -6,13 +6,23 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.time.Instant
 
 @Entity
-@Table(name = "hardware_logs")
+@Table(
+    name = "hardware_logs",
+    indexes =
+        [
+            Index(
+                name = "idx_hw_md5_lookup",
+                columnList = "adapters_md5, uninstall_md5, disk_signature_md5",
+            )
+        ],
+)
 class HardwareLog(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

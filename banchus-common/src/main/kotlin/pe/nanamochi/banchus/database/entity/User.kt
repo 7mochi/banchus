@@ -5,13 +5,17 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.Instant
 import pe.nanamochi.banchus.domain.enums.CountryCode
 import pe.nanamochi.banchus.domain.enums.ServerPrivileges
 
 @Entity
-@Table(name = "users")
+@Table(
+    name = "users",
+    indexes = [Index(name = "idx_users_safe_name", columnList = "safe_username")],
+)
 class User(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -8,13 +8,17 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import pe.nanamochi.banchus.domain.enums.Mode
 
 @Entity
-@Table(name = "stats")
+@Table(
+    name = "stats",
+    indexes = [Index(name = "idx_stats_user_mode", columnList = "user_id, mode")],
+)
 class Stat(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

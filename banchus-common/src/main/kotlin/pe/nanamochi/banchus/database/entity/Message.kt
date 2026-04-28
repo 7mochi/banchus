@@ -6,6 +6,7 @@ import jakarta.persistence.EntityListeners
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.Instant
 import org.springframework.data.annotation.CreatedDate
@@ -13,7 +14,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import pe.nanamochi.banchus.redis.entity.Session
 
 @Entity
-@Table(name = "messages")
+@Table(
+    name = "messages",
+    indexes = [Index(name = "idx_messages_unread", columnList = "target_id, deleted_at, read_at")],
+)
 @EntityListeners(AuditingEntityListener::class)
 class Message(
     @Id
