@@ -388,7 +388,6 @@ class MultiplayerService(
 
             // If we switch to a versus mode, split all players into teams
             if (isVersus) {
-                needSlotUpdates = true
                 var teamIndex = 0
                 slots.forEach { slot ->
                     if (slot.user?.userId == -1) return@forEach
@@ -398,7 +397,13 @@ class MultiplayerService(
                         else pe.nanamochi.banchus.domain.enums.SlotTeam.RED
                     teamIndex++
                 }
+            } else {
+                slots.forEach { slot ->
+                    slot.team = pe.nanamochi.banchus.domain.enums.SlotTeam.NEUTRAL
+                }
             }
+
+            needSlotUpdates = true
         }
 
         mpMatch.winCondition = packet.match.scoringType.value.toUByte()
