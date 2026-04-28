@@ -331,8 +331,29 @@ class MultiplayerService(
 
         val beatmapChanged = mpMatch.beatmapMd5 != packet.match.beatmapMd5
         val freemodChanged = mpMatch.freemodEnabled != packet.match.freemodsEnabled
+        val teamTypeChanged = mpMatch.teamType != packet.match.teamType.value.toUByte()
 
-        if (beatmapChanged || freemodChanged) {
+        val finalModeValue = if (!beatmapChanged) {
+            mpMatch.mode
+        } else {
+            packet.match.mode.value
+        }
+
+        val newMode = Mode.fromValue(finalModeValue)
+
+        if (beatmapChanged || newMode.value != mpMatch.mode) {
+            mpMatch.beatmapName = packet.match.beatmapName
+            mpMatch.beatmapMd5 = packet.match.beatmapMd5
+            mpMatch.beatmapId = packet.match.beatmapId
+
+            if (newMode.value != mpMatch.mode) {
+                mpMatch.mode = newMode.value
+
+                // Update stats for all match members when mode changes
+                val userIds = slots.mapNotNull { it.user?.userId }
+                updateMatchMembersPresences(userIds, newMode)
+            }
+
             changeSlotsNotReady = true
         }
 
@@ -342,22 +363,6 @@ class MultiplayerService(
         if (!mpMatch.password.equals(packet.match.password))
             mpMatch.password = packet.match.password
         if (updateName) mpMatch.name = packet.match.name
-
-        if (beatmapChanged) {
-            mpMatch.beatmapName = packet.match.beatmapName
-            mpMatch.beatmapMd5 = packet.match.beatmapMd5
-            mpMatch.beatmapId = packet.match.beatmapId
-        }
-
-        val newMode = Mode.fromValue(packet.match.mode.value)
-        if (newMode.value != mpMatch.mode) {
-            mpMatch.mode = newMode.value
-            changeSlotsNotReady = true
-
-            // Update stats for all match members when mode changes
-            val userIds = slots.mapNotNull { it.user?.userId }
-            updateMatchMembersPresences(userIds, newMode)
-        }
 
         if (freemodChanged) {
             mpMatch.freemodEnabled = packet.match.freemodsEnabled
@@ -375,7 +380,6 @@ class MultiplayerService(
             }
         }
 
-        val teamTypeChanged = mpMatch.teamType != packet.match.teamType.value.toUByte()
         if (teamTypeChanged) {
             mpMatch.teamType = packet.match.teamType.value.toUByte()
             val isVersus =
