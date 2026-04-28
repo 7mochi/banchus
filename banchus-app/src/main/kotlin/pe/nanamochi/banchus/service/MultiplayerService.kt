@@ -333,11 +333,12 @@ class MultiplayerService(
         val freemodChanged = mpMatch.freemodEnabled != packet.match.freemodsEnabled
         val teamTypeChanged = mpMatch.teamType != packet.match.teamType.value.toUByte()
 
-        val finalModeValue = if (!beatmapChanged) {
-            mpMatch.mode
-        } else {
-            packet.match.mode.value
-        }
+        val finalModeValue =
+            if (!beatmapChanged) {
+                mpMatch.mode
+            } else {
+                packet.match.mode.value
+            }
 
         val newMode = Mode.fromValue(finalModeValue)
 

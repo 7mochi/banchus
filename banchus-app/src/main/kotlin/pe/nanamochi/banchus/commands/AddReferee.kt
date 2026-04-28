@@ -12,11 +12,7 @@ import pe.nanamochi.banchus.service.MultiplayerService
 import pe.nanamochi.banchus.service.UserService
 
 @Component
-@Command(
-    name = "addref",
-    documentation = "Add a referee to the current match.",
-    multiplayer = true,
-)
+@Command(name = "addref", documentation = "Add a referee to the current match.", multiplayer = true)
 class AddReferee(
     private val multiplayerService: MultiplayerService,
     private val userService: UserService,
