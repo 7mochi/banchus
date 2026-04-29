@@ -16,7 +16,6 @@ import pe.nanamochi.banchus.domain.error.DomainMessage
 import pe.nanamochi.banchus.domain.error.InternalError
 import pe.nanamochi.banchus.infrastructure.client.OsuApiClient
 import pe.nanamochi.banchus.mapper.BeatmapMapper
-import pe.nanamochi.banchus.mapper.BeatmapsetMapper
 import pe.nanamochi.banchus.util.runDatabaseCatching
 import pe.nanamochi.banchus.util.toMd5
 
@@ -27,7 +26,6 @@ class BeatmapService(
     private val beatmapMapper: BeatmapMapper,
     private val storageService: StorageService,
     private val osuApiClient: OsuApiClient,
-    private val beatmapsetMapper: BeatmapsetMapper,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
