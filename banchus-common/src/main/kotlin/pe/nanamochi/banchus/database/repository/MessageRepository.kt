@@ -24,9 +24,9 @@ interface MessageRepository : JpaRepository<Message, Int> {
     @Modifying
     @Transactional
     @Query(
-        "UPDATE Message m SET m.deletedAt = CURRENT_TIMESTAMP WHERE m.senderId = :senderId AND m.createdAt > :deltaSeconds"
+        "UPDATE Message m SET m.deletedAt = CURRENT_TIMESTAMP WHERE m.senderId = :senderId AND m.createdAt > :cutoff"
     )
-    fun softDeleteRecent(senderId: Int, deltaSeconds: Instant)
+    fun softDeleteRecent(senderId: Int, cutoff: Instant)
 
     fun senderName(senderName: String): MutableList<Message>
 

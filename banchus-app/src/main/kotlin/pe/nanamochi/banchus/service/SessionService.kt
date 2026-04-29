@@ -9,6 +9,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.database.entity.HardwareLog
 import pe.nanamochi.banchus.domain.enums.CountryCode
@@ -35,7 +36,7 @@ class SessionService(
     private val channelService: ChannelService,
     private val streamService: StreamService,
     private val presenceService: PresenceService,
-    private val userService: UserService,
+    @Lazy private val userService: UserService,
     private val statService: StatService,
     private val leaderboardService: LeaderboardService,
     private val hardwareLogService: HardwareLogService,
@@ -126,6 +127,11 @@ class SessionService(
 
     fun setPrivateDms(session: Session, privateDm: Boolean): Session =
         sessionRepository.setPrivateDms(session, privateDm)
+
+    fun silence(session: Session, duration: Duration) {
+        session.silenceEnd = Instant.now().plus(duration)
+        update(session)
+    }
 
     fun fetchOne(sessionId: UUID) = sessionRepository.findById(sessionId)
 

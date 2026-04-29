@@ -58,8 +58,9 @@ class MessageService(
         messageRepository.markAllAsRead(targetId)
     }
 
-    fun softDeleteRecent(senderId: Int, deltaSeconds: Instant) = runDatabaseCatching {
-        messageRepository.softDeleteRecent(senderId, deltaSeconds)
+    fun softDeleteRecent(senderId: Int, deltaSeconds: Int) = runDatabaseCatching {
+        val cutoff = Instant.now().minusSeconds(deltaSeconds.toLong())
+        messageRepository.softDeleteRecent(senderId, cutoff)
     }
 
     fun checkSpam(session: Session): Result<Unit, DomainMessage> = binding {
