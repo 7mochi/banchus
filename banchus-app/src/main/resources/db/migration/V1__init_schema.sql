@@ -1,6 +1,6 @@
 CREATE TABLE beatmaps
 (
-    id              INT          NOT NULL,
+    id              INT          NOT NULL PRIMARY KEY,
     mode            INT          NOT NULL,
     md5             VARCHAR(32)  NOT NULL,
     status          VARCHAR(32)  NOT NULL,
@@ -21,13 +21,12 @@ CREATE TABLE beatmaps
     od              REAL         NOT NULL,
     hp              REAL         NOT NULL,
     star_rating     REAL         NOT NULL,
-    beatmapset_id   INT          NOT NULL,
-    CONSTRAINT pk_beatmaps PRIMARY KEY (id)
+    beatmapset_id   INT          NOT NULL
 );
 
 CREATE TABLE beatmapsets
 (
-    id                INT           NOT NULL,
+    id                INT           NOT NULL PRIMARY KEY,
     title             VARCHAR(128)  NULL,
     title_unicode     VARCHAR(128)  NULL,
     artist            VARCHAR(128)  NULL,
@@ -44,8 +43,7 @@ CREATE TABLE beatmapsets
     last_updated      datetime      NOT NULL,
     total_playcount   BIGINT        NOT NULL,
     language_id       INT           NOT NULL,
-    genre_id          INT           NOT NULL,
-    CONSTRAINT pk_beatmapsets PRIMARY KEY (id)
+    genre_id          INT           NOT NULL
 );
 
 CREATE TABLE channels
@@ -76,6 +74,35 @@ CREATE TABLE users
     CONSTRAINT uc_users_email UNIQUE (email)
 );
 
+CREATE TABLE scores
+(
+    id                 BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    user_id            INT                   NOT NULL,
+    online_checksum    VARCHAR(32)           NOT NULL,
+    beatmap_id         INT                   NOT NULL,
+    score              BIGINT                NOT NULL,
+    performance_points DOUBLE                NOT NULL,
+    accuracy           DOUBLE                NOT NULL,
+    highest_combo      INT                   NOT NULL,
+    full_combo         BIT(1)                NOT NULL,
+    mods               INT                   NOT NULL,
+    num_300s           INT                   NOT NULL,
+    num_100s           INT                   NOT NULL,
+    num_50s            INT                   NOT NULL,
+    num_misses         INT                   NOT NULL,
+    num_gekis          INT                   NOT NULL,
+    num_katus          INT                   NOT NULL,
+    grade              VARCHAR(2)            NOT NULL,
+    submission_status  VARCHAR(255)          NOT NULL,
+    mode               INT                   NOT NULL,
+    passed             BIT(1)                NOT NULL,
+    time_elapsed       INT                   NOT NULL,
+    created_at         datetime              NOT NULL,
+    updated_at         datetime              NOT NULL,
+    CONSTRAINT fk_scores_on_user FOREIGN KEY (user_id) REFERENCES users (id),
+    CONSTRAINT fk_scores_on_beatmap FOREIGN KEY (beatmap_id) REFERENCES beatmaps (id)
+);
+
 CREATE TABLE stats
 (
     id                                INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
@@ -99,7 +126,7 @@ CREATE TABLE stats
     c_count                           INT                NOT NULL DEFAULT 0,
     d_count                           INT                NOT NULL DEFAULT 0,
     max_combo                         INT                NOT NULL DEFAULT 0,
-    latest_performance_point_awarded  INT                NOT NULL DEFAULT 0,
+    latest_performance_point_awarded  datetime           NOT NULL DEFAULT 0,
     CONSTRAINT fk_stats_on_user FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
@@ -179,3 +206,6 @@ CREATE INDEX idx_stats_user_mode ON stats (user_id, mode);
 CREATE INDEX idx_hw_md5_lookup ON hardware_logs (adapters_md5, uninstall_md5, disk_signature_md5);
 CREATE INDEX idx_messages_unread ON messages (target_id, deleted_at, read_at);
 CREATE INDEX idx_messages_sender_stats ON messages (sender_id, created_at);
+CREATE INDEX score_user_mode_status_pp_idx ON scores (user_id, mode, submission_status, performance_points DESC);
+CREATE INDEX beatmap_mode_status_idx ON scores (beatmap_id);
+CREATE INDEX beatmap_status_idx ON scores (submission_status);
