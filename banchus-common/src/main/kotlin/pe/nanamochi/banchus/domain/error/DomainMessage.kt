@@ -6,8 +6,6 @@ sealed interface DomainMessage
 
 data class DatabaseError(val reason: String?) : DomainMessage
 
-data class RedisError(val reason: String?) : DomainMessage
-
 data object InternalError : DomainMessage
 
 sealed interface BanchoError : DomainMessage
