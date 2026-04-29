@@ -634,7 +634,7 @@ class MultiplayerService(
             }
         multiplayerRepository.updateSlot(matchId, slotId, slot)
 
-        val updatedSlots = fetchAllSlots(matchId) // TODO: is correct?
+        val updatedSlots = fetchAllSlots(matchId)
         broadcastUpdate(mpMatch, updatedSlots)
     }
 

@@ -43,7 +43,7 @@ class ScoringController(private val scoreService: ScoreService) {
                 failure = { domainError ->
                     val submissionError =
                         when (domainError) {
-                            // TODO: add more
+                            // TODO: add more specific errors
                             is InternalError -> ScoreSubmissionErrors.NO
                             else -> ScoreSubmissionErrors.NO
                         }

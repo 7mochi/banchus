@@ -69,7 +69,7 @@ class MessageService(
         }
 
         session.silenceEnd = Instant.now().plusSeconds(CHAT_TIMEOUT_SECONDS.toLong())
-        // userService.silenceUser() // TODO:
+        // TODO: Silence user
 
         Err(MessageUserAutoSilenced)
     }

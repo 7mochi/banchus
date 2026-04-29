@@ -143,7 +143,7 @@ class ScoreService(
         val (scoreDataB64, replayFile) = parseForm(request).bind()
         val (scoreTokens, _) = decryptScore(scoreDataB64, clientHashB64, ivB64, osuVersion).bind()
         val decrypted =
-            DecryptedScoreData.fromTokens(scoreTokens).bind() // TODO: return Response(b"error: no")
+            DecryptedScoreData.fromTokens(scoreTokens).bind()
 
         val user = userService.login(decrypted.username, passwordMd5).bind()
         val sessions = sessionService.fetchByUsername(decrypted.username)
@@ -184,14 +184,12 @@ class ScoreService(
             log.warn(
                 "Score submission denied for ${user.username} (${user.id} in beatmap ${beatmap.id}) due to unrankable mods (${Mods.fromBitmask(score.mods.toUInt())})."
             )
-            return@binding Err(InternalError).bind() // TODO: maybe a more specific error
+            return@binding Err(InternalError).bind() // TODO: maybe change to a more specific error
         }
 
         // TODO: check user agent != 'osu!'
 
-        // TODO: if (score.mods.conflict) { restrict_user(The user attempted to submit a score with
-        // TODO: the mod combination +{score.mods!r} which contains mutually exclusive/illegal mods)
-        // TODO: }
+        // TODO: check if user attempted to submit a score with a mob combination which contains mutually exclusive/illegal mods
 
         val lockKey = "score_submission:${score.onlineChecksum}"
         if (lock.acquireLock(lockKey, 15000, TimeUnit.MILLISECONDS)) {
@@ -209,14 +207,13 @@ class ScoreService(
             lock.releaseLock(lockKey)
         }
 
-        // TODO: Update most played
+        // TODO: Update most played (Table not implemented yet)
 
         if (score.passed) {
             if (replayFile.size < 24) {
-                // TODO: restrict_user(The user attempted to submit a completed score without a
-                // TODO: replay
-                // TODO: attached. This should NEVER happen and means they are likely using a replay
-                // TODO: editor.)
+                // TODO: A user attempted to submit a completed score without a replay attached
+                // this should NEVER happen and means they are likely using a replay editor.
+                // Restrict this user
             } else {
                 storageService.saveReplay(score.id, replayFile)
             }
@@ -283,13 +280,10 @@ class ScoreService(
         }
 
         refreshStats(user, stats)
-        // TODO: score.rank = leaderboardService.findScoreRank(score.id, beatmap.md5, score.user.id,
-        // TODO:score.mode)
 
-        // TODO: if (score.rank == 1 && score.submissionStatus == SubmissionStatus.BEST &&
-        // TODO: beatmap.hasLeaderboard() && !user.isRestricted) {
-        // TODO: handleFirstPlace(score, beatmap, user)
-        // TODO: }
+        // TODO: Find rank of the score in the beatmap leaderboard
+
+        // TODO: Handle first place
 
         // TODO: Handle multiplayer
 
@@ -329,18 +323,18 @@ class ScoreService(
                 chartEntry("pp", oldStats.performancePoints, stats.performancePoints),
             )
 
-        val achievementsStr = "" // TODO: Implement unlockAchievements
+        val achievementsStr = "" // TODO: Implement unlock achievements
 
         val submissionCharts =
             mutableListOf(
                 "beatmapId:${beatmap.id}",
-                "beatmapSetId:${beatmap.beatmapset!!.id}", // TODO: is !! correct here?
+                "beatmapSetId:${beatmap.beatmapset!!.id}",
                 "beatmapPlaycount:${beatmap.playcount}",
                 "beatmapPasscount:${beatmap.passcount}",
                 "approvedDate:$approvedDate",
                 "\n",
                 "chartId:beatmap",
-                "chartUrl:https://osu.ppy.sh/b/${beatmap.id}", // TODO: change with my url
+                "chartUrl:https://osu.ppy.sh/b/${beatmap.id}", // TODO: change this with my url
                 "chartName:Beatmap Ranking",
             )
 
@@ -348,7 +342,7 @@ class ScoreService(
         submissionCharts.add("onlineScoreId:${score.id}")
         submissionCharts.add("\n")
         submissionCharts.add("chartId:overall")
-        submissionCharts.add("chartUrl:https://banchus.com/u/${user.id}")
+        submissionCharts.add("chartUrl:https://osu.ppy.sh/u/${user.id}") // TODO: change this with my url
         submissionCharts.add("chartName:Overall Ranking")
         submissionCharts.addAll(overallRankingChart)
         submissionCharts.add("achievements-new:$achievementsStr")

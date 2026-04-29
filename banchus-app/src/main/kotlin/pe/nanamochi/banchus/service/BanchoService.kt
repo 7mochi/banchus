@@ -31,11 +31,11 @@ class BanchoService(
                     packet,
                     session!!,
                     responseStream,
-                ) // TODO: is !! correct? or maybe wrap in Err()?
+                )
             }
         }
 
-        val pendingData = streamService.readPendingData(session!!) // TODO: same
+        val pendingData = streamService.readPendingData(session!!)
         responseStream.write(pendingData)
         responseStream.toByteArray()
     }

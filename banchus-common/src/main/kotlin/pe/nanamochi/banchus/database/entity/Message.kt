@@ -36,11 +36,7 @@ class Message(
     @Column(name = "deleted_at", nullable = true) var deletedAt: Instant?,
 ) {}
 
-data class MessageSendResult(
-    var message: Message,
-    var response:
-        String, // TODO: change this to CommandResponse later, when commands are implemented
-) {}
+data class MessageSendResult(var message: Message, var response: String) {}
 
 sealed class Target {
     data class Channel(val channelName: ChannelName) : Target()

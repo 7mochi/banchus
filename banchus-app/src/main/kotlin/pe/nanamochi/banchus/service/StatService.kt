@@ -38,9 +38,7 @@ class StatService(private val statRepository: StatRepository) {
         statRepository.findByUserIdAndMode(userId, mode).toResultOr { StatNotFound }
 
     fun fetchUserStats(user: User): Result<List<Stat>, StatNotFound> =
-        statRepository.findByUser(user).toResultOr {
-            StatNotFound
-        } // TODO: is StatNotFound correct?
+        statRepository.findByUser(user).toResultOr { StatNotFound }
 
     fun calculateWeightedAccuracy(topScores: List<Score>): Double {
         if (topScores.isEmpty()) return 0.0

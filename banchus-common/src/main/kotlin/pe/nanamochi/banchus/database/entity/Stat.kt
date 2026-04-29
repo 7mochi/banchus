@@ -61,5 +61,9 @@ class Stat(
         }
     }
 
-    public override fun clone(): Stat = super.clone() as Stat // TODO: is this correct?
+    public override fun clone(): Stat {
+        val cloned = super.clone() as Stat
+        cloned.id = 0
+        return cloned
+    }
 }

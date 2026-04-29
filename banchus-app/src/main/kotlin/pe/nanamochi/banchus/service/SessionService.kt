@@ -58,10 +58,6 @@ class SessionService(
                     .mapError { SessionInvalidCredentials }
                     .bind()
 
-            // TODO: MAYBE add if can login or pending verification
-
-            // TODO: Check password with bcrypt? Idk :Sob:
-
             hardwareLogService
                 .create(
                     HardwareLog(
@@ -73,7 +69,7 @@ class SessionService(
                 )
                 .bind()
 
-            // TODO: Implement hardwareLogService.checkForMultiaccounts()
+            // TODO: Implement check for multiaccounts
 
             val userSessionCount = fetchUserSessionCount(user.id)
             if (
@@ -103,7 +99,7 @@ class SessionService(
                         userId = user.id,
                         username = user.username,
                         privileges = user.privileges,
-                        action = 0u, // TODO: Enum Action
+                        action = 0u, // TODO: Add action enum
                         infoText = "",
                         beatmapMd5 = "",
                         beatmapId = 0,
