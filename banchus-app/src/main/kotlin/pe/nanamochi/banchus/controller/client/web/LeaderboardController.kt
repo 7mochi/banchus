@@ -27,10 +27,10 @@ class LeaderboardController(private val leaderboardService: LeaderboardService) 
         @RequestParam(name = "mods") modsBitmask: Int,
         @RequestParam(name = "f") filename: String,
         @RequestParam(name = "i") beatmapSetId: Int,
-        @RequestParam(name = "vv") version: Int,
-        @RequestParam(name = "s") skip: String,
-        @RequestParam(name = "h") hash: String,
-        @RequestParam(name = "a") aqn: String,
+        @RequestParam(name = "vv") leaderboardVersion: Int,
+        @RequestParam(name = "s") requestingFromEditorSongSelect: String,
+        @RequestParam(name = "h") mapPackageHash: String,
+        @RequestParam(name = "a") aqnFilesFound: String,
     ): ResponseEntity<String> =
         binding {
                 leaderboardService
@@ -38,6 +38,7 @@ class LeaderboardController(private val leaderboardService: LeaderboardService) 
                         user,
                         beatmapMd5,
                         leaderboardType,
+                        leaderboardVersion,
                         gamemode,
                         modsBitmask,
                     )

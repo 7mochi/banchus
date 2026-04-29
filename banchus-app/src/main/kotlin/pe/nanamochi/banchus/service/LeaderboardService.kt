@@ -13,17 +13,24 @@ import pe.nanamochi.banchus.domain.enums.Mode
 import pe.nanamochi.banchus.domain.enums.SubmissionStatus
 import pe.nanamochi.banchus.redis.repository.LeaderboardRepository
 
+private const val CURRENT_LEADERBOARD_VERSION = 4
+
 @Service
 class LeaderboardService(
     private val leaderboardRepository: LeaderboardRepository,
     @Lazy private val scoreService: ScoreService,
     private val beatmapService: BeatmapService,
+    @Lazy private val userService: UserService,
 ) {
     fun addToLeaderboard(user: User, mode: Mode, performancePoints: Int) =
         leaderboardRepository.addToLeaderboard(user, mode, performancePoints)
 
     fun removeFromLeaderboard(user: User, mode: Mode) =
         leaderboardRepository.removeFromLeaderboard(user, mode)
+
+    fun removeFromAllLeaderboards(user: User) {
+        Mode.entries.forEach { mode -> removeFromLeaderboard(user, mode) }
+    }
 
     fun fetchGlobalRank(userId: Int, mode: Mode) =
         leaderboardRepository.fetchGlobalRank(userId, mode)
@@ -32,9 +39,19 @@ class LeaderboardService(
         user: User,
         beatmapMd5: String,
         leaderboardType: Int,
+        leaderboardVersion: Int,
         modeInt: Int,
         modsBitmask: Int,
     ) = binding {
+        if (leaderboardVersion != CURRENT_LEADERBOARD_VERSION) {
+            userService
+                .restrict(
+                    user,
+                    "The leaderboard version for the current known latest osu! client is $CURRENT_LEADERBOARD_VERSION, but the client sent $leaderboardVersion.",
+                )
+                .bind()
+        }
+
         val beatmap = beatmapService.getOrCreateBeatmap(beatmapMd5).bind()
         val type = LeaderboardType.fromValue(leaderboardType)
         val mode = Mode.fromValue(modeInt)

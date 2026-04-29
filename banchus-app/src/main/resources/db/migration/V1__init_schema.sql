@@ -68,10 +68,23 @@ CREATE TABLE users
     latest_activity   datetime    NOT NULL,
     country           SMALLINT    NOT NULL,
     silence_end       datetime    NULL,
+    restriction_time  datetime    NULL,
     privileges        INT         NOT NULL DEFAULT 1,
     CONSTRAINT uc_users_username UNIQUE (username),
     CONSTRAINT uc_users_safe_username UNIQUE (safe_username),
     CONSTRAINT uc_users_email UNIQUE (email)
+);
+
+CREATE TABLE audit_logs
+(
+    id         BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    admin_id   INT                   NOT NULL,
+    target_id  INT                   NOT NULL,
+    action     VARCHAR(32)           NOT NULL,
+    summary    VARCHAR(500)          NOT NULL,
+    created_at DATETIME              NOT NULL,
+    CONSTRAINT fk_audit_logs_on_admin FOREIGN KEY (admin_id) REFERENCES users (id),
+    CONSTRAINT fk_audit_logs_on_target FOREIGN KEY (target_id) REFERENCES users (id)
 );
 
 CREATE TABLE scores

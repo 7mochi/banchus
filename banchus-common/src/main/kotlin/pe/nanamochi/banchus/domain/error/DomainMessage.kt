@@ -151,3 +151,7 @@ data object SelfSilenceNotAllowed : SilenceError
 data object BotSilenceNotAllowed : SilenceError
 
 data object InvalidDuration : SilenceError
+
+sealed interface AuditLogError : DomainMessage
+
+data object AuditLogNotFound : AuditLogError

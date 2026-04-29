@@ -122,6 +122,8 @@ class SessionService(
         }
     }
 
+    fun update(session: Session) = sessionRepository.update(session)
+
     fun setPrivateDms(session: Session, privateDm: Boolean): Session =
         sessionRepository.setPrivateDms(session, privateDm)
 

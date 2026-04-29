@@ -68,6 +68,34 @@ enum class Mods(val value: UInt, val displayName: String, val initial: String) {
         fun toBitmask(mods: List<Mods>?): UInt =
             mods?.fold(0u) { acc, mod -> acc or mod.value } ?: 0u
 
+        fun hasConflict(bitmask: UInt): Boolean {
+            if ((bitmask and DOUBLE_TIME.value) != 0u && (bitmask and HALF_TIME.value) != 0u) {
+                return true
+            }
+
+            if ((bitmask and NIGHTCORE.value) != 0u && (bitmask and DOUBLE_TIME.value) == 0u) {
+                return true
+            }
+
+            if ((bitmask and EASY.value) != 0u && (bitmask and HARD_ROCK.value) != 0u) {
+                return true
+            }
+
+            if ((bitmask and RELAX.value) != 0u && (bitmask and AUTOPILOT.value) != 0u) {
+                return true
+            }
+
+            if ((bitmask and HIDDEN.value) != 0u && (bitmask and FADE_IN.value) != 0u) {
+                return true
+            }
+
+            if ((bitmask and KEY_MODS_MASK).countOneBits() > 1) {
+                return true
+            }
+
+            return false
+        }
+
         fun filterInvalidModCombinations(bitmask: UInt, mode: Mode): UInt {
             var result = bitmask
 

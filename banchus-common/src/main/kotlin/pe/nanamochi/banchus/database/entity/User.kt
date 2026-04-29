@@ -34,6 +34,7 @@ class User(
     @Column(name = "country", length = 2, nullable = false)
     var country: CountryCode = CountryCode.XX,
     @Column(name = "silence_end", nullable = true) var silenceEnd: Instant? = null,
+    @Column(name = "restriction_time", nullable = true) var restrictionTime: Instant? = null,
     @Column(name = "privileges", nullable = false) var privileges: Int = 1,
 ) {
     val isSilenced: Boolean

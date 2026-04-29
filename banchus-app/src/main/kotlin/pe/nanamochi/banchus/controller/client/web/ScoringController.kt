@@ -4,8 +4,10 @@ import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.mapBoth
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestPart
@@ -26,6 +28,7 @@ class ScoringController(private val scoreService: ScoreService) {
     )
     fun scoreSubmission(
         request: HttpServletRequest,
+        @RequestHeader headers: HttpHeaders,
         @RequestParam(value = "iv") ivB64: String,
         @RequestParam(value = "s") clientHashB64: String,
         @RequestParam(value = "st") scoreTime: Int,
@@ -35,7 +38,15 @@ class ScoringController(private val scoreService: ScoreService) {
     ): String {
         return binding {
                 scoreService
-                    .submitScore(request, ivB64, clientHashB64, scoreTime, passwordMd5, osuVersion)
+                    .submitScore(
+                        request,
+                        headers,
+                        ivB64,
+                        clientHashB64,
+                        scoreTime,
+                        passwordMd5,
+                        osuVersion,
+                    )
                     .bind()
             }
             .mapBoth(

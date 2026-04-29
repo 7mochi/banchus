@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Base64
 import java.util.concurrent.TimeUnit
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.components.hasAny
 import pe.nanamochi.banchus.database.entity.Beatmap
@@ -134,6 +135,7 @@ class ScoreService(
 
     fun submitScore(
         request: HttpServletRequest,
+        headers: HttpHeaders,
         ivB64: String,
         clientHashB64: String,
         scoreTime: Int,
@@ -186,10 +188,24 @@ class ScoreService(
             return@binding Err(InternalError).bind() // TODO: maybe change to a more specific error
         }
 
-        // TODO: check user agent != 'osu!'
+        headers.getFirst("user-agent")?.let { userAgent ->
+            if (userAgent != "osu!")
+                userService
+                    .restrict(
+                        user,
+                        "The expected user-agent header for an osu! client is 'osu!', while the client sent $userAgent.",
+                    )
+                    .bind()
+        }
 
-        // TODO: check if user attempted to submit a score with a mob combination which contains
-        // mutually exclusive/illegal mods
+        if (Mods.hasConflict(score.mods.toUInt())) {
+            userService
+                .restrict(
+                    user,
+                    "The user attempted to submit a score with the mod combination ${Mods.fromBitmask(score.mods.toUInt())}, which contains mutually exclusive/illegal mods.",
+                )
+                .bind()
+        }
 
         val lockKey = "score_submission:${score.onlineChecksum}"
         if (lock.acquireLock(lockKey, 15000, TimeUnit.MILLISECONDS)) {
@@ -211,9 +227,12 @@ class ScoreService(
 
         if (score.passed) {
             if (replayFile.size < 24) {
-                // TODO: A user attempted to submit a completed score without a replay attached
-                // this should NEVER happen and means they are likely using a replay editor.
-                // Restrict this user
+                userService
+                    .restrict(
+                        user,
+                        "The user attempted to submit a completed score without a replay attached. This should NEVER happen and means they are likely using a replay editor.",
+                    )
+                    .bind()
             } else {
                 storageService.saveReplay(score.id, replayFile)
             }
