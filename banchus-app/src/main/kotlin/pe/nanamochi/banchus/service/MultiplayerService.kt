@@ -9,7 +9,6 @@ import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.components.MatchTeamType
-import pe.nanamochi.banchus.components.Mods
 import pe.nanamochi.banchus.components.SlotTeam
 import pe.nanamochi.banchus.components.hasAny
 import pe.nanamochi.banchus.database.entity.ChannelName
@@ -17,6 +16,7 @@ import pe.nanamochi.banchus.database.entity.MatchEvent
 import pe.nanamochi.banchus.database.entity.MatchEventType
 import pe.nanamochi.banchus.database.entity.MatchGame
 import pe.nanamochi.banchus.domain.enums.Mode
+import pe.nanamochi.banchus.domain.enums.Mods
 import pe.nanamochi.banchus.domain.enums.SlotStatus
 import pe.nanamochi.banchus.domain.error.DomainMessage
 import pe.nanamochi.banchus.domain.error.InvalidPassword

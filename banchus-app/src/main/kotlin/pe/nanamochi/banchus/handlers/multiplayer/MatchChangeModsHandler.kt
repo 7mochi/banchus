@@ -2,8 +2,8 @@ package pe.nanamochi.banchus.handlers.multiplayer
 
 import java.io.ByteArrayOutputStream
 import org.springframework.stereotype.Component
-import pe.nanamochi.banchus.components.Mods
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.domain.enums.Mods
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.packets.client.MatchChangeModsPacket
