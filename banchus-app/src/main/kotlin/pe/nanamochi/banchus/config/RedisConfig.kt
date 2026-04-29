@@ -36,7 +36,6 @@ class RedisConfig {
         }
 
     @Bean
-    @Primary
     fun sessionIdentityRedisTemplate(
         factory: RedisConnectionFactory
     ): RedisTemplate<String, SessionIdentity> =
