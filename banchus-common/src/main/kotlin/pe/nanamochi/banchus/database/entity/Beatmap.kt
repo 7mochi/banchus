@@ -47,4 +47,8 @@ class Beatmap(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "beatmapset_id", nullable = false)
     var beatmapset: Beatmapset? = null,
-)
+) {
+    fun hasLeaderboard() = status == BeatmapRankedStatus.RANKED
+
+    fun objectCount() = countNormal + countSlider + countSpinner
+}

@@ -12,6 +12,7 @@ import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import java.time.Instant
 import pe.nanamochi.banchus.domain.enums.Mode
 
 @Entity
@@ -44,5 +45,21 @@ class Stat(
     @Column(name = "c_count", nullable = false) var cCount: Int = 0,
     @Column(name = "d_count", nullable = false) var dCount: Int = 0,
     @Column(name = "max_combo", nullable = false) var maxCombo: Int = 0,
-    @Column(name = "latest_performance_point_awarded") var latestPerformancePointAwarded: Int = 0,
-) {}
+    @Column(name = "latest_performance_point_awarded")
+    var latestPerformancePointAwarded: Instant = Instant.now(),
+) : Cloneable {
+    fun adjustGradeCounter(grade: String, delta: Int) {
+        when (grade) {
+            "XH" -> xhCount += delta
+            "X" -> xCount += delta
+            "SH" -> shCount += delta
+            "S" -> sCount += delta
+            "A" -> aCount += delta
+            "B" -> bCount += delta
+            "C" -> cCount += delta
+            "D" -> dCount += delta
+        }
+    }
+
+    public override fun clone(): Stat = super.clone() as Stat // TODO: is this correct?
+}
