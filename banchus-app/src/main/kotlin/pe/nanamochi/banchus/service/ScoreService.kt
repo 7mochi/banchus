@@ -142,8 +142,7 @@ class ScoreService(
     ) = binding {
         val (scoreDataB64, replayFile) = parseForm(request).bind()
         val (scoreTokens, _) = decryptScore(scoreDataB64, clientHashB64, ivB64, osuVersion).bind()
-        val decrypted =
-            DecryptedScoreData.fromTokens(scoreTokens).bind()
+        val decrypted = DecryptedScoreData.fromTokens(scoreTokens).bind()
 
         val user = userService.login(decrypted.username, passwordMd5).bind()
         val sessions = sessionService.fetchByUsername(decrypted.username)
@@ -189,7 +188,8 @@ class ScoreService(
 
         // TODO: check user agent != 'osu!'
 
-        // TODO: check if user attempted to submit a score with a mob combination which contains mutually exclusive/illegal mods
+        // TODO: check if user attempted to submit a score with a mob combination which contains
+        // mutually exclusive/illegal mods
 
         val lockKey = "score_submission:${score.onlineChecksum}"
         if (lock.acquireLock(lockKey, 15000, TimeUnit.MILLISECONDS)) {
@@ -342,7 +342,9 @@ class ScoreService(
         submissionCharts.add("onlineScoreId:${score.id}")
         submissionCharts.add("\n")
         submissionCharts.add("chartId:overall")
-        submissionCharts.add("chartUrl:https://osu.ppy.sh/u/${user.id}") // TODO: change this with my url
+        submissionCharts.add(
+            "chartUrl:https://osu.ppy.sh/u/${user.id}"
+        ) // TODO: change this with my url
         submissionCharts.add("chartName:Overall Ranking")
         submissionCharts.addAll(overallRankingChart)
         submissionCharts.add("achievements-new:$achievementsStr")

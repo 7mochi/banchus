@@ -27,11 +27,7 @@ class BanchoService(
 
         if (body.isNotEmpty()) {
             packetReader.readPackets(body).forEach { packet ->
-                packetHandler.handle(
-                    packet,
-                    session!!,
-                    responseStream,
-                )
+                packetHandler.handle(packet, session!!, responseStream)
             }
         }
 
