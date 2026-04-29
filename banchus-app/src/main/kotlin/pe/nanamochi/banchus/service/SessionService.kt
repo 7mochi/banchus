@@ -133,6 +133,8 @@ class SessionService(
 
     fun fetchByUserId(userId: Int) = sessionRepository.fetchByUserId(userId)
 
+    fun fetchByUsername(username: String) = sessionRepository.fetchByUsername(username)
+
     fun fetchUserSessionCount(userId: Int): Int = sessionRepository.fetchUserSessionCount(userId)
 
     fun logout(session: Session) {
