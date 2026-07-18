@@ -3,8 +3,6 @@ package pe.nanamochi.banchus.service
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
-import com.github.michaelbull.result.getOrElse
-import com.github.michaelbull.result.runCatching
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -21,7 +19,7 @@ class BanchoService(
     private val packetHandler: PacketHandler,
 ) {
     fun handlePackets(token: String, body: ByteArray): Result<ByteArray, DomainMessage> = binding {
-        val uuid = runCatching { UUID.fromString(token) }.getOrElse { Err(InvalidToken).bind() }
+        val uuid = UUID.fromString(token) ?: Err(InvalidToken).bind()
         val session = sessionService.fetchOne(uuid)
         val responseStream = ByteArrayOutputStream()
 
