@@ -83,6 +83,16 @@ class RedisConfig {
         }
 
     @Bean
+    fun byteArrayRedisTemplate(factory: RedisConnectionFactory): RedisTemplate<String, ByteArray> =
+        RedisTemplate<String, ByteArray>().apply {
+            connectionFactory = factory
+            keySerializer = RedisSerializer.string()
+            valueSerializer = RedisSerializer.byteArray()
+            hashKeySerializer = RedisSerializer.string()
+            hashValueSerializer = RedisSerializer.byteArray()
+        }
+
+    @Bean
     fun multiplayerMatchSlotRedisTemplate(
         factory: RedisConnectionFactory
     ): RedisTemplate<String, MultiplayerMatchSlot> =

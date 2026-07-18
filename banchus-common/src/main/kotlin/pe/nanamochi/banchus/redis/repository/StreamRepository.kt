@@ -13,49 +13,56 @@ import org.springframework.stereotype.Repository
 import pe.nanamochi.banchus.redis.stream.MessageInfo
 
 @Repository
-class StreamRepository(private val redisTemplate: RedisTemplate<String, String>) {
+class StreamRepository(
+    private val byteArrayRedisTemplate: RedisTemplate<String, ByteArray>,
+    private val objectMapper: ObjectMapper,
+) {
     private val log = LoggerFactory.getLogger(javaClass)
-    private val objectMapper = ObjectMapper()
 
     fun xadd(streamKey: String, data: ByteArray, info: MessageInfo): RecordId? {
         val infoJson = objectMapper.writeValueAsString(info)
         val record =
             StreamRecords.newRecord()
-                .ofMap(mapOf("data" to String(data, Charsets.ISO_8859_1), "info" to infoJson))
+                .ofMap(mapOf("data" to data, "info" to infoJson.toByteArray()))
                 .withStreamKey(streamKey)
 
-        return redisTemplate.opsForStream<String, Any>().add(record)
+        return byteArrayRedisTemplate.opsForStream<String, ByteArray>().add(record)
     }
 
     fun join(sessionId: UUID, streamKey: String) {
         val latestId = getLatestMessageId(streamKey) ?: "0-0"
-        redisTemplate.opsForHash<String, String>().put(makeKey(sessionId), streamKey, latestId)
+        byteArrayRedisTemplate
+            .opsForHash<String, ByteArray>()
+            .put(makeKey(sessionId), streamKey, latestId.toByteArray())
     }
 
     fun leave(sessionId: UUID, streamKey: String) {
-        redisTemplate.opsForHash<String, String>().delete(makeKey(sessionId), streamKey)
+        byteArrayRedisTemplate.opsForHash<String, ByteArray>().delete(makeKey(sessionId), streamKey)
     }
 
     fun leaveAll(sessionId: UUID) {
-        redisTemplate.delete(makeKey(sessionId))
+        byteArrayRedisTemplate.delete(makeKey(sessionId))
     }
 
     fun isJoined(sessionId: UUID, streamKey: String): Boolean {
-        return redisTemplate.opsForHash<String, String>().hasKey(makeKey(sessionId), streamKey)
+        return byteArrayRedisTemplate
+            .opsForHash<String, ByteArray>()
+            .hasKey(makeKey(sessionId), streamKey)
     }
 
     fun readPendingMessages(sessionId: UUID): List<PendingMessage> {
         val offsetsKey = makeKey(sessionId)
-        val offsets = redisTemplate.opsForHash<String, String>().entries(offsetsKey)
+        val offsets = byteArrayRedisTemplate.opsForHash<String, ByteArray>().entries(offsetsKey)
 
         if (offsets.isEmpty()) return emptyList()
 
         val allMessages = mutableListOf<PendingMessage>()
         val updatedOffsets = offsets.toMutableMap()
+        val streamOps = byteArrayRedisTemplate.opsForStream<String, ByteArray>()
 
-        val streamOps = redisTemplate.opsForStream<String, Any>()
+        for ((streamKey, lastIdBytes) in offsets) {
+            val lastId = String(lastIdBytes, Charsets.UTF_8)
 
-        for ((streamKey, lastId) in offsets) {
             val messages =
                 try {
                     streamOps.read(
@@ -70,32 +77,33 @@ class StreamRepository(private val redisTemplate: RedisTemplate<String, String>)
                 } ?: continue
 
             for (message in messages) {
-                val data = message.value["data"] as? String ?: continue
-                val info = deserializeMessageInfo(message.value["info"] as? String)
+                val data = message.value["data"] ?: continue
+                val infoBytes = message.value["info"] ?: continue
+                val info = deserializeMessageInfo(String(infoBytes, Charsets.UTF_8))
 
-                allMessages.add(
-                    PendingMessage(data = data.toByteArray(Charsets.ISO_8859_1), info = info)
-                )
+                allMessages.add(PendingMessage(data = data, info = info))
             }
 
-            messages.lastOrNull()?.id?.let { updatedOffsets[streamKey] = it.value }
+            messages.lastOrNull()?.id?.let { updatedOffsets[streamKey] = it.value.toByteArray() }
         }
 
         if (updatedOffsets.isNotEmpty()) {
-            redisTemplate.opsForHash<String, String>().putAll(offsetsKey, updatedOffsets)
+            byteArrayRedisTemplate
+                .opsForHash<String, ByteArray>()
+                .putAll(offsetsKey, updatedOffsets)
         }
 
         return allMessages
     }
 
     fun clearStream(streamKey: String) {
-        redisTemplate.delete(streamKey)
+        byteArrayRedisTemplate.delete(streamKey)
     }
 
     fun getLatestMessageId(streamKey: String): String? {
         val messages =
-            redisTemplate
-                .opsForStream<String, Any>()
+            byteArrayRedisTemplate
+                .opsForStream<String, ByteArray>()
                 .reverseRange(streamKey, Range.closed("+", "-"), Limit.limit().count(1))
                 ?: return null
         return messages.lastOrNull()?.id?.value ?: "0-0"
@@ -104,7 +112,7 @@ class StreamRepository(private val redisTemplate: RedisTemplate<String, String>)
     fun fetchAll(): List<String> {
         val keys = mutableListOf<String>()
         val scanCursor =
-            redisTemplate.scan(
+            byteArrayRedisTemplate.scan(
                 org.springframework.data.redis.core.ScanOptions.scanOptions()
                     .match("$BASE_KEY:*")
                     .count(100)
@@ -118,8 +126,8 @@ class StreamRepository(private val redisTemplate: RedisTemplate<String, String>)
 
     fun trimMessages(streamKey: String, minId: Long): Long {
         return try {
-            @Suppress("UNCHECKED_CAST") val streamOps = redisTemplate.opsForStream<String, Any>()
-            streamOps.trim(streamKey, minId) as? Long ?: 0L
+            val streamOps = byteArrayRedisTemplate.opsForStream<String, ByteArray>()
+            streamOps.trim(streamKey, minId)
         } catch (e: Exception) {
             log.warn("Failed to trim stream $streamKey: ${e.message}")
             0L
