@@ -69,7 +69,9 @@ sealed class StreamName {
                 }
                 suffix.startsWith("spectator:") -> {
                     val hostSessionIdStr = suffix.removePrefix("spectator:")
-                    runCatching { UUID.fromString(hostSessionIdStr) }.getOrNull()?.let { Spectator(it) }
+                    runCatching { UUID.fromString(hostSessionIdStr) }
+                        .getOrNull()
+                        ?.let { Spectator(it) }
                 }
                 suffix.startsWith("multiplayer:") -> {
                     val matchIdStr = suffix.removePrefix("multiplayer:")

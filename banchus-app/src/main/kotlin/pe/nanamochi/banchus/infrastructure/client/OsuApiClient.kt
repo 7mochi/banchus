@@ -1,19 +1,21 @@
 package pe.nanamochi.banchus.infrastructure.client
 
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.util.UriComponentsBuilder
+import pe.nanamochi.banchus.config.BanchusProperties
 import pe.nanamochi.banchus.dto.external.OsuApiBeatmap
 
 @Service
-class OsuApiClient(private val restTemplate: RestTemplate) {
+class OsuApiClient(
+    private val restTemplate: RestTemplate,
+    private val properties: BanchusProperties,
+) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val baseUrl = "https://osu.ppy.sh"
-
-    @Value($$"${banchus.osu-api.v1.key}") private lateinit var apiKey: String
+    private val apiKey: String = properties.osuApi.v1.key
 
     fun getOsuFile(beatmapId: Int): ByteArray? {
         return runCatching {

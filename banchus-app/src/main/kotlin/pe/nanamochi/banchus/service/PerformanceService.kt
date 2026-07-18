@@ -4,8 +4,8 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import pe.nanamochi.banchus.config.BanchusProperties
 import pe.nanamochi.banchus.database.entity.Score
 import pe.nanamochi.banchus.domain.error.CalculatorNotFound
 import pe.nanamochi.banchus.domain.error.DomainMessage
@@ -15,9 +15,10 @@ import pe.nanamochi.banchus.infrastructure.performance.PerformanceCalculator
 @Service
 class PerformanceService(
     private val calculators: List<PerformanceCalculator>,
-    @Value($$"${banchus.pp-calculator-type:rosu-pp}") private val defaultCalculatorAlias: String,
+    private val properties: BanchusProperties,
     private val beatmapService: BeatmapService,
 ) {
+    private val defaultCalculatorAlias: String = properties.ppCalculatorType
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val defaultCalculatorType: CalculatorType by lazy {

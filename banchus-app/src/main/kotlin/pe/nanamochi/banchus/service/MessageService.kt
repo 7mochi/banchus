@@ -7,9 +7,9 @@ import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.onFailure
 import java.time.Instant
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
+import pe.nanamochi.banchus.config.BanchusProperties
 import pe.nanamochi.banchus.database.entity.Message
 import pe.nanamochi.banchus.database.entity.MessageSendResult
 import pe.nanamochi.banchus.database.entity.Target
@@ -33,13 +33,14 @@ private const val CHAT_TIMEOUT_SECONDS = 5 * 60
 
 @Service
 class MessageService(
-    @Value($$"${banchus.command-prefix:!}") private val commandPrefix: String,
+    private val properties: BanchusProperties,
     private val messageRepository: MessageRepository,
     private val userService: UserService,
     private val channelService: ChannelService,
     private val relationshipService: RelationshipService,
     @Lazy private val commandProcessor: CommandProcessor,
 ) {
+    private val commandPrefix: String = properties.commandPrefix
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun fetchUnreadMessages(targetId: Int): Result<List<Message>, DomainMessage> =

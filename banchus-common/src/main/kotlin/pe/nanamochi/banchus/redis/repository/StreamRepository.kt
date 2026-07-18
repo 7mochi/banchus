@@ -65,14 +65,17 @@ class StreamRepository(
 
             val messages =
                 runCatching {
-                    streamOps.read(
-                        StreamReadOptions.empty().count(100),
-                        org.springframework.data.redis.connection.stream.StreamOffset.create(
-                            streamKey,
-                            org.springframework.data.redis.connection.stream.ReadOffset.from(lastId),
-                        ),
-                    )
-                }.getOrNull() ?: continue
+                        streamOps.read(
+                            StreamReadOptions.empty().count(100),
+                            org.springframework.data.redis.connection.stream.StreamOffset.create(
+                                streamKey,
+                                org.springframework.data.redis.connection.stream.ReadOffset.from(
+                                    lastId
+                                ),
+                            ),
+                        )
+                    }
+                    .getOrNull() ?: continue
 
             for (message in messages) {
                 val data = message.value["data"] ?: continue
@@ -124,8 +127,9 @@ class StreamRepository(
 
     fun trimMessages(streamKey: String, minId: Long): Long {
         return runCatching {
-            byteArrayRedisTemplate.opsForStream<String, ByteArray>().trim(streamKey, minId)
-        }.onFailure { log.warn("Failed to trim stream $streamKey: ${it.message}") }
+                byteArrayRedisTemplate.opsForStream<String, ByteArray>().trim(streamKey, minId)
+            }
+            .onFailure { log.warn("Failed to trim stream $streamKey: ${it.message}") }
             .getOrDefault(0L)
     }
 
