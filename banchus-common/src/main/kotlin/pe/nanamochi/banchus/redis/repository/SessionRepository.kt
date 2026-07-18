@@ -1,12 +1,11 @@
 package pe.nanamochi.banchus.redis.repository
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import java.time.Instant
 import java.util.UUID
-import kotlin.Suppress
 import org.springframework.data.redis.core.RedisOperations
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.data.redis.core.SessionCallback
+import org.springframework.data.redis.serializer.RedisSerializer
 import org.springframework.stereotype.Repository
 import pe.nanamochi.banchus.redis.entity.Session
 
@@ -16,11 +15,11 @@ private const val SESSIONS_KEY = "banchus:sessions"
 class SessionRepository(
     private val redisTemplate: RedisTemplate<String, Session>,
     private val stringRedisTemplate: RedisTemplate<String, String>,
-    private val objectMapper: ObjectMapper,
+    private val sessionSerializer: RedisSerializer<Session>,
 ) {
     fun create(session: Session): Session {
         session.updatedAt = Instant.now()
-        val sessionJson = objectMapper.writeValueAsString(session)
+        val sessionJson = String(sessionSerializer.serialize(session)!!, Charsets.UTF_8)
 
         stringRedisTemplate.execute(
             object : SessionCallback<List<*>> {

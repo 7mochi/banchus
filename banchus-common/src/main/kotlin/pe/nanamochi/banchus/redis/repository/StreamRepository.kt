@@ -1,6 +1,5 @@
 package pe.nanamochi.banchus.redis.repository
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Range
@@ -9,21 +8,22 @@ import org.springframework.data.redis.connection.stream.RecordId
 import org.springframework.data.redis.connection.stream.StreamReadOptions
 import org.springframework.data.redis.connection.stream.StreamRecords
 import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.data.redis.serializer.RedisSerializer
 import org.springframework.stereotype.Repository
 import pe.nanamochi.banchus.redis.stream.MessageInfo
 
 @Repository
 class StreamRepository(
     private val byteArrayRedisTemplate: RedisTemplate<String, ByteArray>,
-    private val objectMapper: ObjectMapper,
+    private val messageInfoSerializer: RedisSerializer<MessageInfo>,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun xadd(streamKey: String, data: ByteArray, info: MessageInfo): RecordId? {
-        val infoJson = objectMapper.writeValueAsString(info)
+        val infoBytes = messageInfoSerializer.serialize(info)
         val record =
             StreamRecords.newRecord()
-                .ofMap(mapOf("data" to data, "info" to infoJson.toByteArray()))
+                .ofMap(mapOf("data" to data, "info" to infoBytes))
                 .withStreamKey(streamKey)
 
         return byteArrayRedisTemplate.opsForStream<String, ByteArray>().add(record)
@@ -80,7 +80,10 @@ class StreamRepository(
             for (message in messages) {
                 val data = message.value["data"] ?: continue
                 val infoBytes = message.value["info"] ?: continue
-                val info = deserializeMessageInfo(String(infoBytes, Charsets.UTF_8))
+                val info =
+                    runCatching { messageInfoSerializer.deserialize(infoBytes) }
+                        .onFailure { log.warn("Failed to deserialize MessageInfo: ${it.message}") }
+                        .getOrDefault(MessageInfo()) ?: MessageInfo()
 
                 allMessages.add(PendingMessage(data = data, info = info))
             }
@@ -134,13 +137,6 @@ class StreamRepository(
     }
 
     data class PendingMessage(val data: ByteArray, val info: MessageInfo)
-
-    private fun deserializeMessageInfo(raw: String?): MessageInfo {
-        if (raw.isNullOrBlank()) return MessageInfo()
-        return runCatching { objectMapper.readValue(raw, MessageInfo::class.java) }
-            .onFailure { log.warn("Failed to deserialize MessageInfo: ${it.message}") }
-            .getOrDefault(MessageInfo())
-    }
 
     private fun makeKey(sessionId: UUID): String = "banchus:sessions:$sessionId:stream_offsets"
 

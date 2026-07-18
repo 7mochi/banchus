@@ -13,6 +13,7 @@ import pe.nanamochi.banchus.redis.entity.MultiplayerMatchSlot
 import pe.nanamochi.banchus.redis.entity.Presence
 import pe.nanamochi.banchus.redis.entity.Session
 import pe.nanamochi.banchus.redis.entity.SessionIdentity
+import pe.nanamochi.banchus.redis.stream.MessageInfo
 import tools.jackson.module.kotlin.jsonMapper
 import tools.jackson.module.kotlin.kotlinModule
 
@@ -24,15 +25,24 @@ class RedisConfig {
     }
 
     @Bean
+    fun sessionSerializer(): RedisSerializer<Session> = createKotlinSerializer(Session::class.java)
+
+    @Bean
+    fun messageInfoSerializer(): RedisSerializer<MessageInfo> =
+        createKotlinSerializer(MessageInfo::class.java)
+
+    @Bean
     @Primary
-    fun sessionRedisTemplate(factory: RedisConnectionFactory): RedisTemplate<String, Session> =
+    fun sessionRedisTemplate(
+        factory: RedisConnectionFactory,
+        sessionSerializer: RedisSerializer<Session>,
+    ): RedisTemplate<String, Session> =
         RedisTemplate<String, Session>().apply {
-            val serializer = createKotlinSerializer(Session::class.java)
             connectionFactory = factory
             keySerializer = RedisSerializer.string()
-            valueSerializer = serializer
+            valueSerializer = sessionSerializer
             hashKeySerializer = RedisSerializer.string()
-            hashValueSerializer = serializer
+            hashValueSerializer = sessionSerializer
         }
 
     @Bean
