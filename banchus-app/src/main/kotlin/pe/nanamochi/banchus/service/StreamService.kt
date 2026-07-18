@@ -82,11 +82,7 @@ class StreamService(
         val messageId = streamRepository.getLatestMessageId(streamKey) ?: return null
 
         val timestamp = messageId.split("-").firstOrNull()?.toLongOrNull() ?: return null
-        return try {
-            Instant.ofEpochMilli(timestamp)
-        } catch (e: Exception) {
-            null
-        }
+        return runCatching { Instant.ofEpochMilli(timestamp) }.getOrNull()
     }
 
     fun trimStream(stream: StreamName, ttlSeconds: Int): Long {

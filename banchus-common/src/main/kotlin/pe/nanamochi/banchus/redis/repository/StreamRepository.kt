@@ -64,7 +64,7 @@ class StreamRepository(
             val lastId = String(lastIdBytes, Charsets.UTF_8)
 
             val messages =
-                try {
+                runCatching {
                     streamOps.read(
                         StreamReadOptions.empty().count(100),
                         org.springframework.data.redis.connection.stream.StreamOffset.create(
@@ -72,9 +72,7 @@ class StreamRepository(
                             org.springframework.data.redis.connection.stream.ReadOffset.from(lastId),
                         ),
                     )
-                } catch (_: Exception) {
-                    null
-                } ?: continue
+                }.getOrNull() ?: continue
 
             for (message in messages) {
                 val data = message.value["data"] ?: continue
@@ -125,25 +123,19 @@ class StreamRepository(
     }
 
     fun trimMessages(streamKey: String, minId: Long): Long {
-        return try {
-            val streamOps = byteArrayRedisTemplate.opsForStream<String, ByteArray>()
-            streamOps.trim(streamKey, minId)
-        } catch (e: Exception) {
-            log.warn("Failed to trim stream $streamKey: ${e.message}")
-            0L
-        }
+        return runCatching {
+            byteArrayRedisTemplate.opsForStream<String, ByteArray>().trim(streamKey, minId)
+        }.onFailure { log.warn("Failed to trim stream $streamKey: ${it.message}") }
+            .getOrDefault(0L)
     }
 
     data class PendingMessage(val data: ByteArray, val info: MessageInfo)
 
     private fun deserializeMessageInfo(raw: String?): MessageInfo {
         if (raw.isNullOrBlank()) return MessageInfo()
-        return try {
-            objectMapper.readValue(raw, MessageInfo::class.java)
-        } catch (e: Exception) {
-            log.warn("Failed to deserialize MessageInfo: ${e.message}")
-            MessageInfo()
-        }
+        return runCatching { objectMapper.readValue(raw, MessageInfo::class.java) }
+            .onFailure { log.warn("Failed to deserialize MessageInfo: ${it.message}") }
+            .getOrDefault(MessageInfo())
     }
 
     private fun makeKey(sessionId: UUID): String = "banchus:sessions:$sessionId:stream_offsets"

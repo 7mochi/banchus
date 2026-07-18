@@ -61,11 +61,7 @@ sealed class StreamName {
                 suffix == "dev" -> Developer
                 suffix.startsWith("user:") -> {
                     val sessionIdStr = suffix.removePrefix("user:")
-                    try {
-                        User(UUID.fromString(sessionIdStr))
-                    } catch (e: Exception) {
-                        null
-                    }
+                    runCatching { UUID.fromString(sessionIdStr) }.getOrNull()?.let { User(it) }
                 }
                 suffix.startsWith("channel:") -> {
                     val channelName = suffix.removePrefix("channel:")
@@ -73,27 +69,15 @@ sealed class StreamName {
                 }
                 suffix.startsWith("spectator:") -> {
                     val hostSessionIdStr = suffix.removePrefix("spectator:")
-                    try {
-                        Spectator(UUID.fromString(hostSessionIdStr))
-                    } catch (e: Exception) {
-                        null
-                    }
+                    runCatching { UUID.fromString(hostSessionIdStr) }.getOrNull()?.let { Spectator(it) }
                 }
                 suffix.startsWith("multiplayer:") -> {
                     val matchIdStr = suffix.removePrefix("multiplayer:")
-                    try {
-                        Multiplayer(matchIdStr.toLong())
-                    } catch (e: Exception) {
-                        null
-                    }
+                    runCatching { matchIdStr.toLong() }.getOrNull()?.let { Multiplayer(it) }
                 }
                 suffix.startsWith("multiplaying:") -> {
                     val matchIdStr = suffix.removePrefix("multiplaying:")
-                    try {
-                        Multiplaying(matchIdStr.toLong())
-                    } catch (e: Exception) {
-                        null
-                    }
+                    runCatching { matchIdStr.toLong() }.getOrNull()?.let { Multiplaying(it) }
                 }
                 else -> null
             }
