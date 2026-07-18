@@ -39,9 +39,9 @@ class OsuNativeCalculator : PerformanceCalculator {
 
             val mods = modNames.map { Mod.create(it) }
 
-            try {
+            mods.useEach { modsList ->
                 ModsCollection.create().use { modsCollection ->
-                    mods.forEach(modsCollection::add)
+                    modsList.forEach(modsCollection::add)
 
                     val scoreInfo =
                         ScoreInfo().apply {
@@ -69,8 +69,6 @@ class OsuNativeCalculator : PerformanceCalculator {
                     val diffAttrs = diffCalc.calculate(modsCollection)
                     perfCalc.calculate(ruleset, this, modsCollection, scoreInfo, diffAttrs).total
                 }
-            } finally {
-                mods.forEach { it.close() }
             }
         }
     }
