@@ -1,7 +1,6 @@
 package pe.nanamochi.banchus.service
 
 import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
 import java.io.ByteArrayOutputStream
@@ -109,20 +108,17 @@ class SpectatorService(
 
     fun close(sessionId: UUID): Result<Unit, DomainMessage> = binding {
         val spectators = fetchAllMembers(sessionId)
-        if (spectators.isEmpty()) {
-            Ok(Unit)
+        if (spectators.isNotEmpty()) {
+            val channelName = ChannelName.Spectator(sessionId)
+            val streamName = StreamName.Spectator(sessionId)
+            spectators.forEach { spectator ->
+                spectatorRepository.removeSpectating(spectator.sessionId)
+                channelService.leave(spectator.sessionId, channelName).bind()
+                streamService.leave(spectator.sessionId, streamName)
+            }
+            spectatorRepository.removeMembers(sessionId)
+            streamService.clearStream(streamName)
         }
-
-        val channelName = ChannelName.Spectator(sessionId)
-        val streamName = StreamName.Spectator(sessionId)
-        spectators.forEach { spectator ->
-            spectatorRepository.removeSpectating(spectator.sessionId)
-            channelService.leave(spectator.sessionId, channelName).bind()
-            streamService.leave(spectator.sessionId, streamName)
-        }
-
-        spectatorRepository.removeMembers(sessionId)
-        streamService.clearStream(streamName)
     }
 
     fun handleSpectateFrames(packet: SpectateFramesPacket, session: Session) {
