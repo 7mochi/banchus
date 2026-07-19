@@ -9,16 +9,13 @@ import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.components.ReplayAction
-import pe.nanamochi.banchus.components.ReplayFrameBundle
-import pe.nanamochi.banchus.components.ScoreFrame
 import pe.nanamochi.banchus.core.ServerPacket
 import pe.nanamochi.banchus.database.entity.ChannelName
 import pe.nanamochi.banchus.domain.error.DomainMessage
+import pe.nanamochi.banchus.domain.error.InvalidSpectateTarget
 import pe.nanamochi.banchus.domain.error.UserNotFound
 import pe.nanamochi.banchus.packets.client.SpectateFramesPacket
 import pe.nanamochi.banchus.packets.client.StartSpectatingPacket
-import pe.nanamochi.banchus.packets.server.AnnouncePacket
 import pe.nanamochi.banchus.packets.server.ChannelJoinSuccessPacket
 import pe.nanamochi.banchus.packets.server.ChannelRevokedPacket
 import pe.nanamochi.banchus.packets.server.FellowSpectatorJoinedPacket
@@ -144,23 +141,8 @@ class SpectatorService(
         session: Session,
         responseStream: ByteArrayOutputStream,
     ): Result<Unit, DomainMessage> = binding {
-        if (packet.userId == 1) {
-            val stopSpectatingPackets =
-                listOf(
-                    pe.nanamochi.banchus.packets.server.SpectateFramesPacket(
-                        replayFrameBundle =
-                            ReplayFrameBundle(
-                                action = ReplayAction.WATCHING_OTHER,
-                                extra = session.userId,
-                                frames = mutableListOf(),
-                                frame = ScoreFrame(),
-                                sequence = 0,
-                            )
-                    ),
-                    AnnouncePacket("You can't spectate the bot."),
-                )
-            responseStream.write(packetWriter.serializeAll(stopSpectatingPackets))
-            return@binding
+        if (packet.userId == 1 || packet.userId == session.userId) {
+            Err(InvalidSpectateTarget).bind()
         }
 
         val specChannelNotifyPacket = ChannelJoinSuccessPacket("#spectator")

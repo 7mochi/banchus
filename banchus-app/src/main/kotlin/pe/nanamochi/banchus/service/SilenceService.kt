@@ -1,5 +1,6 @@
 package pe.nanamochi.banchus.service
 
+import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.toResultOr
@@ -8,10 +9,13 @@ import java.time.Instant
 import java.util.regex.Pattern
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.database.entity.User
+import pe.nanamochi.banchus.domain.error.BotSilenceNotAllowed
 import pe.nanamochi.banchus.domain.error.DomainMessage
 import pe.nanamochi.banchus.domain.error.InvalidDuration
+import pe.nanamochi.banchus.domain.error.SelfSilenceNotAllowed
 import pe.nanamochi.banchus.packets.server.SilenceInfoPacket
 import pe.nanamochi.banchus.packets.server.UserSilencedPacket
+import pe.nanamochi.banchus.redis.entity.Presence
 import pe.nanamochi.banchus.redis.stream.StreamName
 
 private const val SILENCE_AUTO_DELETE_INTERVAL_SECONDS = 60
@@ -29,26 +33,31 @@ class SilenceService(
             Pattern.CASE_INSENSITIVE,
         )
 
-    fun silenceUser(user: User, duration: String): Result<Unit, DomainMessage> = binding {
-        val duration = parseDurationText(duration).toResultOr { InvalidDuration }.bind()
-        val silencedUntil = Instant.now().plus(duration)
-        user.silenceEnd = silencedUntil
-        userService.update(user).bind()
+    fun silenceUser(adminId: Int, user: User, duration: String): Result<Unit, DomainMessage> =
+        binding {
+            if (user.id == adminId) Err(SelfSilenceNotAllowed).bind()
+            if (user.id == Presence.BOT_ID) Err(BotSilenceNotAllowed).bind()
 
-        messageService.softDeleteRecent(user.id, SILENCE_AUTO_DELETE_INTERVAL_SECONDS)
-        sessionService.fetchByUserId(user.id).forEach { session ->
-            sessionService.silence(session, duration)
-            // Tell the user that they have been silenced
-            val seconds = Duration.between(Instant.now(), silencedUntil).seconds.coerceAtLeast(0)
-            streamService.broadcastMessage(
-                StreamName.User(session.sessionId),
-                SilenceInfoPacket(silenceLength = seconds.toInt()),
-            )
+            val duration = parseDurationText(duration).toResultOr { InvalidDuration }.bind()
+            val silencedUntil = Instant.now().plus(duration)
+            user.silenceEnd = silencedUntil
+            userService.update(user).bind()
+
+            messageService.softDeleteRecent(user.id, SILENCE_AUTO_DELETE_INTERVAL_SECONDS)
+            sessionService.fetchByUserId(user.id).forEach { session ->
+                sessionService.silence(session, duration)
+                // Tell the user that they have been silenced
+                val seconds =
+                    Duration.between(Instant.now(), silencedUntil).seconds.coerceAtLeast(0)
+                streamService.broadcastMessage(
+                    StreamName.User(session.sessionId),
+                    SilenceInfoPacket(silenceLength = seconds.toInt()),
+                )
+            }
+
+            // Tell all other users that the user has been silenced
+            streamService.broadcastMessage(StreamName.Main, UserSilencedPacket(user.id))
         }
-
-        // Tell all other users that the user has been silenced
-        streamService.broadcastMessage(StreamName.Main, UserSilencedPacket(user.id))
-    }
 
     fun formatRemainingSilence(until: Instant): String {
         val seconds = Duration.between(Instant.now(), until).seconds

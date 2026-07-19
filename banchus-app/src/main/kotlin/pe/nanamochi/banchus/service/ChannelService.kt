@@ -14,6 +14,7 @@ import pe.nanamochi.banchus.database.entity.ChannelName
 import pe.nanamochi.banchus.database.repository.ChannelRepository
 import pe.nanamochi.banchus.domain.error.ChannelIsUnauthorized
 import pe.nanamochi.banchus.domain.error.ChannelNotFound
+import pe.nanamochi.banchus.domain.error.ChannelUserAlreadyIn
 import pe.nanamochi.banchus.domain.error.DomainMessage
 import pe.nanamochi.banchus.domain.error.NotInMatch
 import pe.nanamochi.banchus.packets.server.ChannelAvailablePacket
@@ -72,6 +73,11 @@ class ChannelService(
         val channel = fetchOne(channelName).bind()
         if (!channel.canRead(session.privileges)) {
             Err(ChannelIsUnauthorized).bind()
+        }
+
+        val existingChannels = channelRedisRepository.fetchSessionChannels(session.sessionId)
+        if (channelName.resolve() in existingChannels) {
+            Err(ChannelUserAlreadyIn).bind()
         }
 
         streamService.join(session.sessionId, channelName.getMessageStream())

@@ -5,9 +5,12 @@ import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.mapBoth
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import pe.nanamochi.banchus.domain.error.BotSilenceNotAllowed
 import pe.nanamochi.banchus.domain.error.DomainMessage
+import pe.nanamochi.banchus.domain.error.SelfSilenceNotAllowed
 import pe.nanamochi.banchus.domain.error.UserNotFound
 import pe.nanamochi.banchus.domain.error.UserRestricted
+import pe.nanamochi.banchus.domain.error.UserSilenced
 import pe.nanamochi.banchus.infrastructure.command.BaseCommand
 import pe.nanamochi.banchus.infrastructure.command.Command
 import pe.nanamochi.banchus.redis.entity.Session
@@ -31,7 +34,7 @@ class SilenceCommand(
                 val target = userService.fetchOneByUsername(targetUsername).bind()
                 if (target.isRestricted) Err(UserRestricted).bind()
 
-                silenceService.silenceUser(target, durationInput).bind()
+                silenceService.silenceUser(session.userId, target, durationInput).bind()
                 target
             }
             .mapBoth(
@@ -44,10 +47,12 @@ class SilenceCommand(
     }
 
     private fun DomainMessage.toMessage() =
-        // TODO: add more specific messages for different errors
         when (this) {
             UserNotFound,
             UserRestricted -> "Username not found."
+            SelfSilenceNotAllowed -> "You cannot silence yourself."
+            BotSilenceNotAllowed -> "You cannot silence the system bot."
+            UserSilenced -> "This user is already silenced."
             else -> "Internal error executing silence."
         }
 }
