@@ -6,35 +6,44 @@ import com.github.michaelbull.result.binding
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.core.BanchoPacket
-import pe.nanamochi.banchus.domain.errors.DomainMessage
-import pe.nanamochi.banchus.domain.errors.InvalidToken
+import pe.nanamochi.banchus.domain.error.DomainMessage
+import pe.nanamochi.banchus.domain.error.InvalidToken
+import pe.nanamochi.banchus.domain.error.SessionExpired
 import pe.nanamochi.banchus.infrastructure.protocol.PacketHandler
+import pe.nanamochi.banchus.packets.server.RestartPacket
 import pe.nanamochi.banchus.protocol.PacketReader
+import pe.nanamochi.banchus.protocol.PacketWriter
+
+private const val RECONNECT_DELAY_MS = 750
 
 @Service
 class BanchoService(
     private val sessionService: SessionService,
-    private val packetBundleService: PacketBundleService,
+    private val streamService: StreamService,
     private val packetReader: PacketReader,
     private val packetHandler: PacketHandler,
+    private val packetWriter: PacketWriter,
 ) {
     fun handlePackets(token: String, body: ByteArray): Result<ByteArray, DomainMessage> = binding {
-        val uuid = runCatching { UUID.fromString(token) }.getOrElse { Err(InvalidToken).bind() }
-
-        val session = sessionService.findById(uuid).bind()
-
+        val uuid = UUID.fromString(token) ?: Err(InvalidToken).bind()
+        val session =
+            sessionService.fetchOne(uuid)
+                ?: Err(
+                        SessionExpired(
+                            packetWriter.serializeAll(listOf(RestartPacket(RECONNECT_DELAY_MS)))
+                        )
+                    )
+                    .bind()
         val responseStream = ByteArrayOutputStream()
 
         if (body.isNotEmpty()) {
-            packetReader.readPackets(body).filterIsInstance<BanchoPacket.Client>().forEach { packet
-                ->
+            packetReader.readPackets(body).forEach { packet ->
                 packetHandler.handle(packet, session, responseStream)
             }
         }
 
-        packetBundleService.dequeueAll(uuid).forEach { bundle -> responseStream.write(bundle.data) }
-
+        val pendingData = streamService.readPendingData(session)
+        responseStream.write(pendingData)
         responseStream.toByteArray()
     }
 }

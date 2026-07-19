@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.database.entity.Score
 import pe.nanamochi.banchus.domain.enums.Mode
 import pe.nanamochi.banchus.domain.enums.Mods
-import pe.nanamochi.banchus.domain.errors.CalculationFailed
-import pe.nanamochi.banchus.domain.errors.PerformanceError
+import pe.nanamochi.banchus.domain.error.CalculationFailed
+import pe.nanamochi.banchus.domain.error.PerformanceError
 
 @Component
 class OsuNativeCalculator : PerformanceCalculator {
@@ -39,9 +39,9 @@ class OsuNativeCalculator : PerformanceCalculator {
 
             val mods = modNames.map { Mod.create(it) }
 
-            try {
+            mods.useEach { modsList ->
                 ModsCollection.create().use { modsCollection ->
-                    mods.forEach(modsCollection::add)
+                    modsList.forEach(modsCollection::add)
 
                     val scoreInfo =
                         ScoreInfo().apply {
@@ -69,8 +69,6 @@ class OsuNativeCalculator : PerformanceCalculator {
                     val diffAttrs = diffCalc.calculate(modsCollection)
                     perfCalc.calculate(ruleset, this, modsCollection, scoreInfo, diffAttrs).total
                 }
-            } finally {
-                mods.forEach { it.close() }
             }
         }
     }

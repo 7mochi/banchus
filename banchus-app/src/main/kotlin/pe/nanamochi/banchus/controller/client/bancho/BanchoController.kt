@@ -11,14 +11,15 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import pe.nanamochi.banchus.domain.error.SessionExpired
 import pe.nanamochi.banchus.service.BanchoService
 import pe.nanamochi.banchus.service.LoginService
 
 @RestController
 @RequestMapping("/")
 class BanchoController(
-    private val loginService: LoginService,
     private val banchoService: BanchoService,
+    private val loginService: LoginService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -40,7 +41,6 @@ class BanchoController(
     ): ResponseEntity<ByteArray> {
         val rawData = String(body, Charsets.UTF_8)
         val loginResponse = loginService.handleLogin(rawData, headers)
-
         return ResponseEntity.ok()
             .header("cho-token", loginResponse.token)
             .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -57,12 +57,21 @@ class BanchoController(
                     .body(responsePayload)
             }
             .getOrElse { error ->
-                log.warn("Bancho request failed for token {}: {}", token, error)
+                when (error) {
+                    is SessionExpired ->
+                        ResponseEntity.ok()
+                            .header("cho-token", "no")
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .body(error.payload)
+                    else -> {
+                        log.warn("Bancho request failed for token {}: {}", token, error)
 
-                ResponseEntity.ok()
-                    .header("cho-token", "no")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(ByteArray(0))
+                        ResponseEntity.ok()
+                            .header("cho-token", "no")
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .body(ByteArray(0))
+                    }
+                }
             }
     }
 }

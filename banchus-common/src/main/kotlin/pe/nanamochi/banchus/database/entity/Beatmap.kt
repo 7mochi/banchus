@@ -17,21 +17,14 @@ import pe.nanamochi.banchus.domain.enums.Mode
 
 @Entity
 @DynamicUpdate
-@Table(
-    name = "beatmaps",
-    indexes =
-        [
-            Index(name = "beatmaps_md5_idx", columnList = "md5"),
-            Index(name = "beatmaps_id_idx", columnList = "id"),
-        ],
-)
+@Table(name = "beatmaps", indexes = [Index(name = "beatmaps_md5_idx", columnList = "md5")])
 class Beatmap(
     @Id @Column(name = "id", nullable = false) var id: Int = 0,
     @Column(name = "mode", nullable = false)
     @Enumerated(EnumType.ORDINAL)
     var mode: Mode = Mode.OSU,
     @Column(name = "md5", length = 32, nullable = false) var md5: String = "",
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", length = 32, nullable = false)
     @Enumerated(EnumType.STRING)
     var status: BeatmapRankedStatus = BeatmapRankedStatus.PENDING,
     @Column(name = "version", length = 128, nullable = false) var version: String = "",
@@ -54,4 +47,8 @@ class Beatmap(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "beatmapset_id", nullable = false)
     var beatmapset: Beatmapset? = null,
-)
+) {
+    fun hasLeaderboard() = status == BeatmapRankedStatus.RANKED
+
+    fun objectCount() = countNormal + countSlider + countSpinner
+}

@@ -10,8 +10,8 @@ import io.github.nanamochi.rosu_pp_jar.Performance
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.database.entity.Score
 import pe.nanamochi.banchus.domain.enums.Mods
-import pe.nanamochi.banchus.domain.errors.CalculationFailed
-import pe.nanamochi.banchus.domain.errors.PerformanceError
+import pe.nanamochi.banchus.domain.error.CalculationFailed
+import pe.nanamochi.banchus.domain.error.PerformanceError
 
 @Component
 class RosuCalculator : PerformanceCalculator {

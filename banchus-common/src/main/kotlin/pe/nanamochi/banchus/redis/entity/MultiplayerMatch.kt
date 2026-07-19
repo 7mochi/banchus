@@ -1,39 +1,65 @@
 package pe.nanamochi.banchus.redis.entity
 
-import java.time.Instant
-import pe.nanamochi.banchus.domain.enums.MatchStatus
-import pe.nanamochi.banchus.domain.enums.MatchTeamType
-import pe.nanamochi.banchus.domain.enums.Mode
-import pe.nanamochi.banchus.domain.enums.ScoringType
+import kotlin.toUShort
 import pe.nanamochi.banchus.domain.enums.SlotStatus
+import pe.nanamochi.banchus.domain.enums.SlotTeam
 
 data class MultiplayerMatch(
-    var matchId: Int = 0,
-    var matchName: String = "",
-    var matchPassword: String? = null,
-    var beatmapName: String = "",
-    var beatmapId: Int = 0,
-    var beatmapMd5: String = "",
-    var hostUserId: Int = 0,
-    var mode: Mode = Mode.OSU,
+    var matchId: Long = 0,
+    var name: String = "",
+    var password: String? = null,
+    var inProgress: Boolean = false,
+    var powerplay: Boolean = false,
     var mods: UInt = 0u,
-    var scoringType: ScoringType = ScoringType.SCORE,
-    var teamType: MatchTeamType = MatchTeamType.HEAD_TO_HEAD,
-    var freemodsEnabled: Boolean = false,
+    var beatmapName: String = "",
+    var beatmapMd5: String = "",
+    var beatmapId: Int = 0,
+    var hostUserId: Int = 0,
+    var mode: UByte = 0u,
+    var winCondition: UByte = 0u,
+    var teamType: UByte = 0u,
+    var freemodEnabled: Boolean = false,
     var randomSeed: Int = 0,
-    var status: MatchStatus = MatchStatus.WAITING,
-    var slots: MutableList<MultiplayerSlot> = mutableListOf(),
-    var createdAt: Instant = Instant.now(),
-    var updatedAt: Instant = Instant.now(),
+    var lastGameId: Int? = null,
 ) {
-    fun allLoaded(): Boolean =
-        slots.filter { it.status.toInt() and SlotStatus.PLAYING.value != 0 }.all { it.isLoaded }
+    fun inGameMatchId(): UShort {
+        return (matchId and 0xFFFFL).toUShort()
+    }
+}
 
-    fun allSkipped(): Boolean =
-        slots.filter { it.status.toInt() and SlotStatus.PLAYING.value != 0 }.all { it.isSkipped }
+data class MultiplayerMatchSlot(
+    var status: SlotStatus = SlotStatus.OPEN,
+    var team: SlotTeam = SlotTeam.NEUTRAL,
+    var mods: UInt = 0u,
+    var user: SessionIdentity? = null,
+    var loaded: Boolean = false,
+    var skipped: Boolean = false,
+    var failed: Boolean = false,
+    var completed: Boolean = false,
+) {
+    fun prepare(identity: SessionIdentity) {
+        this.status = SlotStatus.NOT_READY
+        this.team = SlotTeam.NEUTRAL
+        this.mods = 0u
+        this.user = identity
+        this.loaded = false
+        this.skipped = false
+        this.failed = false
+        this.completed = false
+    }
 
-    fun allCompleted(): Boolean =
-        slots
-            .filter { it.status.toInt() and SlotStatus.PLAYING.value != 0 }
-            .all { it.status.toInt() and SlotStatus.COMPLETE.value != 0 }
+    fun clear() {
+        this.status = SlotStatus.OPEN
+        this.team = SlotTeam.NEUTRAL
+        this.mods = 0u
+        this.user = null
+        this.loaded = false
+        this.skipped = false
+        this.failed = false
+        this.completed = false
+    }
+}
+
+fun List<MultiplayerMatchSlot>.resetToNotReady() {
+    this.forEach { slot -> slot.user?.let { slot.status = SlotStatus.NOT_READY } }
 }

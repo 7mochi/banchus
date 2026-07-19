@@ -2,18 +2,19 @@ package pe.nanamochi.banchus.protocol
 
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import pe.nanamochi.banchus.core.BanchoPacket
+import pe.nanamochi.banchus.core.ClientPacket
+import pe.nanamochi.banchus.core.PacketRegistry
 import pe.nanamochi.banchus.core.PacketType
-import pe.nanamochi.banchus.io.BanchoDataReader
 import pe.nanamochi.banchus.io.DataReader
+import pe.nanamochi.banchus.io.impl.BanchoDataReader
 
 class PacketReader {
     private val reader: DataReader = BanchoDataReader()
     private val packetFactories = PacketRegistry.getFactories()
 
-    fun readPackets(data: ByteArray): List<BanchoPacket> {
+    fun readPackets(data: ByteArray): List<ClientPacket> {
         val bis = ByteArrayInputStream(data)
-        val packets = mutableListOf<BanchoPacket>()
+        val packets = mutableListOf<ClientPacket>()
 
         while (bis.available() > 0) {
             val packet = readSinglePacket(bis)
@@ -22,7 +23,7 @@ class PacketReader {
         return packets
     }
 
-    private fun readSinglePacket(ins: InputStream): BanchoPacket? {
+    private fun readSinglePacket(ins: InputStream): ClientPacket? {
         val packetId = reader.readUint16(ins)
         reader.readUint8(ins) // padding
         val length = reader.readInt32(ins)
@@ -34,6 +35,6 @@ class PacketReader {
         val packet = factory()
         packet.read(reader, ByteArrayInputStream(data))
 
-        return packet as? BanchoPacket
+        return packet
     }
 }

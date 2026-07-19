@@ -36,13 +36,12 @@ class ReplayController(
         @RequestParam(value = "c") scoreId: Long,
     ): ResponseEntity<ByteArray> {
         val result = binding {
-            sessionService
-                .findPrimaryByUsername(user.username)
-                .mapError { HttpStatus.UNAUTHORIZED }
-                .bind()
+            val sessions = sessionService.fetchByUsername(user.username)
+            if (sessions.isEmpty()) {
+                HttpStatus.UNAUTHORIZED
+            }
 
-            scoreService.findById(scoreId.toInt()).toResultOr { HttpStatus.NOT_FOUND }.bind()
-
+            scoreService.fetchOneById(scoreId).toResultOr { HttpStatus.NOT_FOUND }.bind()
             val replayData =
                 storageService.getReplay(scoreId).mapError { HttpStatus.NOT_FOUND }.bind()
 

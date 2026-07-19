@@ -42,7 +42,7 @@ class Score(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    var id: Int = 0,
+    var id: Long = 0,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     var user: User? = null,
@@ -66,7 +66,7 @@ class Score(
     @Column(name = "grade", length = 2, nullable = false) var grade: String = "F",
     @Column(name = "submission_status", nullable = false)
     @Enumerated(EnumType.STRING)
-    var submissionStatus: SubmissionStatus = SubmissionStatus.SUBMITTED,
+    var submissionStatus: SubmissionStatus = SubmissionStatus.FAILED,
     @Column(name = "mode", nullable = false)
     @Enumerated(EnumType.ORDINAL)
     var mode: Mode = Mode.OSU,
@@ -132,4 +132,48 @@ class Score(
     }
 
     private fun clampAccuracy(value: Double): Double = min(100.0, max(0.0, value))
+
+    fun calculateGrade(): String {
+        val totalNotes = (num300s + num100s + num50s + numMisses).toDouble()
+        if (totalNotes == 0.0) return "D"
+        score
+        val shouldUseSilverGrades = (mods and 1049608) > 0
+        return when (mode) {
+            Mode.OSU,
+            Mode.TAIKO -> {
+                val ratio300 = num300s / totalNotes
+                val ratio50 = num50s / totalNotes
+
+                when {
+                    ratio300 == 1.0 -> if (shouldUseSilverGrades) "XH" else "X"
+                    ratio300 > 0.9 && ratio50 <= 0.01 && numMisses == 0 ->
+                        if (shouldUseSilverGrades) "SH" else "S"
+                    (ratio300 > 0.8 && numMisses == 0) || ratio300 > 0.9 -> "A"
+                    (ratio300 > 0.7 && numMisses == 0) || ratio300 > 0.8 -> "B"
+                    ratio300 > 0.6 -> "C"
+                    else -> "D"
+                }
+            }
+            Mode.CATCH -> {
+                when {
+                    accuracy == 100.0 -> if (shouldUseSilverGrades) "XH" else "X"
+                    accuracy > 98.0 -> if (shouldUseSilverGrades) "SH" else "S"
+                    accuracy > 94.0 -> "A"
+                    accuracy > 90.0 -> "B"
+                    accuracy > 85.0 -> "C"
+                    else -> "D"
+                }
+            }
+            Mode.MANIA -> {
+                when {
+                    accuracy == 100.0 -> if (shouldUseSilverGrades) "XH" else "X"
+                    accuracy > 95.0 -> if (shouldUseSilverGrades) "SH" else "S"
+                    accuracy > 90.0 -> "A"
+                    accuracy > 80.0 -> "B"
+                    accuracy > 70.0 -> "C"
+                    else -> "D"
+                }
+            }
+        }
+    }
 }

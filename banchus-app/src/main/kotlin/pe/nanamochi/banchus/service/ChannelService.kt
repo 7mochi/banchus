@@ -4,265 +4,147 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
-import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.toResultOr
 import java.util.UUID
 import org.slf4j.LoggerFactory
-import org.springframework.context.event.EventListener
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.core.BanchoPacket
 import pe.nanamochi.banchus.database.entity.Channel
-import pe.nanamochi.banchus.database.entity.Session
+import pe.nanamochi.banchus.database.entity.ChannelName
 import pe.nanamochi.banchus.database.repository.ChannelRepository
-import pe.nanamochi.banchus.domain.errors.ChannelInsufficientPrivileges
-import pe.nanamochi.banchus.domain.errors.ChannelNotFound
-import pe.nanamochi.banchus.domain.errors.ChannelUserAlreadyIn
-import pe.nanamochi.banchus.domain.errors.DomainMessage
-import pe.nanamochi.banchus.domain.errors.SessionNotFound
-import pe.nanamochi.banchus.domain.errors.UserNotFound
-import pe.nanamochi.banchus.events.UserLogoutEvent
-import pe.nanamochi.banchus.packets.server.ChannelAvailableAutoJoinPacket
+import pe.nanamochi.banchus.domain.error.ChannelIsUnauthorized
+import pe.nanamochi.banchus.domain.error.ChannelNotFound
+import pe.nanamochi.banchus.domain.error.ChannelUserAlreadyIn
+import pe.nanamochi.banchus.domain.error.DomainMessage
+import pe.nanamochi.banchus.domain.error.NotInMatch
 import pe.nanamochi.banchus.packets.server.ChannelAvailablePacket
-import pe.nanamochi.banchus.packets.server.ChannelJoinSuccessPacket
-import pe.nanamochi.banchus.packets.server.ChannelRevokedPacket
-import pe.nanamochi.banchus.packets.server.MessagePacket
-import pe.nanamochi.banchus.protocol.PacketWriter
-import pe.nanamochi.banchus.redis.entity.PacketBundle
-import pe.nanamochi.banchus.redis.repository.ChannelMembersRepository
+import pe.nanamochi.banchus.redis.entity.Session
+import pe.nanamochi.banchus.redis.stream.StreamName
 import pe.nanamochi.banchus.util.runDatabaseCatching
 
 @Service
 class ChannelService(
+    private val streamService: StreamService,
+    @Lazy private val spectatorService: SpectatorService,
+    @Lazy private val multiplayerService: MultiplayerService,
     private val channelRepository: ChannelRepository,
-    private val membersRepository: ChannelMembersRepository,
-    private val packetBundleService: PacketBundleService,
-    private val packetWriter: PacketWriter,
-    private val sessionService: SessionService,
+    private val channelRedisRepository: pe.nanamochi.banchus.redis.repository.ChannelRepository,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun findByName(name: String): Result<Channel, ChannelNotFound> =
-        channelRepository.findByName(name).toResultOr { ChannelNotFound }
+    fun getChannelName(session: Session, channelName: String): Result<ChannelName, DomainMessage> =
+        binding {
+            when (channelName) {
+                "#spectator" -> {
+                    val hostSessionId =
+                        spectatorService.fetchSpectating(session.sessionId) ?: session.sessionId
+                    ChannelName.Spectator(hostSessionId)
+                }
+                "#multiplayer" -> {
+                    val matchId =
+                        multiplayerService
+                            .fetchSessionMatchId(session.sessionId)
+                            .toResultOr { NotInMatch }
+                            .bind()
 
-    fun findByAutoJoin(autoJoin: Boolean): List<Channel> =
-        channelRepository.findByAutoJoin(autoJoin)
-
-    fun create(channel: Channel): Result<Channel, DomainMessage> = runDatabaseCatching {
-        channelRepository.save(channel)
-    }
-
-    fun delete(channel: Channel): Result<Unit, DomainMessage> {
-        val id = channel.id ?: return Err(ChannelNotFound)
-
-        return if (channelRepository.existsById(id)) {
-            runDatabaseCatching { channelRepository.delete(channel) }
-        } else {
-            Err(ChannelNotFound)
+                    ChannelName.Multiplayer(matchId)
+                }
+                else -> ChannelName.from(channelName)
+            }
         }
+
+    fun fetchOne(channelName: ChannelName): Result<Channel, DomainMessage> =
+        when (channelName) {
+            is ChannelName.Spectator -> Ok(Channel.spectator())
+            is ChannelName.Multiplayer -> Ok(Channel.multiplayer())
+            is ChannelName.Chat -> {
+                channelRepository.findByName(channelName.name).toResultOr { ChannelNotFound }
+            }
+        }
+
+    fun fetchAll(): Result<List<Channel>, DomainMessage> = runDatabaseCatching {
+        channelRepository.findAll()
     }
 
-    fun joinChannel(channel: Channel, session: Session): Result<UUID, DomainMessage> {
-        val channelId = channel.id ?: return Err(ChannelNotFound)
-        val sessionId = session.id ?: return Err(SessionNotFound)
-        return runDatabaseCatching { membersRepository.add(channelId, sessionId) }
-    }
-
-    fun leaveChannel(channel: Channel, session: Session): Result<Unit, DomainMessage> {
-        val channelId = channel.id ?: return Err(ChannelNotFound)
-        val sessionId = session.id ?: return Err(SessionNotFound)
-
-        return runDatabaseCatching { membersRepository.remove(channelId, sessionId) }
-    }
-
-    fun getMemberIds(channelId: UUID): Set<UUID> = membersRepository.getMembers(channelId)
-
-    fun getMemberCount(channelId: UUID): Int = membersRepository.getMemberCount(channelId)
-
-    fun canRead(channel: Channel, privileges: Int): Boolean =
-        channel.readPrivileges == 0 || (privileges and channel.readPrivileges) != 0
-
-    fun canWrite(channel: Channel, privileges: Int): Boolean =
-        channel.writePrivileges == 0 || (privileges and channel.writePrivileges) != 0
-
-    fun joinChannel(
+    fun join(
         session: Session,
-        channelName: String,
-        isAutoJoin: Boolean = false,
-    ): Result<Unit, DomainMessage> = binding {
-        val channel = findByName(channelName).bind()
-        val privileges = session.user?.privileges ?: 0
-
-        if (!canRead(channel, privileges)) Err(ChannelInsufficientPrivileges).bind()
-
-        val channelId = channel.id!!
-        val sessionId = session.id ?: Err(SessionNotFound).bind()
-
-        if (getMemberIds(channelId).contains(sessionId)) Err(ChannelUserAlreadyIn).bind()
-
-        joinChannel(channel, session).bind()
-
-        val clientChannelName = resolveClientChannelName(channel.name)
-        val newUserCount = getMemberCount(channelId)
-        val topic = channel.topic
-
-        if (isAutoJoin) {
-            packetBundleService.enqueue(
-                sessionId,
-                PacketBundle(
-                    packetWriter.serialize(
-                        ChannelAvailableAutoJoinPacket(clientChannelName, topic, newUserCount)
-                    )
-                ),
-            )
+        channelName: ChannelName,
+    ): Result<Pair<Channel, Long>, DomainMessage> = binding {
+        val channel = fetchOne(channelName).bind()
+        if (!channel.canRead(session.privileges)) {
+            Err(ChannelIsUnauthorized).bind()
         }
-        packetBundleService.enqueue(
-            sessionId,
-            PacketBundle(packetWriter.serialize(ChannelJoinSuccessPacket(clientChannelName))),
+
+        val existingChannels = channelRedisRepository.fetchSessionChannels(session.sessionId)
+        if (channelName.resolve() in existingChannels) {
+            Err(ChannelUserAlreadyIn).bind()
+        }
+
+        streamService.join(session.sessionId, channelName.getMessageStream())
+        val memberCount = channelRedisRepository.join(session.sessionId, channelName)
+
+        log.info(
+            "User {} joined channel {}. Members: {}",
+            session.sessionId,
+            channelName.resolve(),
+            memberCount,
         )
 
-        val infoPacket = ChannelAvailablePacket(clientChannelName, topic, newUserCount)
+        broadcastChannelInfoUpdate(channelName, channel, memberCount.toInt())
 
-        if (channel.temporary) {
-            notifyChannelMembers(channelId, infoPacket)
-        } else {
-            announceChannelUpdate(channel, infoPacket)
-        }
-
-        log.info("User {} has joined channel {}.", session.user?.username, channel.name)
+        Pair(channel, memberCount)
     }
 
-    fun leaveChannel(session: Session, channelName: String): Result<Unit, DomainMessage> = binding {
-        val channel = findByName(channelName).bind()
+    fun leave(
+        sessionId: UUID,
+        channelName: ChannelName,
+    ): Result<Pair<Channel, Long>, DomainMessage> = binding {
+        val channel = fetchOne(channelName).bind()
+        streamService.leave(sessionId, channelName.getMessageStream())
 
-        if (channel.name == "#lobby" && session.receiveMatchUpdates) return@binding
-
-        val channelId = channel.id!!
-        val sessionId = session.id ?: Err(SessionNotFound).bind<UUID>()
-
-        if (!getMemberIds(channelId).contains(sessionId)) return@binding
-
-        leaveChannel(channel, session).bind()
-
-        val clientChannelName = resolveClientChannelName(channel.name)
-        packetBundleService.enqueue(
+        val memberCount = channelRedisRepository.leave(sessionId, channelName)
+        log.info(
+            "User member {} left channel {}. Members: {}",
             sessionId,
-            PacketBundle(packetWriter.serialize(ChannelRevokedPacket(clientChannelName))),
+            channelName.resolve(),
+            memberCount,
         )
 
-        val newMemberCount = getMemberCount(channelId)
-        val infoPacket = ChannelAvailablePacket(clientChannelName, channel.topic, newMemberCount)
+        broadcastChannelInfoUpdate(channelName, channel, memberCount.toInt())
 
-        if (channel.temporary) {
-            notifyChannelMembers(channelId, infoPacket)
-        } else {
-            announceChannelUpdate(channel, infoPacket)
-        }
-
-        log.info("User {} has left channel {}.", session.user?.username, channel.name)
+        Pair(channel, memberCount)
     }
 
-    fun leaveAllChannels(session: Session) {
-        channelRepository.findAll().forEach { channel ->
-            leaveChannel(session, channel.name).onFailure { error ->
-                log.trace(
-                    "Error leaving channel {} during departure cleanup for user {}: {}",
-                    channel.name,
-                    session.user?.username,
-                    error,
-                )
+    fun leaveAll(sessionId: UUID): Result<Unit, DomainMessage> = binding {
+        val channels = channelRedisRepository.fetchSessionChannels(sessionId)
+        channels.forEach { channel -> leave(sessionId, ChannelName.from(channel)).bind() }
+    }
+
+    fun memberCount(channelName: ChannelName): Long =
+        channelRedisRepository.memberCount(channelName)
+
+    fun close(channelName: ChannelName): Result<Unit, DomainMessage> = binding {
+        val memberIds = channelRedisRepository.fetchChannelMembers(channelName)
+        memberIds.forEach { sessionId -> leave(sessionId, channelName).bind() }
+    }
+
+    fun broadcastChannelInfoUpdate(channelName: ChannelName, channel: Channel, memberCount: Int) {
+        val updateStream = channelName.getUpdateStream()
+        val privRule =
+            when (updateStream) {
+                StreamName.Main -> channel.readPrivileges
+                else -> null
             }
-        }
-    }
 
-    @EventListener
-    fun onUserLogout(event: UserLogoutEvent) {
-        leaveAllChannels(event.session)
-    }
-
-    fun broadcastMessage(
-        sender: Session,
-        targetName: String,
-        content: String,
-    ): Result<Unit, DomainMessage> = binding {
-        val realChannelName = resolveRealChannelName(targetName, sender).bind()
-        val channel = findByName(realChannelName).bind()
-
-        val user = sender.user ?: Err(UserNotFound).bind()
-
-        if (!canWrite(channel, user.privileges)) {
-            Err(ChannelInsufficientPrivileges).bind<Unit>()
-        }
-
-        val truncated = if (content.length > 2000) content.take(2000) + "..." else content
-
-        val msgPacket =
-            MessagePacket(
-                sender = user.username,
-                content = truncated,
-                target = targetName,
-                senderId = user.id,
-            )
-        val bundle = PacketBundle(packetWriter.serialize(msgPacket))
-
-        val senderId = sender.id ?: Err(SessionNotFound).bind<UUID>()
-        val channelId = channel.id!!
-
-        getMemberIds(channelId)
-            .filter { targetId -> targetId != senderId }
-            .forEach { targetId -> packetBundleService.enqueue(targetId, bundle) }
-
-        log.debug("User {} sent message to channel {}", sender.user?.username, channel.name)
-    }
-
-    private fun announceChannelUpdate(channel: Channel, packet: BanchoPacket.Server) {
-        val bundle = PacketBundle(packetWriter.serialize(packet))
-        sessionService.findAll().forEach { targetSession ->
-            val privs = targetSession.user?.privileges ?: 0
-            if (canRead(channel, privs)) {
-                packetBundleService.enqueue(targetSession.id!!, bundle)
-            }
-        }
-    }
-
-    private fun notifyChannelMembers(channelId: UUID, packet: BanchoPacket.Server) {
-        val bundle = PacketBundle(packetWriter.serialize(packet))
-        getMemberIds(channelId).forEach { memberId ->
-            packetBundleService.enqueue(memberId, bundle)
-        }
-    }
-
-    private fun resolveClientChannelName(realName: String): String =
-        when {
-            realName.startsWith("#mp_") -> "#multiplayer"
-            realName.startsWith("#spec_") -> "#spectator"
-            else -> realName
-        }
-
-    fun resolveRealChannelName(
-        targetName: String,
-        session: Session,
-    ): Result<String, ChannelNotFound> =
-        when (targetName) {
-            "#multiplayer" -> {
-                session.multiplayerMatchId.takeIf { it != null && it != -1 }?.let { Ok("#mp_$it") }
-                    ?: Err(ChannelNotFound)
-            }
-            "#spectator" -> {
-                (session.spectatorHostSessionId ?: session.id)?.let { Ok("#spec_$it") }
-                    ?: Err(ChannelNotFound)
-            }
-            else -> Ok(targetName)
-        }
-
-    fun sendBanchoBotMessage(targetName: String, content: String, recipients: Set<UUID>) {
-        val messageBundle =
-            PacketBundle(
-                packetWriter.serialize(
-                    MessagePacket(sender = "BanchoBot", content = content, target = targetName, 1)
-                )
-            )
-        recipients.forEach { recipientId ->
-            packetBundleService.enqueue(recipientId, messageBundle)
-        }
+        streamService.broadcastMessage(
+            updateStream,
+            ChannelAvailablePacket(
+                realName = channel.name,
+                topic = channel.description,
+                userCount = memberCount,
+            ),
+            null,
+            privRule,
+        )
     }
 }

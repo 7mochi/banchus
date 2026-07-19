@@ -7,9 +7,5 @@ import pe.nanamochi.banchus.database.entity.Channel
 
 @Repository
 interface ChannelRepository : JpaRepository<Channel, UUID> {
-    fun findChannelById(id: UUID): Channel?
-
-    fun findByAutoJoin(autoJoin: Boolean): List<Channel>
-
     fun findByName(name: String): Channel?
 }

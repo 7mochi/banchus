@@ -1,6 +1,9 @@
 package pe.nanamochi.banchus.service
 
-import kotlin.math.roundToLong
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.database.entity.Beatmap
 import pe.nanamochi.banchus.database.entity.Score
@@ -9,70 +12,83 @@ import pe.nanamochi.banchus.database.entity.User
 
 @Service
 class ChartService {
-    fun buildCharts(
+    fun buildSubmissionCharts(
         beatmap: Beatmap,
         score: Score,
-        previousBestScore: Score?,
         user: User,
-        previousModeStats: Stat,
-        modeStats: Stat,
-        previousGlobalRank: Int,
-        ownGlobalRank: Int,
+        previousBest: Score?,
+        previousBestRank: Int?,
+        newBeatmapRank: Int,
+        oldGlobalRank: UInt,
+        newGlobalRank: UInt,
+        oldStats: Stat,
+        stats: Stat,
     ): String {
-        val beatmapSetId = beatmap.beatmapset?.id ?: 0
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val approvedDate =
+            LocalDateTime.ofInstant(beatmap.lastUpdated, ZoneOffset.UTC).format(formatter)
 
-        fun Double.formatAcc() = "%.2f".format(this)
-        fun Double.toLongStr() = this.roundToLong().toString()
+        val beatmapRankingChart =
+            listOf(
+                chartEntry("rank", previousBestRank, newBeatmapRank),
+                chartEntry("rankedScore", previousBest?.score, score.score),
+                chartEntry("totalScore", previousBest?.score, score.score),
+                chartEntry("maxCombo", previousBest?.highestCombo, score.highestCombo),
+                chartEntry(
+                    "accuracy",
+                    previousBest?.accuracy?.let { "%.2f".format(it) },
+                    "%.2f".format(score.accuracy),
+                ),
+                chartEntry(
+                    "pp",
+                    previousBest?.performancePoints?.roundToInt(),
+                    score.performancePoints.roundToInt(),
+                ),
+            )
 
-        val rankedScoreBefore = previousBestScore?.score ?: 0L
-        val maxComboBefore = previousBestScore?.highestCombo ?: 0
-        val accuracyBefore = previousBestScore?.accuracy?.formatAcc() ?: "0.00"
-        val ppBefore = previousBestScore?.performancePoints?.toLongStr() ?: "0"
+        val overallRankingChart =
+            listOf(
+                chartEntry("rank", oldGlobalRank, newGlobalRank),
+                chartEntry("rankedScore", oldStats.rankedScore, stats.rankedScore),
+                chartEntry("totalScore", oldStats.totalScore, stats.totalScore),
+                chartEntry("maxCombo", oldStats.maxCombo, stats.maxCombo),
+                chartEntry(
+                    "accuracy",
+                    "%.2f".format(oldStats.averageAccuracy),
+                    "%.2f".format(stats.averageAccuracy),
+                ),
+                chartEntry("pp", oldStats.performancePoints, stats.performancePoints),
+            )
 
-        val overallAccBefore = previousModeStats.accuracy.formatAcc()
-        val overallAccAfter = modeStats.accuracy.formatAcc()
+        val achievementsStr = "" // TODO: Implement unlock achievements
 
-        val sb = StringBuilder()
+        val submissionCharts =
+            mutableListOf(
+                "beatmapId:${beatmap.id}",
+                "beatmapSetId:${beatmap.beatmapset!!.id}",
+                "beatmapPlaycount:${beatmap.playcount}",
+                "beatmapPasscount:${beatmap.passcount}",
+                "approvedDate:$approvedDate",
+                "\n",
+                "chartId:beatmap",
+                "chartUrl:https://osu.ppy.sh/b/${beatmap.id}", // TODO: change this with my url
+                "chartName:Beatmap Ranking",
+            )
 
-        sb.append("beatmapId:${beatmap.id}|")
-        sb.append("beatmapSetId:$beatmapSetId|")
-        sb.append("beatmapPlaycount:${beatmap.playcount}|")
-        sb.append("beatmapPasscount:${beatmap.passcount}|")
-        sb.append("approvedDate:${beatmap.submissionDate}|")
+        submissionCharts.addAll(beatmapRankingChart)
+        submissionCharts.add("onlineScoreId:${score.id}")
+        submissionCharts.add("\n")
+        submissionCharts.add("chartId:overall")
+        submissionCharts.add(
+            "chartUrl:https://osu.ppy.sh/u/${user.id}"
+        ) // TODO: change this with my url
+        submissionCharts.add("chartName:Overall Ranking")
+        submissionCharts.addAll(overallRankingChart)
+        submissionCharts.add("achievements-new:$achievementsStr")
 
-        sb.append("\nchartId:beatmap|")
-        sb.append("chartUrl:https://osu.ppy.sh/beatmapsets/$beatmapSetId|")
-        sb.append("chartName:Beatmap Ranking|")
-        sb.append("rankBefore:${previousBestScore?.let { "0" } ?: ""}|") // TODO: Leaderboard pos
-        sb.append("rankAfter:1|")
-        sb.append("rankedScoreBefore:$rankedScoreBefore|")
-        sb.append("rankedScoreAfter:${score.score}|")
-        sb.append("totalScoreBefore:$rankedScoreBefore|")
-        sb.append("totalScoreAfter:${score.score}|")
-        sb.append("maxComboBefore:$maxComboBefore|")
-        sb.append("maxComboAfter:${score.highestCombo}|")
-        sb.append("accuracyBefore:$accuracyBefore|")
-        sb.append("accuracyAfter:${score.accuracy.formatAcc()}|")
-        sb.append("ppBefore:$ppBefore|")
-        sb.append("ppAfter:${score.performancePoints.toLongStr()}|")
-        sb.append("onlineScoreId:${score.id}|")
-
-        sb.append("\nchartId:overall|")
-        sb.append("chartUrl:https://osu.ppy.sh/u/${user.id}|")
-        sb.append("chartName:Overall Ranking|")
-        sb.append("rankBefore:$previousGlobalRank|")
-        sb.append("rankAfter:$ownGlobalRank|")
-        sb.append("rankedScoreBefore:${previousModeStats.rankedScore}|")
-        sb.append("rankedScoreAfter:${modeStats.rankedScore}|")
-        sb.append("totalScoreBefore:${previousModeStats.totalScore}|")
-        sb.append("totalScoreAfter:${modeStats.totalScore}|")
-        sb.append("maxComboBefore:${previousModeStats.highestCombo}|")
-        sb.append("maxComboAfter:${modeStats.highestCombo}|")
-        sb.append("accuracyBefore:$overallAccBefore|")
-        sb.append("accuracyAfter:$overallAccAfter|")
-        sb.append("ppBefore:${previousModeStats.performancePoints}|")
-        sb.append("ppAfter:${modeStats.performancePoints}")
-
-        return sb.toString()
+        return submissionCharts.joinToString("|")
     }
+
+    private fun <T> chartEntry(name: String, before: T?, after: T): String =
+        "${name}Before:${before ?: ""}|${name}After:$after"
 }

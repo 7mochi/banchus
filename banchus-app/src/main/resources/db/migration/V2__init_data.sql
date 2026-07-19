@@ -1,41 +1,21 @@
-INSERT INTO users (id, username, email, password_md5, country, privileges)
-VALUES (1, 'BanchoBot', 'bancho@osupe.ru', '098f6bcd4621d373cade4e832627b4f6', 118, 1),
-       (3, 'test', 'test@gmail.com', '098f6bcd4621d373cade4e832627b4f6', 118, 1),
-       (4, 'test2', 'test2@gmail.com', '098f6bcd4621d373cade4e832627b4f6', 13, 0),
-       (5, 'test3', 'test3@gmail.com', '098f6bcd4621d373cade4e832627b4f6', 13, 1);
+INSERT INTO channels (id, name, description, read_privileges, write_privileges, status)
+VALUES (UUID(), '#osu', 'General discussion.', 0, 1, 1),
+       (UUID(), '#lobby', 'General multiplayer lobby chat.', 0, 1, 1),
+       (UUID(), '#announce', 'Announcements from the server.', 0, 1 << 30, 1),
+       (UUID(), '#help', 'Help and support.', 0, 1, 1),
 
-ALTER TABLE users AUTO_INCREMENT = 6;
-
-INSERT INTO channels (id, name, topic, read_privileges, write_privileges, auto_join, temporary, created_at, updated_at)
-VALUES (UUID(), '#osu', 'General discussion.', 0, 1, 1, false, NOW(), NOW()),
-       (UUID(), '#lobby', 'General multiplayer lobby chat.', 0, 1, 0, false, NOW(), NOW()),
-       (UUID(), '#announce', 'Announcements from the server.', 0, 1 << 30, 1, false, NOW(), NOW()),
-       (UUID(), '#help', 'Help and support.', 1, 0, 1, false, NOW(), NOW()),
-       (UUID(), '#staff', 'General discussion for staff members.', (1 << 7 | 1 << 9 | 1 << 13 | 1 << 30),
+       (UUID(), '#staff', 'General discussion for staff members.',
         (1 << 7 | 1 << 9 | 1 << 13 | 1 << 30),
-        1, false, NOW(), NOW()),
-       (UUID(), '#dev', 'General discussion for developers.', 1 << 30, 1 << 30, 1, false, NOW(), NOW());
+        (1 << 7 | 1 << 9 | 1 << 13 | 1 << 30), 1),
+       (UUID(), '#devlog', 'Development updates and logs.', 0, 1 << 30, 1),
 
-INSERT INTO stats (user_id, gamemode)
-VALUES (1, 0),
-       (1, 1),
-       (1, 2),
-       (1, 3);
+       (UUID(), '#plus', 'Supporter exclusive channel.', 1 << 2, 1 << 2, 1),
+       (UUID(), '#supporter', 'Supporter exclusive channel.', 1 << 2, 1 << 2, 1),
+       (UUID(), '#premium', 'Premium supporter exclusive channel.', 1 << 3, 1 << 3, 1);
 
-INSERT INTO stats (user_id, gamemode)
-VALUES (3, 0),
-       (3, 1),
-       (3, 2),
-       (3, 3);
+INSERT INTO users (id, username, safe_username, email, password_bcrypt, registration_time, latest_activity, country,
+                   privileges)
+VALUES (1, 'BanchoBot', 'banchobot', 'bot@osupe.ru', '__a_dummy_bcrypt_password__',
+        NOW(), NOW(), 0, 0);
 
-INSERT INTO stats (user_id, gamemode)
-VALUES (4, 0),
-       (4, 1),
-       (4, 2),
-       (4, 3);
-
-INSERT INTO stats (user_id, gamemode)
-VALUES (5, 0),
-       (5, 1),
-       (5, 2),
-       (5, 3);
+ALTER TABLE users auto_increment = 3;

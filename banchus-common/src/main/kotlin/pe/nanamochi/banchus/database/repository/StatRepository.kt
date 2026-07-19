@@ -8,5 +8,7 @@ import pe.nanamochi.banchus.domain.enums.Mode
 
 @Repository
 interface StatRepository : JpaRepository<Stat, Int> {
-    fun findByUserAndGamemode(user: User, gamemode: Mode): Stat?
+    fun findByUserIdAndMode(userId: Int, mode: Mode): Stat?
+
+    fun findByUser(user: User): List<Stat>
 }

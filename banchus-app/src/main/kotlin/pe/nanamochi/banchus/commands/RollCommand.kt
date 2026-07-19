@@ -1,9 +1,9 @@
 package pe.nanamochi.banchus.commands
 
 import org.springframework.stereotype.Component
-import pe.nanamochi.banchus.database.entity.User
-import pe.nanamochi.banchus.infrastructure.commands.BaseCommand
-import pe.nanamochi.banchus.infrastructure.commands.Command
+import pe.nanamochi.banchus.infrastructure.command.BaseCommand
+import pe.nanamochi.banchus.infrastructure.command.Command
+import pe.nanamochi.banchus.redis.entity.Session
 
 @Component
 @Command(
@@ -12,10 +12,10 @@ import pe.nanamochi.banchus.infrastructure.commands.Command
     multiplayer = true,
 )
 class RollCommand : BaseCommand() {
-    override fun processCommand(user: User, trigger: String, args: Array<String>): String {
+    override fun processCommand(session: Session, trigger: String, args: Array<String>): String {
         val max = args.getOrNull(0)?.toIntOrNull()?.coerceIn(1, 32767) ?: 100
         val result = (0..max).random()
 
-        return "${user.username} rolls $result points."
+        return "${session.username} rolls $result points."
     }
 }

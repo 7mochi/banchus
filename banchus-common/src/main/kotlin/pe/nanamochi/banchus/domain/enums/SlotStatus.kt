@@ -1,6 +1,7 @@
 package pe.nanamochi.banchus.domain.enums
 
 enum class SlotStatus(val value: Int) {
+    NONE(0),
     OPEN(1),
     LOCKED(1 shl 1),
     NOT_READY(1 shl 2),
@@ -11,20 +12,6 @@ enum class SlotStatus(val value: Int) {
     QUIT(1 shl 7);
 
     companion object {
-        val HAS_PLAYER: Int
-            get() =
-                NOT_READY.value or
-                    READY.value or
-                    NO_BEATMAP.value or
-                    PLAYING.value or
-                    COMPLETE.value
-
-        val CAN_START: Int
-            get() = NOT_READY.value or READY.value
-
-        val WAITING_FOR_END: Int
-            get() = PLAYING.value or COMPLETE.value
-
         fun fromValue(value: Int): SlotStatus = entries.find { it.value == value } ?: OPEN
 
         fun fromBitmask(bitmask: Int): List<SlotStatus> =
