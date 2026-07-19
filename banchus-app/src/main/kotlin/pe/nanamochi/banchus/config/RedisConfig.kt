@@ -24,6 +24,18 @@ class RedisConfig {
         return JacksonJsonRedisSerializer(mapper, type)
     }
 
+    private fun <T : Any> createTemplate(
+        factory: RedisConnectionFactory,
+        serializer: RedisSerializer<T>,
+    ): RedisTemplate<String, T> =
+        RedisTemplate<String, T>().apply {
+            connectionFactory = factory
+            keySerializer = RedisSerializer.string()
+            valueSerializer = serializer
+            hashKeySerializer = RedisSerializer.string()
+            hashValueSerializer = serializer
+        }
+
     @Bean
     fun sessionSerializer(): RedisSerializer<Session> = createKotlinSerializer(Session::class.java)
 
@@ -36,27 +48,13 @@ class RedisConfig {
     fun sessionRedisTemplate(
         factory: RedisConnectionFactory,
         sessionSerializer: RedisSerializer<Session>,
-    ): RedisTemplate<String, Session> =
-        RedisTemplate<String, Session>().apply {
-            connectionFactory = factory
-            keySerializer = RedisSerializer.string()
-            valueSerializer = sessionSerializer
-            hashKeySerializer = RedisSerializer.string()
-            hashValueSerializer = sessionSerializer
-        }
+    ): RedisTemplate<String, Session> = createTemplate(factory, sessionSerializer)
 
     @Bean
     fun sessionIdentityRedisTemplate(
         factory: RedisConnectionFactory
     ): RedisTemplate<String, SessionIdentity> =
-        RedisTemplate<String, SessionIdentity>().apply {
-            val serializer = createKotlinSerializer(SessionIdentity::class.java)
-            connectionFactory = factory
-            keySerializer = RedisSerializer.string()
-            valueSerializer = serializer
-            hashKeySerializer = RedisSerializer.string()
-            hashValueSerializer = serializer
-        }
+        createTemplate(factory, createKotlinSerializer(SessionIdentity::class.java))
 
     @Bean
     fun uuidRedisTemplate(factory: RedisConnectionFactory): RedisTemplate<String, UUID> =
@@ -70,27 +68,13 @@ class RedisConfig {
 
     @Bean
     fun presenceRedisTemplate(factory: RedisConnectionFactory): RedisTemplate<String, Presence> =
-        RedisTemplate<String, Presence>().apply {
-            val serializer = createKotlinSerializer(Presence::class.java)
-            connectionFactory = factory
-            keySerializer = RedisSerializer.string()
-            valueSerializer = serializer
-            hashKeySerializer = RedisSerializer.string()
-            hashValueSerializer = serializer
-        }
+        createTemplate(factory, createKotlinSerializer(Presence::class.java))
 
     @Bean
     fun multiplayerMatchRedisTemplate(
         factory: RedisConnectionFactory
     ): RedisTemplate<String, MultiplayerMatch> =
-        RedisTemplate<String, MultiplayerMatch>().apply {
-            val serializer = createKotlinSerializer(MultiplayerMatch::class.java)
-            connectionFactory = factory
-            keySerializer = RedisSerializer.string()
-            valueSerializer = serializer
-            hashKeySerializer = RedisSerializer.string()
-            hashValueSerializer = serializer
-        }
+        createTemplate(factory, createKotlinSerializer(MultiplayerMatch::class.java))
 
     @Bean
     fun byteArrayRedisTemplate(factory: RedisConnectionFactory): RedisTemplate<String, ByteArray> =
@@ -106,12 +90,5 @@ class RedisConfig {
     fun multiplayerMatchSlotRedisTemplate(
         factory: RedisConnectionFactory
     ): RedisTemplate<String, MultiplayerMatchSlot> =
-        RedisTemplate<String, MultiplayerMatchSlot>().apply {
-            val serializer = createKotlinSerializer(MultiplayerMatchSlot::class.java)
-            connectionFactory = factory
-            keySerializer = RedisSerializer.string()
-            valueSerializer = serializer
-            hashKeySerializer = RedisSerializer.string()
-            hashValueSerializer = serializer
-        }
+        createTemplate(factory, createKotlinSerializer(MultiplayerMatchSlot::class.java))
 }

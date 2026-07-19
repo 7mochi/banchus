@@ -8,12 +8,8 @@ import com.github.michaelbull.result.runCatching
 import com.github.michaelbull.result.toResultOr
 import jakarta.servlet.http.HttpServletRequest
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import java.util.Base64
 import java.util.concurrent.TimeUnit
-import kotlin.math.roundToInt
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Service
@@ -54,6 +50,7 @@ class ScoreService(
     private val presenceService: PresenceService,
     private val streamService: StreamService,
     private val lock: RedisDistributedLock,
+    private val chartService: ChartService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -376,69 +373,18 @@ class ScoreService(
 
         // TODO: Handle multiplayer
 
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        val approvedDate =
-            LocalDateTime.ofInstant(beatmap.lastUpdated, ZoneOffset.UTC).format(formatter)
-
-        val beatmapRankingChart =
-            listOf(
-                chartEntry("rank", previousBestRank, newBeatmapRank),
-                chartEntry("rankedScore", previousBest?.score, score.score),
-                chartEntry("totalScore", previousBest?.score, score.score),
-                chartEntry("maxCombo", previousBest?.highestCombo, score.highestCombo),
-                chartEntry(
-                    "accuracy",
-                    previousBest?.accuracy?.let { "%.2f".format(it) },
-                    "%.2f".format(score.accuracy),
-                ),
-                chartEntry(
-                    "pp",
-                    previousBest?.performancePoints?.roundToInt(),
-                    score.performancePoints.roundToInt(),
-                ),
-            )
-
-        val overallRankingChart =
-            listOf(
-                chartEntry("rank", oldGlobalRank, newGlobalRank),
-                chartEntry("rankedScore", oldStats.rankedScore, stats.rankedScore),
-                chartEntry("totalScore", oldStats.totalScore, stats.totalScore),
-                chartEntry("maxCombo", oldStats.maxCombo, stats.maxCombo),
-                chartEntry(
-                    "accuracy",
-                    "%.2f".format(oldStats.averageAccuracy),
-                    "%.2f".format(stats.averageAccuracy),
-                ),
-                chartEntry("pp", oldStats.performancePoints, stats.performancePoints),
-            )
-
-        val achievementsStr = "" // TODO: Implement unlock achievements
-
-        val submissionCharts =
-            mutableListOf(
-                "beatmapId:${beatmap.id}",
-                "beatmapSetId:${beatmap.beatmapset!!.id}",
-                "beatmapPlaycount:${beatmap.playcount}",
-                "beatmapPasscount:${beatmap.passcount}",
-                "approvedDate:$approvedDate",
-                "\n",
-                "chartId:beatmap",
-                "chartUrl:https://osu.ppy.sh/b/${beatmap.id}", // TODO: change this with my url
-                "chartName:Beatmap Ranking",
-            )
-
-        submissionCharts.addAll(beatmapRankingChart)
-        submissionCharts.add("onlineScoreId:${score.id}")
-        submissionCharts.add("\n")
-        submissionCharts.add("chartId:overall")
-        submissionCharts.add(
-            "chartUrl:https://osu.ppy.sh/u/${user.id}"
-        ) // TODO: change this with my url
-        submissionCharts.add("chartName:Overall Ranking")
-        submissionCharts.addAll(overallRankingChart)
-        submissionCharts.add("achievements-new:$achievementsStr")
-
-        submissionCharts.joinToString("|")
+        chartService.buildSubmissionCharts(
+            beatmap = beatmap,
+            score = score,
+            user = user,
+            previousBest = previousBest,
+            previousBestRank = previousBestRank,
+            newBeatmapRank = newBeatmapRank,
+            oldGlobalRank = oldGlobalRank,
+            newGlobalRank = newGlobalRank,
+            oldStats = oldStats,
+            stats = stats,
+        )
     }
 
     fun calculateStatus(score: Score, previousBest: Score?): SubmissionStatus {
@@ -486,7 +432,4 @@ class ScoreService(
 
         log.info("Successfully handled update stats event for user ${user.username} (${user.id})")
     }
-
-    private fun <T> chartEntry(name: String, before: T?, after: T): String =
-        "${name}Before:${before ?: ""}|${name}After:$after"
 }
