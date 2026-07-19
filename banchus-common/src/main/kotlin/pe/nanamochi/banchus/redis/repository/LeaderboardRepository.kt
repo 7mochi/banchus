@@ -33,13 +33,15 @@ class LeaderboardRepository(private val redisTemplate: RedisTemplate<String, Str
     }
 
     fun fetchGlobalRank(userId: Int, mode: Mode): UInt =
-        redisTemplate.opsForZSet().reverseRank(makeKey(mode), userId.toString())?.toUInt() ?: 0u
+        redisTemplate.opsForZSet().reverseRank(makeKey(mode), userId.toString())?.let {
+            it.toUInt() + 1u
+        } ?: 0u
 
     fun fetchCountryRank(userId: Int, mode: Mode, countryCode: CountryCode): UInt =
         redisTemplate
             .opsForZSet()
             .reverseRank(makeCountryKey(mode, countryCode), userId.toString())
-            ?.toUInt() ?: 0u
+            ?.let { it.toUInt() + 1u } ?: 0u
 
     private fun makeKey(mode: Mode) = "banchus:leaderboard:${mode.alias}"
 
