@@ -1,6 +1,5 @@
 package pe.nanamochi.banchus.controller.client.web
 
-import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.mapBoth
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
@@ -13,8 +12,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
-import pe.nanamochi.banchus.domain.enums.ScoreSubmissionErrors
-import pe.nanamochi.banchus.domain.error.InternalError
+import pe.nanamochi.banchus.domain.error.BeatmapNotFound
+import pe.nanamochi.banchus.domain.error.InvalidCredentials
 import pe.nanamochi.banchus.service.ScoreService
 
 @RestController
@@ -36,29 +35,16 @@ class ScoringController(private val scoreService: ScoreService) {
         @RequestParam(value = "osuver") osuVersion: String,
         @RequestPart(value = "i", required = false) screenshot: MultipartFile?,
     ): String {
-        return binding {
-                scoreService
-                    .submitScore(
-                        request,
-                        headers,
-                        ivB64,
-                        clientHashB64,
-                        scoreTime,
-                        passwordMd5,
-                        osuVersion,
-                    )
-                    .bind()
-            }
+        return scoreService
+            .submitScore(request, headers, ivB64, clientHashB64, scoreTime, passwordMd5, osuVersion)
             .mapBoth(
                 success = { chartString -> chartString },
                 failure = { domainError ->
-                    val submissionError =
-                        when (domainError) {
-                            // TODO: add more specific errors
-                            is InternalError -> ScoreSubmissionErrors.NO
-                            else -> ScoreSubmissionErrors.NO
-                        }
-                    "error: ${submissionError.value}"
+                    when (domainError) {
+                        is BeatmapNotFound -> "error: beatmap"
+                        is InvalidCredentials -> ""
+                        else -> "error: no"
+                    }
                 },
             )
     }
