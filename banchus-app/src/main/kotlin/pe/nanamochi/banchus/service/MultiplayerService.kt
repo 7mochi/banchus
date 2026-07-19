@@ -378,6 +378,15 @@ class MultiplayerService(
                         needSlotUpdates = true
                     }
                 }
+            } else {
+                val hostSlot = slots.firstOrNull { it.user?.userId == mpMatch.hostUserId }
+                mpMatch.mods = mpMatch.mods or (hostSlot?.mods ?: 0u)
+                slots.forEach { slot ->
+                    slot.user?.let {
+                        slot.mods = 0u
+                        needSlotUpdates = true
+                    }
+                }
             }
         }
 
@@ -755,6 +764,8 @@ class MultiplayerService(
                 Err(MultiplayerUnauthorized).bind()
             }
         }
+        if (mpMatch.inProgress) return@binding
+
         mpMatch.inProgress = true
         val slots = fetchAllSlots(matchId)
         slots.forEach { slot ->
