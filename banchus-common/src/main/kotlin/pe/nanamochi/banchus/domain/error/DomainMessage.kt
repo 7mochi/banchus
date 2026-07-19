@@ -96,6 +96,8 @@ sealed interface SessionError : DomainMessage
 
 data object SessionNotFound : SessionError
 
+data class SessionExpired(val payload: ByteArray) : SessionError
+
 data object SessionInvalidCredentials : UserError
 
 data object SessionsLimitReached : UserError
