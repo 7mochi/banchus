@@ -222,3 +222,13 @@ CREATE INDEX idx_messages_sender_stats ON messages (sender_id, created_at);
 CREATE INDEX score_user_mode_status_pp_idx ON scores (user_id, mode, submission_status, performance_points DESC);
 CREATE INDEX beatmap_mode_status_idx ON scores (beatmap_id);
 CREATE INDEX beatmap_status_idx ON scores (submission_status);
+
+CREATE TABLE scores_first (
+    beatmap_id INT  NOT NULL,
+    mode       INT  NOT NULL DEFAULT 0,
+    score_id   BIGINT NOT NULL,
+    user_id    INT  NOT NULL,
+    PRIMARY KEY (beatmap_id, mode),
+    CONSTRAINT fk_scores_first_on_score FOREIGN KEY (score_id) REFERENCES scores (id),
+    CONSTRAINT fk_scores_first_on_user FOREIGN KEY (user_id) REFERENCES users (id)
+);

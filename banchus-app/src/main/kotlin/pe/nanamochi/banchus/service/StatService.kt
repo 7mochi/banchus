@@ -52,11 +52,18 @@ class StatService(private val statRepository: StatRepository) {
         return weightedSum / totalWeight
     }
 
-    fun calculateWeightedPp(topScores: List<Score>): Int =
-        topScores
-            .asSequence()
-            .withIndex()
-            .sumOf { (i, score) -> score.performancePoints * DECAY.pow(i) }
-            .roundToLong()
-            .toInt()
+    fun calculateWeightedPp(topScores: List<Score>, rankedScoreCount: Int = 0): Int {
+        val weightedPp =
+            topScores
+                .asSequence()
+                .withIndex()
+                .sumOf { (i, score) -> score.performancePoints * DECAY.pow(i) }
+                .roundToLong()
+                .toInt()
+
+        return weightedPp + calculateBonusPp(rankedScoreCount)
+    }
+
+    fun calculateBonusPp(rankedScoreCount: Int): Int =
+        (416.6667 * (1.0 - 0.9994.pow(rankedScoreCount))).roundToLong().toInt()
 }

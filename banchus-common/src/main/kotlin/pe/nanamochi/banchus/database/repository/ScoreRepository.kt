@@ -1,6 +1,7 @@
 package pe.nanamochi.banchus.database.repository
 
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import pe.nanamochi.banchus.database.entity.Beatmap
@@ -51,4 +52,55 @@ interface ScoreRepository : JpaRepository<Score, Long> {
         submissionStatuses: List<SubmissionStatus>,
         beatmapRankedStatuses: List<BeatmapRankedStatus>,
     ): List<Score>
+
+    @Query(
+        """
+        SELECT COUNT(s)
+        FROM Score s
+        JOIN s.beatmap b
+        WHERE s.user.id = :userId
+          AND s.mode = :mode
+          AND s.submissionStatus = :status
+          AND b.status IN :beatmapStatuses
+        """
+    )
+    fun countRankedScores(
+        userId: Int,
+        mode: Mode,
+        status: SubmissionStatus,
+        beatmapStatuses: List<BeatmapRankedStatus>,
+    ): Long
+
+    @Query(
+        """
+        SELECT COUNT(s) + 1
+        FROM Score s
+        JOIN s.user u
+        WHERE s.beatmap.id = :beatmapId
+          AND s.mode = :mode
+          AND s.submissionStatus = :status
+          AND (u.privileges >= 1 OR u.id = :userId)
+          AND (s.score > :score OR (s.score = :score AND s.id < :scoreId))
+        """
+    )
+    fun findBeatmapRank(
+        beatmapId: Int,
+        mode: Mode,
+        status: SubmissionStatus,
+        userId: Int,
+        score: Long,
+        scoreId: Long,
+    ): Long
+
+    @Modifying
+    @Query(
+        value =
+            """
+        INSERT INTO scores_first (beatmap_id, mode, score_id, user_id)
+        VALUES (:beatmapId, :mode, :scoreId, :userId)
+        ON DUPLICATE KEY UPDATE score_id = :scoreId, user_id = :userId
+        """,
+        nativeQuery = true,
+    )
+    fun upsertFirstPlace(beatmapId: Int, mode: Int, scoreId: Long, userId: Int)
 }

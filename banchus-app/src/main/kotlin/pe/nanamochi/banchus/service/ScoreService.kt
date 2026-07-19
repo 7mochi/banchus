@@ -13,9 +13,11 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Base64
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToLong
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import pe.nanamochi.banchus.components.hasAny
 import pe.nanamochi.banchus.database.entity.Beatmap
 import pe.nanamochi.banchus.database.entity.Score
@@ -33,6 +35,7 @@ import pe.nanamochi.banchus.domain.error.ScoreNotFound
 import pe.nanamochi.banchus.domain.error.SessionNotFound
 import pe.nanamochi.banchus.dto.client.DecryptedScoreData
 import pe.nanamochi.banchus.infrastructure.redis.RedisDistributedLock
+import pe.nanamochi.banchus.packets.server.MessagePacket
 import pe.nanamochi.banchus.packets.server.UserStatsPacket
 import pe.nanamochi.banchus.redis.stream.StreamName
 import pe.nanamochi.banchus.util.Rijndael
@@ -133,6 +136,7 @@ class ScoreService(
         Pair(scoreData, clientHashDecoded)
     }
 
+    @Transactional
     fun submitScore(
         request: HttpServletRequest,
         headers: HttpHeaders,
@@ -170,6 +174,9 @@ class ScoreService(
                 mode = Mode.fromValue(decrypted.mode),
                 passed = decrypted.passed,
             )
+
+        score.accuracy = score.calculateAccuracy()
+
         val previousBest =
             scoreRepository
                 .findFirstByBeatmapAndUserIdAndSubmissionStatusOrderByPerformancePointsDesc(
@@ -264,8 +271,18 @@ class ScoreService(
                             listOf(BeatmapRankedStatus.RANKED, BeatmapRankedStatus.APPROVED),
                         )
 
+                val rankedScoreCount =
+                    scoreRepository
+                        .countRankedScores(
+                            user.id,
+                            score.mode,
+                            SubmissionStatus.BEST,
+                            listOf(BeatmapRankedStatus.RANKED, BeatmapRankedStatus.APPROVED),
+                        )
+                        .toInt()
+
                 stats.averageAccuracy = statService.calculateWeightedAccuracy(top100)
-                stats.performancePoints = statService.calculateWeightedPp(top100)
+                stats.performancePoints = statService.calculateWeightedPp(top100, rankedScoreCount)
             }
 
             if (
@@ -275,7 +292,7 @@ class ScoreService(
             ) {
                 val grade = score.calculateGrade()
                 stats.adjustGradeCounter(grade, +1)
-                stats.rankedScore = score.score
+                stats.rankedScore += score.score
 
                 previousBest?.let {
                     stats.rankedScore -= it.score
@@ -285,9 +302,9 @@ class ScoreService(
             }
         }
 
-        statService.create(stats)
-
         // TODO: increment playcount
+
+        val oldGlobalRank = leaderboardService.fetchGlobalRank(user.id, score.mode)
 
         if (
             score.submissionStatus == SubmissionStatus.BEST &&
@@ -298,11 +315,64 @@ class ScoreService(
             leaderboardService.addToLeaderboard(user, stats.mode, stats.performancePoints)
         }
 
+        val newGlobalRank = leaderboardService.fetchGlobalRank(user.id, score.mode)
+
+        val newBeatmapRank =
+            if (score.passed && beatmap.hasLeaderboard()) {
+                scoreRepository
+                    .findBeatmapRank(
+                        beatmap.id,
+                        score.mode,
+                        SubmissionStatus.BEST,
+                        user.id,
+                        score.score,
+                        score.id,
+                    )
+                    .toInt()
+            } else {
+                0
+            }
+
+        val previousBestRank =
+            previousBest?.let {
+                scoreRepository
+                    .findBeatmapRank(
+                        beatmap.id,
+                        score.mode,
+                        SubmissionStatus.BEST,
+                        user.id,
+                        it.score,
+                        it.id,
+                    )
+                    .toInt()
+            }
+
+        if (
+            newBeatmapRank == 1 &&
+                score.submissionStatus == SubmissionStatus.BEST &&
+                beatmap.hasLeaderboard() &&
+                !user.isRestricted
+        ) {
+            scoreRepository.upsertFirstPlace(
+                beatmap.id,
+                score.mode.value.toInt(),
+                score.id,
+                user.id,
+            )
+
+            streamService.broadcastMessage(
+                StreamName.Channel("#announce"),
+                MessagePacket(
+                    sender = "BanchoBot",
+                    content =
+                        "${user.username} has achieved #1 on ${beatmap.beatmapset?.artist} - ${beatmap.beatmapset?.title} [${beatmap.version}] +${Mods.fromBitmask(score.mods.toUInt())} (${"%.2f".format(score.performancePoints)}pp)",
+                    target = "#announce",
+                    senderId = 1,
+                ),
+            )
+        }
+
         refreshStats(user, stats)
-
-        // TODO: Find rank of the score in the beatmap leaderboard
-
-        // TODO: Handle first place
 
         // TODO: Handle multiplayer
 
@@ -312,11 +382,7 @@ class ScoreService(
 
         val beatmapRankingChart =
             listOf(
-                chartEntry(
-                    "rank",
-                    1,
-                    1,
-                ), // TODO: chartEntry("rank", previousBest?.rank, score.rank),
+                chartEntry("rank", previousBestRank, newBeatmapRank),
                 chartEntry("rankedScore", previousBest?.score, score.score),
                 chartEntry("totalScore", previousBest?.score, score.score),
                 chartEntry("maxCombo", previousBest?.highestCombo, score.highestCombo),
@@ -325,12 +391,16 @@ class ScoreService(
                     previousBest?.accuracy?.let { "%.2f".format(it) },
                     "%.2f".format(score.accuracy),
                 ),
-                chartEntry("pp", previousBest?.performancePoints, score.performancePoints.toInt()),
+                chartEntry(
+                    "pp",
+                    previousBest?.performancePoints?.roundToLong()?.toInt(),
+                    score.performancePoints.roundToLong().toInt(),
+                ),
             )
 
         val overallRankingChart =
             listOf(
-                chartEntry("rank", 1, 1), // TODO: chartEntry("rank", oldStats.rank, stats.rank),
+                chartEntry("rank", oldGlobalRank, newGlobalRank),
                 chartEntry("rankedScore", oldStats.rankedScore, stats.rankedScore),
                 chartEntry("totalScore", oldStats.totalScore, stats.totalScore),
                 chartEntry("maxCombo", oldStats.maxCombo, stats.maxCombo),
