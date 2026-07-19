@@ -19,7 +19,7 @@ import pe.nanamochi.banchus.domain.enums.Mode
 import pe.nanamochi.banchus.domain.enums.Mods
 import pe.nanamochi.banchus.domain.enums.SlotStatus
 import pe.nanamochi.banchus.domain.error.DomainMessage
-import pe.nanamochi.banchus.domain.error.InvalidPassword
+import pe.nanamochi.banchus.domain.error.IncorrectPassword
 import pe.nanamochi.banchus.domain.error.MatchNotFound
 import pe.nanamochi.banchus.domain.error.MultiplayerMatchFull
 import pe.nanamochi.banchus.domain.error.MultiplayerUnauthorized
@@ -209,7 +209,7 @@ class MultiplayerService(
 
         val mpMatch = fetchOne(matchId) ?: Err(MatchNotFound).bind()
         if (mpMatch.password != password) {
-            Err(InvalidPassword).bind()
+            Err(IncorrectPassword).bind()
         }
 
         val existingSlots = fetchAllSlots(matchId)

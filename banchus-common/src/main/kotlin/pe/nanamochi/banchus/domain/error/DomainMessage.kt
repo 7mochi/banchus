@@ -16,8 +16,6 @@ data object UnsupportedClientVersion : DomainMessage
 
 data object ClientTooOld : DomainMessage
 
-data object InvalidLoginFormat : BanchoError
-
 data object InvalidToken : BanchoError
 
 sealed interface RegistrationResult
@@ -60,17 +58,11 @@ data object MultiplayerUnauthorized : MultiplayerError
 
 data object NotInMatch : MultiplayerError
 
-data object NotHost : MultiplayerError
-
 data object MultiplayerMatchFull : MultiplayerError
 
 data object SlotNotFound : MultiplayerError
 
-data object SlotNotAvailable : MultiplayerError
-
 data object IncorrectPassword : MultiplayerError
-
-data object ChangeSlotNotAllowed : MultiplayerError
 
 sealed interface SpectatorError : DomainMessage
 
@@ -111,8 +103,6 @@ sealed interface ChannelError : DomainMessage
 data object ChannelNotFound : ChannelError
 
 data object ChannelIsUnauthorized : ChannelError
-
-data object ChannelInsufficientPrivileges : ChannelError
 
 data object ChannelUserAlreadyIn : ChannelError
 

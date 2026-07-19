@@ -6,7 +6,7 @@ import java.io.ByteArrayOutputStream
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.core.PacketType
-import pe.nanamochi.banchus.domain.error.InvalidPassword
+import pe.nanamochi.banchus.domain.error.IncorrectPassword
 import pe.nanamochi.banchus.domain.error.MultiplayerMatchFull
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
@@ -53,7 +53,7 @@ class JoinMatchHandler(
 
                 val errorMessage =
                     when (error) {
-                        InvalidPassword -> "You have entered an invalid password for this match."
+                        IncorrectPassword -> "You have entered an invalid password for this match."
                         MultiplayerMatchFull -> "The match has no free space left."
                         else -> "An unexpected error occurred."
                     }
