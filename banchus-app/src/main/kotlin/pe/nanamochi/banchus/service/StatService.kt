@@ -19,10 +19,6 @@ private const val DECAY = 0.95
 
 @Service
 class StatService(private val statRepository: StatRepository) {
-    fun create(stat: Stat): Result<Stat, DomainMessage> = runDatabaseCatching {
-        statRepository.save(stat)
-    }
-
     fun update(stat: Stat): Result<Stat, DomainMessage> =
         if (statRepository.existsById(stat.id)) {
             runDatabaseCatching { statRepository.save(stat) }
