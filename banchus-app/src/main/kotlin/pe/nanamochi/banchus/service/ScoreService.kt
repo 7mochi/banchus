@@ -13,7 +13,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Base64
 import java.util.concurrent.TimeUnit
-import kotlin.math.roundToLong
+import kotlin.math.roundToInt
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Service
@@ -393,8 +393,8 @@ class ScoreService(
                 ),
                 chartEntry(
                     "pp",
-                    previousBest?.performancePoints?.roundToLong()?.toInt(),
-                    score.performancePoints.roundToLong().toInt(),
+                    previousBest?.performancePoints?.roundToInt(),
+                    score.performancePoints.roundToInt(),
                 ),
             )
 

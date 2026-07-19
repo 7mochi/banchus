@@ -47,7 +47,7 @@ sealed class ChannelName {
     fun getUpdateStream(): StreamName {
         return when (this) {
             is Spectator -> StreamName.Spectator(this.sessionId)
-            is Multiplayer -> StreamName.Multiplayer(this.matchId.toLong())
+            is Multiplayer -> StreamName.Multiplayer(this.matchId)
             is Chat -> {
                 when (this.name) {
                     "#plus",

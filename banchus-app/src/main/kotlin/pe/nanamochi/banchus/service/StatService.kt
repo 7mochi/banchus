@@ -4,7 +4,7 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.toResultOr
 import kotlin.math.pow
-import kotlin.math.roundToLong
+import kotlin.math.roundToInt
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.database.entity.Score
 import pe.nanamochi.banchus.database.entity.Stat
@@ -58,12 +58,11 @@ class StatService(private val statRepository: StatRepository) {
                 .asSequence()
                 .withIndex()
                 .sumOf { (i, score) -> score.performancePoints * DECAY.pow(i) }
-                .roundToLong()
-                .toInt()
+                .roundToInt()
 
         return weightedPp + calculateBonusPp(rankedScoreCount)
     }
 
     fun calculateBonusPp(rankedScoreCount: Int): Int =
-        (416.6667 * (1.0 - 0.9994.pow(rankedScoreCount))).roundToLong().toInt()
+        (416.6667 * (1.0 - 0.9994.pow(rankedScoreCount))).roundToInt()
 }
