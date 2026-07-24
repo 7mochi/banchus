@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.util.UriComponentsBuilder
-import pe.nanamochi.banchus.config.BanchusProperties
-import pe.nanamochi.banchus.dto.external.OsuApiBeatmap
+import pe.nanamochi.banchus.beatmap.dto.external.OsuApiBeatmap
+import pe.nanamochi.banchus.infrastructure.config.BanchusProperties
 
 @Service
 class OsuApiClient(

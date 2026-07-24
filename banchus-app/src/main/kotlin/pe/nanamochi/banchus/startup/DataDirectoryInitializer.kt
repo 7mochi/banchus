@@ -3,7 +3,7 @@ package pe.nanamochi.banchus.startup
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
-import pe.nanamochi.banchus.service.StorageService
+import pe.nanamochi.banchus.core.service.StorageService
 
 @Component
 class DataDirectoryInitializer(private val storageService: StorageService) : CommandLineRunner {

@@ -3,9 +3,9 @@ package pe.nanamochi.banchus.infrastructure.protocol
 import java.io.ByteArrayOutputStream
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.core.ClientPacket
 import pe.nanamochi.banchus.core.PacketType
-import pe.nanamochi.banchus.redis.entity.Session
 
 @Component
 class PacketHandler(beans: List<AbstractPacketHandler<*>>) {

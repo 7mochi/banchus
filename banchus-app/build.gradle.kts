@@ -13,9 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":banchus-common"))
     implementation(project(":banchus-packet"))
-    implementation(project(":banchus-common"))
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
@@ -31,6 +29,7 @@ dependencies {
     implementation("io.github.7mochi:rosu-pp-jar:0.2.0")
     implementation("io.github.7mochi:osu-native-jar:0.0.7")
     implementation("com.michael-bull.kotlin-result:kotlin-result:2.1.0")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.83")
 
     kapt("org.mapstruct:mapstruct-processor:1.6.3")
 

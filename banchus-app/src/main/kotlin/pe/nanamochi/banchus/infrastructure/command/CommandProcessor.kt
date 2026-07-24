@@ -5,11 +5,11 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import pe.nanamochi.banchus.database.entity.Target
-import pe.nanamochi.banchus.domain.error.CommandNotFound
-import pe.nanamochi.banchus.domain.error.DomainMessage
-import pe.nanamochi.banchus.domain.error.InternalError
-import pe.nanamochi.banchus.redis.entity.Session
+import pe.nanamochi.banchus.auth.entity.Session
+import pe.nanamochi.banchus.chat.entity.Target
+import pe.nanamochi.banchus.core.error.CommandNotFound
+import pe.nanamochi.banchus.core.error.DomainMessage
+import pe.nanamochi.banchus.core.error.InternalError
 
 @Component
 class CommandProcessor(private val commands: List<BaseCommand>) {

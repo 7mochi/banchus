@@ -1,7 +1,7 @@
 package pe.nanamochi.banchus.infrastructure.command
 
-import pe.nanamochi.banchus.domain.enums.ServerPrivileges
-import pe.nanamochi.banchus.redis.entity.Session
+import pe.nanamochi.banchus.auth.entity.Session
+import pe.nanamochi.banchus.core.enums.ServerPrivileges
 
 abstract class BaseCommand {
     val config: Command by lazy {
