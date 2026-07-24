@@ -6,12 +6,12 @@ import java.io.ByteArrayOutputStream
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.core.error.NotInMatch
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.multiplayer.enums.SlotStatus
 import pe.nanamochi.banchus.multiplayer.service.MultiplayerService
 import pe.nanamochi.banchus.packets.client.MatchLockPacket
-import pe.nanamochi.banchus.core.error.NotInMatch
 
 @Component
 @HandleClientPacket(type = PacketType.OSU_MATCH_LOCK)

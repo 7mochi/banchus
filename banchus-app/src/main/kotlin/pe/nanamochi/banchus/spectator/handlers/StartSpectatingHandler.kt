@@ -8,11 +8,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.core.error.DomainMessage
+import pe.nanamochi.banchus.core.error.InvalidSpectateTarget
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.packets.client.StartSpectatingPacket
-import pe.nanamochi.banchus.core.error.DomainMessage
-import pe.nanamochi.banchus.core.error.InvalidSpectateTarget
 import pe.nanamochi.banchus.spectator.broadcast.SpectatorBroadcaster
 import pe.nanamochi.banchus.spectator.service.SpectatorService
 

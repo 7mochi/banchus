@@ -11,17 +11,17 @@ import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.bcrypt.BCrypt
 import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.auth.service.SessionService
-import pe.nanamochi.banchus.identity.entity.User
-import pe.nanamochi.banchus.core.enums.ServerPrivileges
-import pe.nanamochi.banchus.identity.repository.UserRepository
 import pe.nanamochi.banchus.core.entity.AuditAction
 import pe.nanamochi.banchus.core.entity.AuditLog
+import pe.nanamochi.banchus.core.enums.ServerPrivileges
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.error.InvalidCredentials
 import pe.nanamochi.banchus.core.error.UserNotFound
 import pe.nanamochi.banchus.core.service.AuditLogService
-import pe.nanamochi.banchus.score.service.LeaderboardService
 import pe.nanamochi.banchus.core.util.runDatabaseCatching
+import pe.nanamochi.banchus.identity.entity.User
+import pe.nanamochi.banchus.identity.repository.UserRepository
+import pe.nanamochi.banchus.score.service.LeaderboardService
 
 @Service
 class UserService(

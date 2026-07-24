@@ -43,8 +43,10 @@ class BanchoController(
     ): ResponseEntity<ByteArray> {
         val rawData = String(body, Charsets.UTF_8)
         val loginResult = loginService.handleLogin(rawData, headers)
-        val loginResponse = loginResult.map { loginBroadcaster.loginSuccess(it) }
-            .getOrElse { error -> loginBroadcaster.loginFailure(error) }
+        val loginResponse =
+            loginResult
+                .map { loginBroadcaster.loginSuccess(it) }
+                .getOrElse { error -> loginBroadcaster.loginFailure(error) }
         return ResponseEntity.ok()
             .header("cho-token", loginResponse.token)
             .contentType(MediaType.APPLICATION_OCTET_STREAM)

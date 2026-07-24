@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
-import pe.nanamochi.banchus.score.service.ScoreService
 import pe.nanamochi.banchus.core.error.BeatmapNotFound
 import pe.nanamochi.banchus.core.error.InvalidCredentials
+import pe.nanamochi.banchus.score.service.ScoreService
 
 @RestController
 @RequestMapping("/web")

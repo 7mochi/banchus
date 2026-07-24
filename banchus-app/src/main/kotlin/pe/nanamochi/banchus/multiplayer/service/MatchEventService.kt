@@ -1,9 +1,9 @@
 package pe.nanamochi.banchus.multiplayer.service
 
 import org.springframework.stereotype.Service
+import pe.nanamochi.banchus.core.util.runDatabaseCatching
 import pe.nanamochi.banchus.multiplayer.entity.MatchEvent
 import pe.nanamochi.banchus.multiplayer.repository.MatchEventRepository
-import pe.nanamochi.banchus.core.util.runDatabaseCatching
 
 @Service
 class MatchEventService(private val matchEventRepository: MatchEventRepository) {

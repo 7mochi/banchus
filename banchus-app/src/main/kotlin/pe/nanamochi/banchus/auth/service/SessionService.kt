@@ -15,11 +15,6 @@ import pe.nanamochi.banchus.auth.dto.LoginData
 import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.auth.repository.SessionRepository
 import pe.nanamochi.banchus.chat.service.ChannelService
-import pe.nanamochi.banchus.identity.dto.Geolocation
-import pe.nanamochi.banchus.identity.entity.HardwareLog
-import pe.nanamochi.banchus.identity.service.HardwareLogService
-import pe.nanamochi.banchus.identity.service.UserService
-import pe.nanamochi.banchus.score.service.StatService
 import pe.nanamochi.banchus.core.StreamName
 import pe.nanamochi.banchus.core.entity.Presence
 import pe.nanamochi.banchus.core.enums.CountryCode
@@ -28,9 +23,14 @@ import pe.nanamochi.banchus.core.error.ClientTooOld
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.error.SessionInvalidCredentials
 import pe.nanamochi.banchus.core.error.SessionsLimitReached
-import pe.nanamochi.banchus.score.service.LeaderboardService
 import pe.nanamochi.banchus.core.service.PresenceService
 import pe.nanamochi.banchus.core.service.StreamService
+import pe.nanamochi.banchus.identity.dto.Geolocation
+import pe.nanamochi.banchus.identity.entity.HardwareLog
+import pe.nanamochi.banchus.identity.service.HardwareLogService
+import pe.nanamochi.banchus.identity.service.UserService
+import pe.nanamochi.banchus.score.service.LeaderboardService
+import pe.nanamochi.banchus.score.service.StatService
 import pe.nanamochi.banchus.spectator.service.SpectatorService
 
 private const val USER_SESSIONS_LIMIT = 20

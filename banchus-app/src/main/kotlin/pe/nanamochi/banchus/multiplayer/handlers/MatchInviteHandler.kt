@@ -9,11 +9,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.core.error.NotInMatch
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.multiplayer.service.MultiplayerService
 import pe.nanamochi.banchus.packets.client.MatchInvitePacket
-import pe.nanamochi.banchus.core.error.NotInMatch
 
 @Component
 @HandleClientPacket(type = PacketType.OSU_MATCH_INVITE)

@@ -8,10 +8,10 @@ import io.github.nanamochi.rosu_pp_jar.Beatmap
 import io.github.nanamochi.rosu_pp_jar.GameMode
 import io.github.nanamochi.rosu_pp_jar.Performance
 import org.springframework.stereotype.Component
-import pe.nanamochi.banchus.score.entity.Score
 import pe.nanamochi.banchus.core.enums.Mods
 import pe.nanamochi.banchus.core.error.CalculationFailed
 import pe.nanamochi.banchus.core.error.PerformanceError
+import pe.nanamochi.banchus.score.entity.Score
 
 @Component
 class RosuCalculator : PerformanceCalculator {

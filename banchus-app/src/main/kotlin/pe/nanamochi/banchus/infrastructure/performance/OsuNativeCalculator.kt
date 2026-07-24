@@ -11,11 +11,11 @@ import io.github.nanamochi.osu_native.wrapper.objects.ModsCollection
 import io.github.nanamochi.osu_native.wrapper.objects.Ruleset
 import io.github.nanamochi.osu_native.wrapper.objects.ScoreInfo
 import org.springframework.stereotype.Component
-import pe.nanamochi.banchus.score.entity.Score
 import pe.nanamochi.banchus.core.enums.Mode
 import pe.nanamochi.banchus.core.enums.Mods
 import pe.nanamochi.banchus.core.error.CalculationFailed
 import pe.nanamochi.banchus.core.error.PerformanceError
+import pe.nanamochi.banchus.score.entity.Score
 
 @Component
 class OsuNativeCalculator : PerformanceCalculator {

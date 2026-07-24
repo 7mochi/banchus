@@ -6,9 +6,6 @@ import com.github.michaelbull.result.mapBoth
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.auth.entity.Session
-import pe.nanamochi.banchus.identity.service.UserService
-import pe.nanamochi.banchus.infrastructure.command.BaseCommand
-import pe.nanamochi.banchus.infrastructure.command.Command
 import pe.nanamochi.banchus.core.error.BotSilenceNotAllowed
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.error.SelfSilenceNotAllowed
@@ -16,6 +13,9 @@ import pe.nanamochi.banchus.core.error.UserNotFound
 import pe.nanamochi.banchus.core.error.UserRestricted
 import pe.nanamochi.banchus.core.error.UserSilenced
 import pe.nanamochi.banchus.core.service.SilenceService
+import pe.nanamochi.banchus.identity.service.UserService
+import pe.nanamochi.banchus.infrastructure.command.BaseCommand
+import pe.nanamochi.banchus.infrastructure.command.Command
 
 @Component
 @Command(name = "silence", documentation = "Silence a user for a specified duration.")

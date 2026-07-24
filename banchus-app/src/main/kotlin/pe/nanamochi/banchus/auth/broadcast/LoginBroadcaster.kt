@@ -1,12 +1,17 @@
 package pe.nanamochi.banchus.auth.broadcast
 
-import com.github.michaelbull.result.getOrElse
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.auth.dto.LoginResponse
 import pe.nanamochi.banchus.auth.dto.LoginResult
 import pe.nanamochi.banchus.chat.entity.ChannelName
 import pe.nanamochi.banchus.chat.service.ChannelService
+import pe.nanamochi.banchus.core.StreamName
+import pe.nanamochi.banchus.core.entity.Presence
 import pe.nanamochi.banchus.core.enums.ServerPrivileges
+import pe.nanamochi.banchus.core.error.DomainMessage
+import pe.nanamochi.banchus.core.error.InvalidCredentials
+import pe.nanamochi.banchus.core.service.StreamService
+import pe.nanamochi.banchus.core.util.toClientPrivileges
 import pe.nanamochi.banchus.infrastructure.util.userPanel
 import pe.nanamochi.banchus.packets.server.AnnouncePacket
 import pe.nanamochi.banchus.packets.server.ChannelAvailablePacket
@@ -18,12 +23,6 @@ import pe.nanamochi.banchus.packets.server.LoginReplyPacket
 import pe.nanamochi.banchus.packets.server.ProtocolNegotiationPacket
 import pe.nanamochi.banchus.packets.server.SilenceInfoPacket
 import pe.nanamochi.banchus.protocol.PacketWriter
-import pe.nanamochi.banchus.core.StreamName
-import pe.nanamochi.banchus.core.entity.Presence
-import pe.nanamochi.banchus.core.error.DomainMessage
-import pe.nanamochi.banchus.core.error.InvalidCredentials
-import pe.nanamochi.banchus.core.service.StreamService
-import pe.nanamochi.banchus.core.util.toClientPrivileges
 
 @Component
 class LoginBroadcaster(
@@ -66,8 +65,7 @@ class LoginBroadcaster(
 
         result.channels.forEach { channel ->
             if (channel.canRead(result.session.privileges)) {
-                val memberCount =
-                    channelService.memberCount(ChannelName.Chat(channel.name))
+                val memberCount = channelService.memberCount(ChannelName.Chat(channel.name))
                 responsePackets.add(
                     ChannelAvailablePacket(
                         realName = channel.name,

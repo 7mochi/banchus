@@ -5,16 +5,15 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.flatMap
 import com.github.michaelbull.result.toResultOr
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import pe.nanamochi.banchus.core.error.DomainMessage
+import pe.nanamochi.banchus.core.error.HardwareLogNotFound
+import pe.nanamochi.banchus.core.util.runDatabaseCatching
 import pe.nanamochi.banchus.identity.entity.HardwareLog
 import pe.nanamochi.banchus.identity.entity.HardwareLogSummary
 import pe.nanamochi.banchus.identity.entity.MatchingHardware
 import pe.nanamochi.banchus.identity.entity.User
 import pe.nanamochi.banchus.identity.repository.HardwareLogRepository
-import pe.nanamochi.banchus.core.error.DomainMessage
-import pe.nanamochi.banchus.core.error.HardwareLogNotFound
-import pe.nanamochi.banchus.core.util.runDatabaseCatching
 
 @Service
 class HardwareLogService(private val hardwareLogRepository: HardwareLogRepository) {

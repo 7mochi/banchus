@@ -8,8 +8,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.Instant
-import pe.nanamochi.banchus.core.enums.ServerPrivileges
 import pe.nanamochi.banchus.core.enums.CountryCode
+import pe.nanamochi.banchus.core.enums.ServerPrivileges
 
 @Entity
 @Table(

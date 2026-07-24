@@ -7,14 +7,14 @@ import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.components.Mods
 import pe.nanamochi.banchus.components.StatusUpdate
-import pe.nanamochi.banchus.infrastructure.client.IPApiClient
-import pe.nanamochi.banchus.score.service.StatService
 import pe.nanamochi.banchus.core.entity.Presence
 import pe.nanamochi.banchus.core.enums.CountryCode
 import pe.nanamochi.banchus.core.enums.Mode
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.repository.PresenceRepository
+import pe.nanamochi.banchus.infrastructure.client.IPApiClient
 import pe.nanamochi.banchus.score.service.LeaderboardService
+import pe.nanamochi.banchus.score.service.StatService
 
 @Service
 class PresenceService(

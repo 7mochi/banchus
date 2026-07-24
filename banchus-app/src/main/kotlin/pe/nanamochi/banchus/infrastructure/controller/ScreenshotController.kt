@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.server.ResponseStatusException
+import pe.nanamochi.banchus.core.service.StorageService
 import pe.nanamochi.banchus.identity.entity.User
 import pe.nanamochi.banchus.infrastructure.security.AuthenticatedUser
-import pe.nanamochi.banchus.core.service.StorageService
 
 @RestController
 class ScreenshotController(private val storageService: StorageService) {

@@ -9,15 +9,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.security.crypto.bcrypt.BCrypt
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.identity.entity.User
-import pe.nanamochi.banchus.core.enums.ServerPrivileges
-import pe.nanamochi.banchus.identity.service.GeolocationService
-import pe.nanamochi.banchus.identity.service.UserService
-import pe.nanamochi.banchus.identity.util.isValidEmail
-import pe.nanamochi.banchus.identity.util.isValidPassword
-import pe.nanamochi.banchus.identity.util.isValidUsername
-import pe.nanamochi.banchus.score.service.StatService
 import pe.nanamochi.banchus.core.enums.CountryCode
+import pe.nanamochi.banchus.core.enums.ServerPrivileges
 import pe.nanamochi.banchus.core.error.CheckOk
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.error.EmailTaken
@@ -28,6 +21,13 @@ import pe.nanamochi.banchus.core.error.RegistrationResult
 import pe.nanamochi.banchus.core.error.UserCreated
 import pe.nanamochi.banchus.core.error.UsernameTaken
 import pe.nanamochi.banchus.core.util.toMd5
+import pe.nanamochi.banchus.identity.entity.User
+import pe.nanamochi.banchus.identity.service.GeolocationService
+import pe.nanamochi.banchus.identity.service.UserService
+import pe.nanamochi.banchus.identity.util.isValidEmail
+import pe.nanamochi.banchus.identity.util.isValidPassword
+import pe.nanamochi.banchus.identity.util.isValidUsername
+import pe.nanamochi.banchus.score.service.StatService
 
 @Service
 class RegistrationService(

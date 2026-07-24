@@ -7,14 +7,13 @@ import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.beatmap.entity.Beatmap
 import pe.nanamochi.banchus.beatmap.enums.BeatmapWebRankedStatus
 import pe.nanamochi.banchus.beatmap.service.BeatmapService
+import pe.nanamochi.banchus.core.enums.LeaderboardType
+import pe.nanamochi.banchus.core.enums.Mode
 import pe.nanamochi.banchus.identity.entity.User
 import pe.nanamochi.banchus.identity.service.UserService
 import pe.nanamochi.banchus.score.entity.Score
 import pe.nanamochi.banchus.score.enums.SubmissionStatus
 import pe.nanamochi.banchus.score.repository.LeaderboardRepository
-import pe.nanamochi.banchus.score.service.ScoreService
-import pe.nanamochi.banchus.core.enums.LeaderboardType
-import pe.nanamochi.banchus.core.enums.Mode
 
 private const val CURRENT_LEADERBOARD_VERSION = 4
 

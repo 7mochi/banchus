@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import pe.nanamochi.banchus.beatmap.entity.Beatmap
 import pe.nanamochi.banchus.beatmap.enums.BeatmapRankedStatus
+import pe.nanamochi.banchus.core.enums.CountryCode
+import pe.nanamochi.banchus.core.enums.Mode
 import pe.nanamochi.banchus.identity.entity.User
 import pe.nanamochi.banchus.score.entity.Score
 import pe.nanamochi.banchus.score.enums.SubmissionStatus
-import pe.nanamochi.banchus.core.enums.CountryCode
-import pe.nanamochi.banchus.core.enums.Mode
 
 @Repository
 interface ScoreRepository : JpaRepository<Score, Long> {

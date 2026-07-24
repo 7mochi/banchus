@@ -10,13 +10,13 @@ import pe.nanamochi.banchus.auth.dto.LoginData
 import pe.nanamochi.banchus.auth.dto.LoginResult
 import pe.nanamochi.banchus.chat.entity.ChannelName
 import pe.nanamochi.banchus.chat.service.ChannelService
-import pe.nanamochi.banchus.identity.service.GeolocationService
-import pe.nanamochi.banchus.identity.service.RelationshipService
-import pe.nanamochi.banchus.identity.service.UserService
 import pe.nanamochi.banchus.core.StreamName
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.service.PresenceService
 import pe.nanamochi.banchus.core.service.StreamService
+import pe.nanamochi.banchus.identity.service.GeolocationService
+import pe.nanamochi.banchus.identity.service.RelationshipService
+import pe.nanamochi.banchus.identity.service.UserService
 
 @Service
 class LoginService(

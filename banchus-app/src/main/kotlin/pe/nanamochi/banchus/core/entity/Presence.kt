@@ -1,7 +1,7 @@
 package pe.nanamochi.banchus.core.entity
 
-import pe.nanamochi.banchus.core.enums.ServerPrivileges
 import pe.nanamochi.banchus.core.enums.CountryCode
+import pe.nanamochi.banchus.core.enums.ServerPrivileges
 
 data class Presence(
     var userId: Int = 0,

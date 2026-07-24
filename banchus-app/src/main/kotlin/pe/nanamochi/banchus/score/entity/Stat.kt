@@ -13,8 +13,8 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.time.Instant
-import pe.nanamochi.banchus.identity.entity.User
 import pe.nanamochi.banchus.core.enums.Mode
+import pe.nanamochi.banchus.identity.entity.User
 
 @Entity
 @Table(

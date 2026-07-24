@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import pe.nanamochi.banchus.auth.service.SessionService
+import pe.nanamochi.banchus.core.service.StorageService
 import pe.nanamochi.banchus.identity.entity.User
 import pe.nanamochi.banchus.infrastructure.security.AuthenticatedUser
 import pe.nanamochi.banchus.score.service.ScoreService
-import pe.nanamochi.banchus.core.service.StorageService
 
 @RestController
 @RequestMapping("/web")

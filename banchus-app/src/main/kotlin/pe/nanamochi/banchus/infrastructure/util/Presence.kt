@@ -7,10 +7,10 @@ import pe.nanamochi.banchus.components.UserPresence
 import pe.nanamochi.banchus.components.UserStats
 import pe.nanamochi.banchus.components.UserStatus
 import pe.nanamochi.banchus.core.ServerPacket
-import pe.nanamochi.banchus.packets.server.UserPresencePacket
-import pe.nanamochi.banchus.packets.server.UserStatsPacket
 import pe.nanamochi.banchus.core.entity.Presence
 import pe.nanamochi.banchus.core.util.toClientPrivileges
+import pe.nanamochi.banchus.packets.server.UserPresencePacket
+import pe.nanamochi.banchus.packets.server.UserStatsPacket
 
 fun Presence.userPanel(): List<ServerPacket> {
     return buildList {

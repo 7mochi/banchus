@@ -7,14 +7,14 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.core.StreamName
+import pe.nanamochi.banchus.core.service.PresenceService
+import pe.nanamochi.banchus.core.service.StreamService
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.infrastructure.util.userPanel
 import pe.nanamochi.banchus.packets.client.ChangeStatusPacket
 import pe.nanamochi.banchus.protocol.PacketWriter
-import pe.nanamochi.banchus.core.StreamName
-import pe.nanamochi.banchus.core.service.PresenceService
-import pe.nanamochi.banchus.core.service.StreamService
 
 @Component
 @HandleClientPacket(type = PacketType.OSU_CHANGE_STATUS, checkForRestriction = true)

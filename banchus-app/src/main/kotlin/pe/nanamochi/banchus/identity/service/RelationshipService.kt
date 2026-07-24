@@ -3,12 +3,12 @@ package pe.nanamochi.banchus.identity.service
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.toResultOr
 import org.springframework.stereotype.Service
-import pe.nanamochi.banchus.identity.entity.Relationship
-import pe.nanamochi.banchus.identity.entity.User
-import pe.nanamochi.banchus.identity.repository.RelationshipRepository
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.error.RelationshipNotFound
 import pe.nanamochi.banchus.core.util.runDatabaseCatching
+import pe.nanamochi.banchus.identity.entity.Relationship
+import pe.nanamochi.banchus.identity.entity.User
+import pe.nanamochi.banchus.identity.repository.RelationshipRepository
 
 @Service
 class RelationshipService(private val relationshipRepository: RelationshipRepository) {

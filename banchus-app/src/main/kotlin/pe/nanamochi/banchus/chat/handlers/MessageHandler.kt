@@ -9,13 +9,13 @@ import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.chat.service.ChannelService
 import pe.nanamochi.banchus.chat.service.ChatService
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.core.entity.Presence
+import pe.nanamochi.banchus.core.error.DomainMessage
+import pe.nanamochi.banchus.core.service.StreamService
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.packets.client.MessagePacket
 import pe.nanamochi.banchus.protocol.PacketWriter
-import pe.nanamochi.banchus.core.entity.Presence
-import pe.nanamochi.banchus.core.error.DomainMessage
-import pe.nanamochi.banchus.core.service.StreamService
 
 @Component
 @HandleClientPacket(type = PacketType.OSU_MESSAGE, checkForRestriction = true)

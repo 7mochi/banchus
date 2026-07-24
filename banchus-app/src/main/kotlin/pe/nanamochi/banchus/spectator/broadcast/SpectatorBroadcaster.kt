@@ -4,6 +4,8 @@ import java.util.UUID
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.auth.entity.SessionIdentity
 import pe.nanamochi.banchus.components.ReplayFrameBundle
+import pe.nanamochi.banchus.core.StreamName
+import pe.nanamochi.banchus.core.service.StreamService
 import pe.nanamochi.banchus.packets.server.ChannelJoinSuccessPacket
 import pe.nanamochi.banchus.packets.server.ChannelRevokedPacket
 import pe.nanamochi.banchus.packets.server.FellowSpectatorJoinedPacket
@@ -12,8 +14,6 @@ import pe.nanamochi.banchus.packets.server.SpectatorCantSpectatePacket
 import pe.nanamochi.banchus.packets.server.SpectatorJoinedPacket
 import pe.nanamochi.banchus.packets.server.SpectatorLeftPacket
 import pe.nanamochi.banchus.protocol.PacketWriter
-import pe.nanamochi.banchus.core.StreamName
-import pe.nanamochi.banchus.core.service.StreamService
 
 @Component
 class SpectatorBroadcaster(
@@ -36,6 +36,7 @@ class SpectatorBroadcaster(
             packetWriter.serializeAll(packets)
         }
     }
+
     fun spectatorJoined(stream: StreamName, userId: Int) {
         streamService.broadcastData(stream, packetWriter.serialize(SpectatorJoinedPacket(userId)))
     }

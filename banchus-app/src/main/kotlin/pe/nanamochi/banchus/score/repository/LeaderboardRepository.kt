@@ -2,9 +2,9 @@ package pe.nanamochi.banchus.score.repository
 
 import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Repository
-import pe.nanamochi.banchus.identity.entity.User
 import pe.nanamochi.banchus.core.enums.CountryCode
 import pe.nanamochi.banchus.core.enums.Mode
+import pe.nanamochi.banchus.identity.entity.User
 
 @Repository
 class LeaderboardRepository(private val redisTemplate: RedisTemplate<String, String>) {

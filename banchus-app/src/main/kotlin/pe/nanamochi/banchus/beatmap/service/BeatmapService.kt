@@ -12,13 +12,13 @@ import org.springframework.stereotype.Service
 import pe.nanamochi.banchus.beatmap.entity.Beatmap
 import pe.nanamochi.banchus.beatmap.mapper.BeatmapMapper
 import pe.nanamochi.banchus.beatmap.repository.BeatmapRepository
-import pe.nanamochi.banchus.infrastructure.client.OsuApiClient
 import pe.nanamochi.banchus.core.error.BeatmapNotFound
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.error.InternalError
 import pe.nanamochi.banchus.core.service.StorageService
 import pe.nanamochi.banchus.core.util.runDatabaseCatching
 import pe.nanamochi.banchus.core.util.toMd5
+import pe.nanamochi.banchus.infrastructure.client.OsuApiClient
 
 @Service
 class BeatmapService(

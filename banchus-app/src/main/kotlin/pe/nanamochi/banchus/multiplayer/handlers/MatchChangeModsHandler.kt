@@ -5,12 +5,12 @@ import java.io.ByteArrayOutputStream
 import org.springframework.stereotype.Component
 import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.core.PacketType
+import pe.nanamochi.banchus.core.enums.Mods
 import pe.nanamochi.banchus.infrastructure.protocol.AbstractPacketHandler
 import pe.nanamochi.banchus.infrastructure.protocol.HandleClientPacket
 import pe.nanamochi.banchus.multiplayer.broadcast.MultiplayerBroadcaster
 import pe.nanamochi.banchus.multiplayer.service.MultiplayerService
 import pe.nanamochi.banchus.packets.client.MatchChangeModsPacket
-import pe.nanamochi.banchus.core.enums.Mods
 
 @Component
 @HandleClientPacket(type = PacketType.OSU_MATCH_CHANGE_MODS)

@@ -10,10 +10,10 @@ import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializer
 import pe.nanamochi.banchus.auth.entity.Session
 import pe.nanamochi.banchus.auth.entity.SessionIdentity
-import pe.nanamochi.banchus.multiplayer.entity.MultiplayerMatch
-import pe.nanamochi.banchus.multiplayer.entity.MultiplayerMatchSlot
 import pe.nanamochi.banchus.core.MessageInfo
 import pe.nanamochi.banchus.core.entity.Presence
+import pe.nanamochi.banchus.multiplayer.entity.MultiplayerMatch
+import pe.nanamochi.banchus.multiplayer.entity.MultiplayerMatchSlot
 import tools.jackson.module.kotlin.jsonMapper
 import tools.jackson.module.kotlin.kotlinModule
 

@@ -22,9 +22,9 @@ import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import pe.nanamochi.banchus.beatmap.entity.Beatmap
+import pe.nanamochi.banchus.core.enums.Mode
 import pe.nanamochi.banchus.identity.entity.User
 import pe.nanamochi.banchus.score.enums.SubmissionStatus
-import pe.nanamochi.banchus.core.enums.Mode
 
 @Entity
 @Table(
