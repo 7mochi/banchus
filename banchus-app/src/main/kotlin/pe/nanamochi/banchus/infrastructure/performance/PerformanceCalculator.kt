@@ -1,8 +1,8 @@
 package pe.nanamochi.banchus.infrastructure.performance
 
 import com.github.michaelbull.result.Result
-import pe.nanamochi.banchus.database.entity.Score
-import pe.nanamochi.banchus.domain.error.PerformanceError
+import pe.nanamochi.banchus.core.error.PerformanceError
+import pe.nanamochi.banchus.score.entity.Score
 
 interface PerformanceCalculator {
     fun calculate(beatmapPath: String, score: Score): Result<Double, PerformanceError>

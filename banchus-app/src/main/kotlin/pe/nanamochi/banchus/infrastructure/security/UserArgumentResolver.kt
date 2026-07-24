@@ -10,8 +10,8 @@ import org.springframework.web.context.request.NativeWebRequest
 import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.method.support.ModelAndViewContainer
 import org.springframework.web.server.ResponseStatusException
-import pe.nanamochi.banchus.database.entity.User
-import pe.nanamochi.banchus.service.UserService
+import pe.nanamochi.banchus.identity.entity.User
+import pe.nanamochi.banchus.identity.service.UserService
 
 @Component
 class UserArgumentResolver(private val userService: UserService) : HandlerMethodArgumentResolver {

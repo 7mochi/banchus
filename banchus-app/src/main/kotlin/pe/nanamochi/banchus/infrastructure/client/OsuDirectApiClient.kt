@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
 import org.springframework.web.util.UriComponentsBuilder
-import pe.nanamochi.banchus.domain.enums.BeatmapDirectDisplayMode
-import pe.nanamochi.banchus.domain.enums.OsuDirectQuery
+import pe.nanamochi.banchus.beatmap.enums.BeatmapDirectDisplayMode
+import pe.nanamochi.banchus.beatmap.enums.OsuDirectQuery
 
 @Service
 class OsuDirectApiClient(private val restTemplate: RestTemplate) {

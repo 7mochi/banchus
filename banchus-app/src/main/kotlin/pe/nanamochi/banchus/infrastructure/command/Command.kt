@@ -1,6 +1,6 @@
 package pe.nanamochi.banchus.infrastructure.command
 
-import pe.nanamochi.banchus.domain.enums.ServerPrivileges
+import pe.nanamochi.banchus.core.enums.ServerPrivileges
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)

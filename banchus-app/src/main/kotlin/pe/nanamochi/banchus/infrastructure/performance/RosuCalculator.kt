@@ -8,10 +8,10 @@ import io.github.nanamochi.rosu_pp_jar.Beatmap
 import io.github.nanamochi.rosu_pp_jar.GameMode
 import io.github.nanamochi.rosu_pp_jar.Performance
 import org.springframework.stereotype.Component
-import pe.nanamochi.banchus.database.entity.Score
-import pe.nanamochi.banchus.domain.enums.Mods
-import pe.nanamochi.banchus.domain.error.CalculationFailed
-import pe.nanamochi.banchus.domain.error.PerformanceError
+import pe.nanamochi.banchus.core.enums.Mods
+import pe.nanamochi.banchus.core.error.CalculationFailed
+import pe.nanamochi.banchus.core.error.PerformanceError
+import pe.nanamochi.banchus.score.entity.Score
 
 @Component
 class RosuCalculator : PerformanceCalculator {
@@ -56,11 +56,11 @@ class RosuCalculator : PerformanceCalculator {
         return Err(CalculationFailed)
     }
 
-    private fun pe.nanamochi.banchus.domain.enums.Mode.toRosuMode(): GameMode =
+    private fun pe.nanamochi.banchus.core.enums.Mode.toRosuMode(): GameMode =
         when (this) {
-            pe.nanamochi.banchus.domain.enums.Mode.TAIKO -> GameMode.TAIKO
-            pe.nanamochi.banchus.domain.enums.Mode.CATCH -> GameMode.CATCH
-            pe.nanamochi.banchus.domain.enums.Mode.MANIA -> GameMode.MANIA
+            pe.nanamochi.banchus.core.enums.Mode.TAIKO -> GameMode.TAIKO
+            pe.nanamochi.banchus.core.enums.Mode.CATCH -> GameMode.CATCH
+            pe.nanamochi.banchus.core.enums.Mode.MANIA -> GameMode.MANIA
             else -> GameMode.OSU
         }
 
