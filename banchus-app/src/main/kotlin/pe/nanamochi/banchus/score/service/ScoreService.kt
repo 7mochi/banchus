@@ -143,7 +143,11 @@ class ScoreService(
         return if (sessions.isEmpty()) Err(SessionNotFound) else Ok(Unit)
     }
 
-    internal fun buildScoreFromSubmission(decrypted: DecryptedScoreData, beatmap: Beatmap, user: User): Score {
+    internal fun buildScoreFromSubmission(
+        decrypted: DecryptedScoreData,
+        beatmap: Beatmap,
+        user: User,
+    ): Score {
         val score =
             Score(
                 user = user,

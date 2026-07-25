@@ -111,52 +111,54 @@ class MessageService(
         MessageSendResult(message = message, response = response)
     }
 
-    internal fun resolveTargetInfo(sender: Session, target: Target): Result<TargetInfo, DomainMessage> =
-        binding {
-            when (target) {
-                is Target.Channel -> {
-                    val channel = channelService.fetchOne(target.channelName).bind()
+    internal fun resolveTargetInfo(
+        sender: Session,
+        target: Target,
+    ): Result<TargetInfo, DomainMessage> = binding {
+        when (target) {
+            is Target.Channel -> {
+                val channel = channelService.fetchOne(target.channelName).bind()
 
-                    if (!channel.canWrite(sender.privileges)) {
-                        Err(ChannelIsUnauthorized).bind<TargetInfo>()
-                    }
-
-                    TargetInfo(targetChannel = target.channelName)
+                if (!channel.canWrite(sender.privileges)) {
+                    Err(ChannelIsUnauthorized).bind<TargetInfo>()
                 }
 
-                is Target.UserSessions -> {
-                    val receiver = target.sessions.firstOrNull() ?: Err(UserNotFound).bind()
+                TargetInfo(targetChannel = target.channelName)
+            }
 
-                    if (receiver.isRestricted) {
-                        Err(InteractionBlocked).bind<TargetInfo>()
-                    }
+            is Target.UserSessions -> {
+                val receiver = target.sessions.firstOrNull() ?: Err(UserNotFound).bind()
 
-                    if (receiver.privateDms) {
-                        relationshipService.fetchOne(receiver.userId, sender.userId).onFailure {
-                            error ->
-                            if (error is RelationshipNotFound) {
-                                Err(InteractionBlocked).bind<TargetInfo>()
-                            }
-                            log.error("Error fetching relationship.")
+                if (receiver.isRestricted) {
+                    Err(InteractionBlocked).bind<TargetInfo>()
+                }
+
+                if (receiver.privateDms) {
+                    relationshipService.fetchOne(receiver.userId, sender.userId).onFailure { error
+                        ->
+                        if (error is RelationshipNotFound) {
+                            Err(InteractionBlocked).bind<TargetInfo>()
                         }
+                        log.error("Error fetching relationship.")
                     }
-
-                    TargetInfo(targetId = receiver.userId)
                 }
 
-                is Target.OfflineUser -> {
-                    val user = userService.fetchOneByUsername(target.username).bind()
+                TargetInfo(targetId = receiver.userId)
+            }
 
-                    if (user.isRestricted) {
-                        Err(InteractionBlocked).bind<TargetInfo>()
-                    }
+            is Target.OfflineUser -> {
+                val user = userService.fetchOneByUsername(target.username).bind()
 
-                    TargetInfo(targetId = user.id, markAsUnread = true)
+                if (user.isRestricted) {
+                    Err(InteractionBlocked).bind<TargetInfo>()
                 }
 
-                is Target.Bot -> {
-                    TargetInfo(targetId = 1)
-                }
+                TargetInfo(targetId = user.id, markAsUnread = true)
+            }
+
+            is Target.Bot -> {
+                TargetInfo(targetId = 1)
             }
         }
+    }
 }

@@ -63,7 +63,11 @@ class BeatmapService(
                         .bind()
 
                 val newBeatmap =
-                    create(beatmapMapper.buildFromApi(apiBeatmap).apply { this.beatmapset = beatmapset })
+                    create(
+                            beatmapMapper.buildFromApi(apiBeatmap).apply {
+                                this.beatmapset = beatmapset
+                            }
+                        )
                         .bind()
                 fetchOrDownloadOsuFile(newBeatmap.id, beatmapMd5).bind()
 

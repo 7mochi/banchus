@@ -933,29 +933,27 @@ class MultiplayerService(
         }
     }
 
-    fun applyMatchMembersPresences(
-        userIds: List<Int>,
-        newMode: Mode,
-    ): Result<Unit, DomainMessage> = binding {
-        userIds.forEach { userId ->
-            val presence = presenceService.fetchOne(userId) ?: return@forEach
-            presence.mode = newMode.value
+    fun applyMatchMembersPresences(userIds: List<Int>, newMode: Mode): Result<Unit, DomainMessage> =
+        binding {
+            userIds.forEach { userId ->
+                val presence = presenceService.fetchOne(userId) ?: return@forEach
+                presence.mode = newMode.value
 
-            val stats = statService.fetchOne(userId, newMode).bind()
-            val globalRank = leaderboardService.fetchGlobalRank(userId, newMode)
+                val stats = statService.fetchOne(userId, newMode).bind()
+                val globalRank = leaderboardService.fetchGlobalRank(userId, newMode)
 
-            presence.rankedScore = stats.rankedScore.toULong()
-            presence.totalScore = stats.totalScore.toULong()
-            presence.accuracy = stats.averageAccuracy
-            presence.playcount = stats.playCount.toUInt()
-            presence.performancePoints = stats.performancePoints.toUInt()
-            presence.globalRank = globalRank
+                presence.rankedScore = stats.rankedScore.toULong()
+                presence.totalScore = stats.totalScore.toULong()
+                presence.accuracy = stats.averageAccuracy
+                presence.playcount = stats.playCount.toUInt()
+                presence.performancePoints = stats.performancePoints.toUInt()
+                presence.globalRank = globalRank
 
-            val updatedPresence = presenceService.update(presence)
+                val updatedPresence = presenceService.update(presence)
 
-            broadcaster.userPanelToMain(updatedPresence.userPanel())
+                broadcaster.userPanelToMain(updatedPresence.userPanel())
+            }
         }
-    }
 
     private fun changePlayingState(
         matchId: Long,

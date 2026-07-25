@@ -38,26 +38,28 @@ class ChannelService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun resolveChannelName(session: Session, channelName: String): Result<ChannelName, DomainMessage> =
-        binding {
-            when (channelName) {
-                "#spectator" -> {
-                    val hostSessionId =
-                        spectatorService.fetchSpectating(session.sessionId) ?: session.sessionId
-                    ChannelName.Spectator(hostSessionId)
-                }
-                "#multiplayer" -> {
-                    val matchId =
-                        multiplayerService
-                            .fetchSessionMatchId(session.sessionId)
-                            .toResultOr { NotInMatch }
-                            .bind()
-
-                    ChannelName.Multiplayer(matchId)
-                }
-                else -> ChannelName.buildFromName(channelName)
+    fun resolveChannelName(
+        session: Session,
+        channelName: String,
+    ): Result<ChannelName, DomainMessage> = binding {
+        when (channelName) {
+            "#spectator" -> {
+                val hostSessionId =
+                    spectatorService.fetchSpectating(session.sessionId) ?: session.sessionId
+                ChannelName.Spectator(hostSessionId)
             }
+            "#multiplayer" -> {
+                val matchId =
+                    multiplayerService
+                        .fetchSessionMatchId(session.sessionId)
+                        .toResultOr { NotInMatch }
+                        .bind()
+
+                ChannelName.Multiplayer(matchId)
+            }
+            else -> ChannelName.buildFromName(channelName)
         }
+    }
 
     fun fetchOne(channelName: ChannelName): Result<Channel, DomainMessage> =
         when (channelName) {

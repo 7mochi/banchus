@@ -28,12 +28,14 @@ class OsuApiClient(
             .getOrNull()
     }
 
-    fun fetchBeatmapByMd5(beatmapMd5: String): OsuApiBeatmap? = callApi("h", beatmapMd5).firstOrNull()
+    fun fetchBeatmapByMd5(beatmapMd5: String): OsuApiBeatmap? =
+        callApi("h", beatmapMd5).firstOrNull()
 
     fun fetchBeatmapById(beatmapId: Int): OsuApiBeatmap? =
         callApi("b", beatmapId.toString()).firstOrNull()
 
-    fun fetchBeatmaps(beatmapSetId: Int): List<OsuApiBeatmap> = callApi("s", beatmapSetId.toString())
+    fun fetchBeatmaps(beatmapSetId: Int): List<OsuApiBeatmap> =
+        callApi("s", beatmapSetId.toString())
 
     private fun callApi(paramName: String, paramValue: String): List<OsuApiBeatmap> {
         return runCatching {
