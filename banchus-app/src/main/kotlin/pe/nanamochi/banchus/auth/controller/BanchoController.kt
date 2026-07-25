@@ -1,5 +1,6 @@
 package pe.nanamochi.banchus.auth.controller
 
+import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
 import org.slf4j.LoggerFactory
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import pe.nanamochi.banchus.auth.broadcast.LoginBroadcaster
+import pe.nanamochi.banchus.auth.dto.LoginData
 import pe.nanamochi.banchus.auth.service.BanchoService
 import pe.nanamochi.banchus.auth.service.LoginService
 import pe.nanamochi.banchus.core.error.SessionExpired
@@ -42,9 +44,9 @@ class BanchoController(
         body: ByteArray,
     ): ResponseEntity<ByteArray> {
         val rawData = String(body, Charsets.UTF_8)
-        val loginResult = loginService.handleLogin(rawData, headers)
         val loginResponse =
-            loginResult
+            LoginData.parse(rawData)
+                .andThen { loginService.handleLogin(it, headers) }
                 .map { loginBroadcaster.loginSuccess(it) }
                 .getOrElse { error -> loginBroadcaster.loginFailure(error) }
         return ResponseEntity.ok()

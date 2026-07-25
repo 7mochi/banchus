@@ -92,7 +92,7 @@ class SilenceService(
         return "$value $unit${if (value != 1L) "s" else ""}"
     }
 
-    private fun parseDurationText(input: String?): Duration? {
+    internal fun parseDurationText(input: String?): Duration? {
         if (input.isNullOrBlank()) return null
 
         val matcher = durationPattern.matcher(input.trim())

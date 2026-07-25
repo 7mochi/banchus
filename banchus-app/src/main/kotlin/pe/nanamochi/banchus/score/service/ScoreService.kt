@@ -1,6 +1,7 @@
 package pe.nanamochi.banchus.score.service
 
 import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.binding
 import com.github.michaelbull.result.mapError
@@ -26,6 +27,7 @@ import pe.nanamochi.banchus.core.enums.Mods
 import pe.nanamochi.banchus.core.error.DomainMessage
 import pe.nanamochi.banchus.core.error.InternalError
 import pe.nanamochi.banchus.core.error.ScoreNotFound
+import pe.nanamochi.banchus.core.error.SessionError
 import pe.nanamochi.banchus.core.error.SessionNotFound
 import pe.nanamochi.banchus.core.service.PresenceService
 import pe.nanamochi.banchus.core.service.StorageService
@@ -136,25 +138,12 @@ class ScoreService(
         Pair(scoreData, clientHashDecoded)
     }
 
-    @Transactional
-    fun submitScore(
-        request: HttpServletRequest,
-        headers: HttpHeaders,
-        ivB64: String,
-        clientHashB64: String,
-        scoreTime: Int,
-        passwordMd5: String,
-        osuVersion: String,
-    ) = binding {
-        val (scoreDataB64, replayFile) = parseForm(request).bind()
-        val (scoreTokens, _) = decryptScore(scoreDataB64, clientHashB64, ivB64, osuVersion).bind()
-        val decrypted = DecryptedScoreData.fromTokens(scoreTokens).bind()
+    internal fun verifyActiveSession(username: String): Result<Unit, SessionError> {
+        val sessions = sessionService.fetchByUsername(username)
+        return if (sessions.isEmpty()) Err(SessionNotFound) else Ok(Unit)
+    }
 
-        val user = userService.login(decrypted.username, passwordMd5).bind()
-        val sessions = sessionService.fetchByUsername(decrypted.username)
-        if (sessions.isEmpty()) return@binding Err(SessionNotFound).bind()
-
-        val beatmap = beatmapService.getOrCreateBeatmap(decrypted.beatmapMd5).bind()
+    internal fun buildScoreFromSubmission(decrypted: DecryptedScoreData, beatmap: Beatmap, user: User): Score {
         val score =
             Score(
                 user = user,
@@ -174,8 +163,122 @@ class ScoreService(
                 mode = Mode.fromValue(decrypted.mode),
                 passed = decrypted.passed,
             )
-
         score.accuracy = score.calculateAccuracy()
+        return score
+    }
+
+    internal fun validateClientRestrictions(
+        mods: UInt,
+        userAgent: String?,
+        user: User,
+    ): Result<Unit, DomainMessage> = binding {
+        if (userAgent != null && userAgent != "osu!") {
+            userService
+                .restrict(
+                    user,
+                    "The expected user-agent header for an osu! client is 'osu!', while the client sent $userAgent.",
+                )
+                .bind()
+        }
+
+        if (Mods.hasConflict(mods)) {
+            userService
+                .restrict(
+                    user,
+                    "The user attempted to submit a score with the mod combination ${Mods.fromBitmask(mods)}, which contains mutually exclusive/illegal mods.",
+                )
+                .bind()
+        }
+    }
+
+    internal fun processScoreSubmission(
+        score: Score,
+        lockKey: String,
+        scoreTime: Int,
+        previousBest: Score?,
+    ): Result<Score, DomainMessage> = binding {
+        if (!lock.acquireLock(lockKey, 15000, TimeUnit.MILLISECONDS)) return@binding score
+
+        val scoreExists = fetchOneByOnlineChecksum(score.onlineChecksum).isOk
+        if (scoreExists) Err(InternalError).bind() // TODO: maybe a more specific error
+
+        score.performancePoints =
+            performanceService.calculate(score.beatmap!!.id, score.beatmap!!.md5, score).bind()
+        score.submissionStatus = calculateStatus(score, previousBest)
+        score.timeElapsed = scoreTime
+
+        scoreRepository.save(score)
+        lock.releaseLock(lockKey)
+
+        score
+    }
+
+    internal fun applyStatsCounters(score: Score, stats: Stat) {
+        var totalHits = score.num300s + score.num100s
+        if (score.mode != Mode.CATCH) totalHits += score.num50s
+        if (score.mode == Mode.TAIKO || score.mode == Mode.MANIA)
+            totalHits += score.numGekis + score.numKatus
+
+        stats.playCount += 1
+        stats.playTime += score.timeElapsed / 1000
+        stats.totalScore += score.score
+        stats.totalHits += totalHits
+    }
+
+    internal fun applyWeightedStats(
+        score: Score,
+        stats: Stat,
+        user: User,
+        beatmap: Beatmap,
+    ): Result<Unit, DomainMessage> = binding {
+        if (!score.passed || !beatmap.hasLeaderboard()) return@binding
+
+        if (stats.maxCombo < score.highestCombo) stats.maxCombo = score.highestCombo
+
+        if (score.performancePoints > 0.0) {
+            val top100 =
+                scoreRepository
+                    .findTop100ByUserAndModeAndSubmissionStatusInAndBeatmapStatusInOrderByPerformancePointsDesc(
+                        user,
+                        score.mode,
+                        listOf(SubmissionStatus.BEST),
+                        listOf(BeatmapRankedStatus.RANKED, BeatmapRankedStatus.APPROVED),
+                    )
+
+            val rankedScoreCount =
+                scoreRepository
+                    .countRankedScores(
+                        user.id,
+                        score.mode,
+                        SubmissionStatus.BEST,
+                        listOf(BeatmapRankedStatus.RANKED, BeatmapRankedStatus.APPROVED),
+                    )
+                    .toInt()
+
+            stats.averageAccuracy = statService.calculateWeightedAccuracy(top100)
+            stats.performancePoints = statService.calculateWeightedPp(top100, rankedScoreCount)
+        }
+    }
+
+    @Transactional
+    fun submitScore(
+        request: HttpServletRequest,
+        headers: HttpHeaders,
+        ivB64: String,
+        clientHashB64: String,
+        scoreTime: Int,
+        passwordMd5: String,
+        osuVersion: String,
+    ) = binding {
+        val (scoreDataB64, replayFile) = parseForm(request).bind()
+        val (scoreTokens, _) = decryptScore(scoreDataB64, clientHashB64, ivB64, osuVersion).bind()
+        val decrypted = DecryptedScoreData.buildFromTokens(scoreTokens).bind()
+
+        val user = userService.login(decrypted.username, passwordMd5).bind()
+        verifyActiveSession(decrypted.username).bind()
+
+        val beatmap = beatmapService.fetchOrCreateBeatmap(decrypted.beatmapMd5).bind()
+        val score = buildScoreFromSubmission(decrypted, beatmap, user)
 
         val previousBest =
             scoreRepository
@@ -195,40 +298,15 @@ class ScoreService(
             return@binding Err(InternalError).bind() // TODO: maybe change to a more specific error
         }
 
-        headers.getFirst("user-agent")?.let { userAgent ->
-            if (userAgent != "osu!")
-                userService
-                    .restrict(
-                        user,
-                        "The expected user-agent header for an osu! client is 'osu!', while the client sent $userAgent.",
-                    )
-                    .bind()
-        }
+        validateClientRestrictions(score.mods.toUInt(), headers.getFirst("user-agent"), user).bind()
 
-        if (Mods.hasConflict(score.mods.toUInt())) {
-            userService
-                .restrict(
-                    user,
-                    "The user attempted to submit a score with the mod combination ${Mods.fromBitmask(score.mods.toUInt())}, which contains mutually exclusive/illegal mods.",
-                )
-                .bind()
-        }
-
-        val lockKey = "score_submission:${score.onlineChecksum}"
-        if (lock.acquireLock(lockKey, 15000, TimeUnit.MILLISECONDS)) {
-            val scoreExists = fetchOneByOnlineChecksum(score.onlineChecksum).isOk
-            if (scoreExists)
-                return@binding Err(InternalError).bind() // TODO: maybe a more specific error
-
-            score.performancePoints =
-                performanceService.calculate(beatmap.id, beatmap.md5, score).bind()
-            score.submissionStatus = calculateStatus(score, previousBest)
-            score.timeElapsed = scoreTime
-
-            scoreRepository.save(score)
-
-            lock.releaseLock(lockKey)
-        }
+        processScoreSubmission(
+                score,
+                "score_submission:${score.onlineChecksum}",
+                scoreTime,
+                previousBest,
+            )
+            .bind()
 
         // TODO: Update most played (Table not implemented yet)
 
@@ -241,64 +319,30 @@ class ScoreService(
                     )
                     .bind()
             } else {
-                storageService.saveReplay(score.id, replayFile)
+                storageService.persistReplay(score.id, replayFile)
             }
         }
 
         val stats = statService.fetchOne(user.id, score.mode).bind()
         val oldStats = stats.clone()
 
-        var totalHits = score.num300s + score.num100s
-        if (score.mode != Mode.CATCH) totalHits += score.num50s
-        if (score.mode == Mode.TAIKO || score.mode == Mode.MANIA)
-            totalHits += score.numGekis + score.numKatus
+        applyStatsCounters(score, stats)
 
-        stats.playCount += 1
-        stats.playTime += score.timeElapsed / 1000
-        stats.totalScore += score.score
-        stats.totalHits += totalHits
+        applyWeightedStats(score, stats, user, beatmap).bind()
 
-        if (score.passed && beatmap.hasLeaderboard()) {
-            if (stats.maxCombo < score.highestCombo) stats.maxCombo = score.highestCombo
+        if (
+            (beatmap.status == BeatmapRankedStatus.RANKED ||
+                beatmap.status == BeatmapRankedStatus.APPROVED) &&
+                score.submissionStatus == SubmissionStatus.BEST
+        ) {
+            val grade = score.calculateGrade()
+            stats.adjustGradeCounter(grade, +1)
+            stats.rankedScore += score.score
 
-            if (score.performancePoints > 0.0) {
-                val top100 =
-                    scoreRepository
-                        .findTop100ByUserAndModeAndSubmissionStatusInAndBeatmapStatusInOrderByPerformancePointsDesc(
-                            user,
-                            score.mode,
-                            listOf(SubmissionStatus.BEST),
-                            listOf(BeatmapRankedStatus.RANKED, BeatmapRankedStatus.APPROVED),
-                        )
-
-                val rankedScoreCount =
-                    scoreRepository
-                        .countRankedScores(
-                            user.id,
-                            score.mode,
-                            SubmissionStatus.BEST,
-                            listOf(BeatmapRankedStatus.RANKED, BeatmapRankedStatus.APPROVED),
-                        )
-                        .toInt()
-
-                stats.averageAccuracy = statService.calculateWeightedAccuracy(top100)
-                stats.performancePoints = statService.calculateWeightedPp(top100, rankedScoreCount)
-            }
-
-            if (
-                (beatmap.status == BeatmapRankedStatus.RANKED ||
-                    beatmap.status == BeatmapRankedStatus.APPROVED) &&
-                    score.submissionStatus == SubmissionStatus.BEST
-            ) {
-                val grade = score.calculateGrade()
-                stats.adjustGradeCounter(grade, +1)
-                stats.rankedScore += score.score
-
-                previousBest?.let {
-                    stats.rankedScore -= it.score
-                    val previousBestGrade = previousBest.calculateGrade()
-                    stats.adjustGradeCounter(previousBestGrade, -1)
-                }
+            previousBest?.let {
+                stats.rankedScore -= it.score
+                val previousBestGrade = previousBest.calculateGrade()
+                stats.adjustGradeCounter(previousBestGrade, -1)
             }
         }
 

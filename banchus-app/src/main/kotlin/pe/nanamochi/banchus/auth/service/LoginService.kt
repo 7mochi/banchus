@@ -30,9 +30,11 @@ class LoginService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun handleLogin(rawData: String, headers: HttpHeaders): Result<LoginResult, DomainMessage> {
+    fun handleLogin(
+        loginData: LoginData,
+        headers: HttpHeaders,
+    ): Result<LoginResult, DomainMessage> {
         return binding {
-                val loginData = LoginData.parse(rawData).bind()
                 val user = userService.login(loginData.identifier, loginData.secret).bind()
                 val (ipAddress, geolocation) = geolocationService.resolve(headers)
                 val (session, presence) =
