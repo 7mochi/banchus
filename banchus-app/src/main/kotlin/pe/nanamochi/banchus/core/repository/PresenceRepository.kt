@@ -18,7 +18,7 @@ class PresenceRepository(private val redisTemplate: RedisTemplate<String, Presen
     }
 
     fun fetchOne(userId: Int): Presence? {
-        if (userId == Presence.BOT_ID) return Presence.botPresence()
+        if (userId == Presence.BOT_ID) return Presence.buildBotPresence()
 
         return redisTemplate.opsForHash<String, Presence>().get(PRESENCE_KEY, userId.toString())
     }
@@ -29,7 +29,7 @@ class PresenceRepository(private val redisTemplate: RedisTemplate<String, Presen
 
         return userIds.indices.map { i ->
             if (userIds[i] == Presence.BOT_ID) {
-                Presence.botPresence()
+                Presence.buildBotPresence()
             } else {
                 results[i]
             }
@@ -53,12 +53,12 @@ class PresenceRepository(private val redisTemplate: RedisTemplate<String, Presen
     fun fetchAll(): List<Presence> {
         val presences =
             redisTemplate.opsForHash<String, Presence>().values(PRESENCE_KEY).toMutableList()
-        presences.add(Presence.botPresence())
+        presences.add(Presence.buildBotPresence())
         return presences
     }
 
     fun update(presence: Presence): Presence {
-        if (presence.userId == Presence.BOT_ID) return Presence.botPresence()
+        if (presence.userId == Presence.BOT_ID) return Presence.buildBotPresence()
 
         redisTemplate
             .opsForHash<String, Presence>()

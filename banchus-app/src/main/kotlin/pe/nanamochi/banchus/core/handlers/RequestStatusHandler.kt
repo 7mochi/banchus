@@ -32,7 +32,7 @@ class RequestStatusHandler(
         responseStream: ByteArrayOutputStream,
     ) {
         presenceService
-            .getRequestStatus(session)
+            .fetchRequestStatus(session)
             .onSuccess { presence ->
                 val statsPacket = packetWriter.serialize(UserStatsPacket(presence.toBanchoUser()))
                 if (!session.isRestricted) {

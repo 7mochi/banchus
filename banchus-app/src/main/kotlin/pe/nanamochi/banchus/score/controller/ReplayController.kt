@@ -43,7 +43,7 @@ class ReplayController(
 
             scoreService.fetchOneById(scoreId).toResultOr { HttpStatus.NOT_FOUND }.bind()
             val replayData =
-                storageService.getReplay(scoreId).mapError { HttpStatus.NOT_FOUND }.bind()
+                storageService.fetchReplay(scoreId).mapError { HttpStatus.NOT_FOUND }.bind()
 
             log.debug("Serving replay ID: {} to user: {}", scoreId, user.username)
 

@@ -187,13 +187,13 @@ class MultiplayerRepository(
             .filterNotNull()
     }
 
-    fun updateSlot(matchId: Long, slotId: Int, slot: MultiplayerMatchSlot) {
+    fun persistSlot(matchId: Long, slotId: Int, slot: MultiplayerMatchSlot) {
         slotTemplate
             .opsForHash<String, MultiplayerMatchSlot>()
             .put(makeSlotsKey(matchId), slotId.toString(), slot)
     }
 
-    fun updateSlots(matchId: Long, slots: List<Pair<Int, MultiplayerMatchSlot>>) {
+    fun persistSlots(matchId: Long, slots: List<Pair<Int, MultiplayerMatchSlot>>) {
         if (slots.isEmpty()) return
 
         val updates = slots.associate { (id, slot) -> id.toString() to slot }
@@ -203,7 +203,7 @@ class MultiplayerRepository(
             .putAll(makeSlotsKey(matchId), updates)
     }
 
-    fun updateAllSlots(matchId: Long, slots: List<MultiplayerMatchSlot>) {
+    fun persistAllSlots(matchId: Long, slots: List<MultiplayerMatchSlot>) {
         val slotsKey = makeSlotsKey(matchId)
         val map = slots.mapIndexed { index, slot -> index.toString() to slot }.toMap()
         slotTemplate.opsForHash<String, MultiplayerMatchSlot>().putAll(slotsKey, map)
@@ -213,11 +213,11 @@ class MultiplayerRepository(
         stringRedisTemplate.opsForSet().add(makeRefereesKey(matchId), userId.toString())
     }
 
-    fun removeReferee(matchId: Long, userId: Int) {
+    fun deleteReferee(matchId: Long, userId: Int) {
         stringRedisTemplate.opsForSet().remove(makeRefereesKey(matchId), userId.toString())
     }
 
-    fun getReferees(matchId: Long): List<Int> =
+    fun fetchReferees(matchId: Long): List<Int> =
         stringRedisTemplate.opsForSet().members(makeRefereesKey(matchId))?.map { it.toInt() }
             ?: emptyList()
 
@@ -230,7 +230,7 @@ class MultiplayerRepository(
         stringRedisTemplate.delete(makeRefereesKey(matchId))
     }
 
-    fun getTimer(matchId: Long, type: TimerType): Long? {
+    fun fetchTimer(matchId: Long, type: TimerType): Long? {
         return stringRedisTemplate.opsForValue().get(makeTimerKey(matchId, type))?.toLong()
     }
 

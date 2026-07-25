@@ -24,7 +24,7 @@ class UserStatsRequestHandler(
         session: Session,
         responseStream: ByteArrayOutputStream,
     ) {
-        presenceService.getUserStats(packet.userIds).forEach { (userId, presence) ->
+        presenceService.fetchUserStats(packet.userIds).forEach { (userId, presence) ->
             presence?.let { p ->
                 if (p.globalRank > 0u) {
                     responseStream.write(

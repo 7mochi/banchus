@@ -27,11 +27,11 @@ class LeaderboardService(
     fun addToLeaderboard(user: User, mode: Mode, performancePoints: Int) =
         leaderboardRepository.addToLeaderboard(user, mode, performancePoints)
 
-    fun removeFromLeaderboard(user: User, mode: Mode) =
-        leaderboardRepository.removeFromLeaderboard(user, mode)
+    fun deleteFromLeaderboard(user: User, mode: Mode) =
+        leaderboardRepository.deleteFromLeaderboard(user, mode)
 
-    fun removeFromAllLeaderboards(user: User) {
-        Mode.entries.forEach { mode -> removeFromLeaderboard(user, mode) }
+    fun deleteFromAllLeaderboards(user: User) {
+        Mode.entries.forEach { mode -> deleteFromLeaderboard(user, mode) }
     }
 
     fun fetchGlobalRank(userId: Int, mode: Mode) =
@@ -54,7 +54,7 @@ class LeaderboardService(
                 .bind()
         }
 
-        val beatmap = beatmapService.getOrCreateBeatmap(beatmapMd5).bind()
+        val beatmap = beatmapService.fetchOrCreateBeatmap(beatmapMd5).bind()
         val type = LeaderboardType.fromValue(leaderboardType)
         val mode = Mode.fromValue(modeInt)
 

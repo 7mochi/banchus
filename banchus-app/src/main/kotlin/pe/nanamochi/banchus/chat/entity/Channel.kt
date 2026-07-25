@@ -31,10 +31,10 @@ class Channel(
         writePrivileges == 0 || (privileges and writePrivileges) != 0
 
     companion object {
-        fun spectator() =
+        fun buildSpectatorChannel() =
             Channel(name = "#spectator", description = "Spectator channel", status = true)
 
-        fun multiplayer() =
+        fun buildMultiplayerChannel() =
             Channel(name = "#multiplayer", description = "Multiplayer channel", status = false)
     }
 }
@@ -42,9 +42,9 @@ class Channel(
 sealed class ChannelName {
     abstract fun resolve(): String
 
-    fun getMessageStream(): StreamName = StreamName.Channel(this.resolve())
+    fun resolveMessageStream(): StreamName = StreamName.Channel(this.resolve())
 
-    fun getUpdateStream(): StreamName {
+    fun resolveUpdateStream(): StreamName {
         return when (this) {
             is Spectator -> StreamName.Spectator(this.sessionId)
             is Multiplayer -> StreamName.Multiplayer(this.matchId)
@@ -74,7 +74,7 @@ sealed class ChannelName {
     }
 
     companion object {
-        fun from(name: String): ChannelName {
+        fun buildFromName(name: String): ChannelName {
             return when {
                 name.startsWith("#spectator_") -> {
                     val idPart = name.removePrefix("#spectator_")

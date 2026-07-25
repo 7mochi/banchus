@@ -22,7 +22,7 @@ class RemoveFriendHandler(private val relationshipService: RelationshipService) 
         session: Session,
         responseStream: ByteArrayOutputStream,
     ) {
-        relationshipService.removeFriend(session.userId, packet.userId).onFailure {
+        relationshipService.deleteFriend(session.userId, packet.userId).onFailure {
             log.warn("User {} failed to remove friend {}: {}", session.userId, packet.userId, it)
         }
     }

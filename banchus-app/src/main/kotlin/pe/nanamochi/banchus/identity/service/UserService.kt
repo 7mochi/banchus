@@ -84,7 +84,7 @@ class UserService(
                 )
             )
             .bind()
-        leaderboardService.removeFromAllLeaderboards(user)
+        leaderboardService.deleteFromAllLeaderboards(user)
 
         // TODO: remove first places
 

@@ -23,7 +23,7 @@ class LeaderboardRepository(private val redisTemplate: RedisTemplate<String, Str
         }
     }
 
-    fun removeFromLeaderboard(user: User, mode: Mode) {
+    fun deleteFromLeaderboard(user: User, mode: Mode) {
         redisTemplate.opsForZSet().remove(makeKey(mode), user.id.toString())
         if (user.country != CountryCode.XX) {
             redisTemplate

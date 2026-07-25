@@ -51,7 +51,7 @@ class LoginBroadcaster(
                     add(AnnouncePacket("Welcome to Banchus!"))
                     add(FriendListPacket(result.friends.map { it }))
                     addAll(result.presence.userPanel())
-                    addAll(Presence.botPresence().userPanel())
+                    addAll(Presence.buildBotPresence().userPanel())
                 }
                 .toMutableList()
 

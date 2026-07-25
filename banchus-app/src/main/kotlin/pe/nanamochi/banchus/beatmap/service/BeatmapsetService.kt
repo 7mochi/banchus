@@ -22,7 +22,7 @@ class BeatmapsetService(
     }
 
     fun create(apiBeatmap: OsuApiBeatmap): Result<Beatmapset, DomainMessage> =
-        create(beatmapsetMapper.fromApi(apiBeatmap))
+        create(beatmapsetMapper.buildFromApi(apiBeatmap))
 
     fun update(beatmapset: Beatmapset): Result<Beatmapset, DomainMessage> =
         if (beatmapsetRepository.existsById(beatmapset.id)) {

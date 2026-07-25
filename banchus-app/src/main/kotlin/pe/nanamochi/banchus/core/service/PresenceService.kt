@@ -37,12 +37,12 @@ class PresenceService(
 
     fun fetchAll(): List<Presence> = presenceRepository.fetchAll()
 
-    fun getUserStats(userIds: List<Int>): List<Pair<Int, Presence?>> {
+    fun fetchUserStats(userIds: List<Int>): List<Pair<Int, Presence?>> {
         val presences = fetchMultiple(userIds)
         return userIds.zip(presences)
     }
 
-    fun getPresences(userIds: List<Int>): List<Pair<Int, Presence?>> {
+    fun fetchPresences(userIds: List<Int>): List<Pair<Int, Presence?>> {
         val presences = fetchMultiple(userIds)
         return userIds.zip(presences)
     }
@@ -90,7 +90,7 @@ class PresenceService(
         presenceRepository.update(presence)
     }
 
-    fun getRequestStatus(session: Session): Result<Presence, DomainMessage> = binding {
+    fun fetchRequestStatus(session: Session): Result<Presence, DomainMessage> = binding {
         val presence =
             fetchOne(session.userId)
                 ?: Presence(

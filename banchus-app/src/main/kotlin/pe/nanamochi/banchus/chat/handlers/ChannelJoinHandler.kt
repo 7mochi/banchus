@@ -31,7 +31,7 @@ class ChannelJoinHandler(
         if (channelName == "#highlight" || channelName == "#userlog") return
 
         binding {
-                val internalName = channelService.getChannelName(session, channelName).bind()
+                val internalName = channelService.resolveChannelName(session, channelName).bind()
                 channelService.join(session, internalName).bind()
                 responseStream.write(packetWriter.serialize(ChannelJoinSuccessPacket(packet.name)))
             }

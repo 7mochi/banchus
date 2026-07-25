@@ -23,7 +23,7 @@ class PresenceRequestHandler(
         session: Session,
         responseStream: ByteArrayOutputStream,
     ) {
-        presenceService.getPresences(packet.userIds).forEach { (userId, presence) ->
+        presenceService.fetchPresences(packet.userIds).forEach { (userId, presence) ->
             presence?.let { p -> responseStream.write(packetWriter.serializeAll(p.userPanel())) }
                 ?: run { responseStream.write(packetWriter.serialize(UserQuitPacket(userId))) }
         }

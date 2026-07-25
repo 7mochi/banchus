@@ -28,7 +28,7 @@ class ListReferees(
         if (!isHost && !isRef) return null
 
         val refUsernames =
-            multiplayerService.getReferees(matchId).mapNotNull { refId ->
+            multiplayerService.fetchReferees(matchId).mapNotNull { refId ->
                 userService.fetchOneById(refId).get()?.username
             }
 

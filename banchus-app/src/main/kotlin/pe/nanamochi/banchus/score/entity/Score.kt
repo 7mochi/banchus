@@ -83,7 +83,7 @@ class Score(
 ) {
     @PrePersist
     @PreUpdate
-    fun updateAccuracy() {
+    fun applyAccuracy() {
         this.accuracy = calculateAccuracy()
     }
 
@@ -95,7 +95,7 @@ class Score(
             Mode.MANIA -> calculateManiaAccuracy()
         }
 
-    private fun calculateOsuAccuracy(): Double {
+    internal fun calculateOsuAccuracy(): Double {
         val totalNotes = num300s + num100s + num50s + numMisses
         if (totalNotes == 0) return 0.0
 
@@ -104,7 +104,7 @@ class Score(
         return clampAccuracy(acc)
     }
 
-    private fun calculateTaikoAccuracy(): Double {
+    internal fun calculateTaikoAccuracy(): Double {
         val totalNotes = num300s + num100s + numMisses
         if (totalNotes == 0) return 0.0
 
@@ -112,7 +112,7 @@ class Score(
         return clampAccuracy(acc)
     }
 
-    private fun calculateCatchAccuracy(): Double {
+    internal fun calculateCatchAccuracy(): Double {
         val totalNotes = num300s + num100s + num50s + numKatus + numMisses
         if (totalNotes == 0) return 0.0
 
@@ -120,7 +120,7 @@ class Score(
         return clampAccuracy(acc)
     }
 
-    private fun calculateManiaAccuracy(): Double {
+    internal fun calculateManiaAccuracy(): Double {
         val totalNotes = num300s + num100s + num50s + numGekis + numKatus + numMisses
         if (totalNotes == 0) return 0.0
 

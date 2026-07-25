@@ -30,7 +30,7 @@ class StreamRepository(
     }
 
     fun join(sessionId: UUID, streamKey: String) {
-        val latestId = getLatestMessageId(streamKey) ?: "0-0"
+        val latestId = fetchLatestMessageId(streamKey) ?: "0-0"
         byteArrayRedisTemplate
             .opsForHash<String, ByteArray>()
             .put(makeKey(sessionId), streamKey, latestId.toByteArray())
@@ -104,7 +104,7 @@ class StreamRepository(
         byteArrayRedisTemplate.delete(streamKey)
     }
 
-    fun getLatestMessageId(streamKey: String): String? {
+    fun fetchLatestMessageId(streamKey: String): String? {
         val messages =
             byteArrayRedisTemplate
                 .opsForStream<String, ByteArray>()

@@ -29,7 +29,7 @@ class ChannelLeaveHandler(private val channelService: ChannelService) :
         if (!channelName.startsWith('#')) return
 
         binding {
-                val internalName = channelService.getChannelName(session, channelName).bind()
+                val internalName = channelService.resolveChannelName(session, channelName).bind()
                 channelService.leave(session.sessionId, internalName).bind()
             }
             .onFailure { error ->

@@ -17,7 +17,7 @@ class OsuApiClient(
     private val baseUrl = "https://osu.ppy.sh"
     private val apiKey: String = properties.osuApi.v1.key
 
-    fun getOsuFile(beatmapId: Int): ByteArray? {
+    fun fetchOsuFile(beatmapId: Int): ByteArray? {
         return runCatching {
                 val response = restTemplate.getForEntity<ByteArray>("$baseUrl/osu/$beatmapId")
                 if (response.statusCode.is2xxSuccessful) response.body else null
@@ -28,12 +28,12 @@ class OsuApiClient(
             .getOrNull()
     }
 
-    fun getBeatmap(beatmapMd5: String): OsuApiBeatmap? = callApi("h", beatmapMd5).firstOrNull()
+    fun fetchBeatmapByMd5(beatmapMd5: String): OsuApiBeatmap? = callApi("h", beatmapMd5).firstOrNull()
 
-    fun getBeatmap(beatmapId: Int): OsuApiBeatmap? =
+    fun fetchBeatmapById(beatmapId: Int): OsuApiBeatmap? =
         callApi("b", beatmapId.toString()).firstOrNull()
 
-    fun getBeatmaps(beatmapSetId: Int): List<OsuApiBeatmap> = callApi("s", beatmapSetId.toString())
+    fun fetchBeatmaps(beatmapSetId: Int): List<OsuApiBeatmap> = callApi("s", beatmapSetId.toString())
 
     private fun callApi(paramName: String, paramValue: String): List<OsuApiBeatmap> {
         return runCatching {

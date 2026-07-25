@@ -24,7 +24,7 @@ class RosuCalculator : PerformanceCalculator {
                     val maniaMods =
                         if (mode == GameMode.MANIA) {
                             val keyCount =
-                                Mods.getManiaKeyCount(Mods.fromBitmask(score.mods.toUInt()))
+                                Mods.calculateManiaKeyCount(Mods.fromBitmask(score.mods.toUInt()))
                             io.github.nanamochi.rosu_pp_jar.Mods.fromBits(keyCount.value.toInt())
                         } else null
 

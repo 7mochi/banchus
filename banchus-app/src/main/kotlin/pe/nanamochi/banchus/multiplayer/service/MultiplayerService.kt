@@ -125,8 +125,8 @@ class MultiplayerService(
         updatedMatch
     }
 
-    fun updateAllSlots(matchId: Long, slots: List<MultiplayerMatchSlot>) =
-        multiplayerRepository.updateAllSlots(matchId, slots)
+    fun applyAllSlots(matchId: Long, slots: List<MultiplayerMatchSlot>) =
+        multiplayerRepository.persistAllSlots(matchId, slots)
 
     fun delete(matchId: Long): Result<Unit, DomainMessage> = binding {
         multiplayerRepository.delete(matchId)
@@ -145,7 +145,7 @@ class MultiplayerService(
 
     fun addReferee(matchId: Long, userId: Int) = multiplayerRepository.addReferee(matchId, userId)
 
-    fun getReferees(matchId: Long) = multiplayerRepository.getReferees(matchId)
+    fun fetchReferees(matchId: Long) = multiplayerRepository.fetchReferees(matchId)
 
     fun isReferee(matchId: Long, userId: Int) = multiplayerRepository.isReferee(matchId, userId)
 
@@ -236,7 +236,7 @@ class MultiplayerService(
                             slot.apply { clear() }
                         } else slot
                     }
-                multiplayerRepository.updateAllSlots(matchId, updatedSlots)
+                multiplayerRepository.persistAllSlots(matchId, updatedSlots)
 
                 streamService.leave(ghostSessionId, StreamName.Multiplayer(matchId))
                 streamService.leave(ghostSessionId, StreamName.Multiplaying(matchId))
@@ -351,7 +351,7 @@ class MultiplayerService(
                 mpMatch.mode = newMode.value
 
                 val userIds = slots.mapNotNull { it.user?.userId }
-                updateMatchMembersPresences(userIds, newMode)
+                applyMatchMembersPresences(userIds, newMode)
             }
 
             changeSlotsNotReady = true
@@ -421,7 +421,7 @@ class MultiplayerService(
             slots.resetToNotReady()
         }
 
-        if (needSlotUpdates) multiplayerRepository.updateAllSlots(matchId, slots)
+        if (needSlotUpdates) multiplayerRepository.persistAllSlots(matchId, slots)
 
         val updatedMatch = multiplayerRepository.update(mpMatch, updateName || updatePrivate)
         updatedMatch to slots
@@ -512,7 +512,7 @@ class MultiplayerService(
             slots[fromSlotId] = toSlot
             slots[toSlotId] = fromSlot
 
-            multiplayerRepository.updateSlots(
+            multiplayerRepository.persistSlots(
                 matchId,
                 listOf(fromSlotId to toSlot, toSlotId to fromSlot),
             )
@@ -535,7 +535,7 @@ class MultiplayerService(
         slots[targetSlotId] = userSlot
         slots[userSlotId] = targetSlot
 
-        multiplayerRepository.updateSlots(
+        multiplayerRepository.persistSlots(
             matchId,
             listOf(userSlotId to targetSlot, targetSlotId to userSlot),
         )
@@ -591,7 +591,7 @@ class MultiplayerService(
             slot.status = status
         }
 
-        multiplayerRepository.updateSlot(matchId, slotId, slot)
+        multiplayerRepository.persistSlot(matchId, slotId, slot)
 
         val updatedSlots = fetchAllSlots(matchId)
         broadcastUpdate(mpMatch, updatedSlots)
@@ -608,7 +608,7 @@ class MultiplayerService(
 
             slot.team =
                 pe.nanamochi.banchus.multiplayer.enums.SlotTeam.fromValue(team.value.toUByte())
-            multiplayerRepository.updateSlot(matchId, slotId, slot)
+            multiplayerRepository.persistSlot(matchId, slotId, slot)
             val updatedSlots = fetchAllSlots(matchId)
             broadcastUpdate(mpMatch, updatedSlots)
         }
@@ -633,7 +633,7 @@ class MultiplayerService(
                 pe.nanamochi.banchus.multiplayer.enums.SlotTeam.RED ->
                     pe.nanamochi.banchus.multiplayer.enums.SlotTeam.BLUE
             }
-        multiplayerRepository.updateSlot(matchId, slotId, slot)
+        multiplayerRepository.persistSlot(matchId, slotId, slot)
 
         val updatedSlots = fetchAllSlots(matchId)
         mpMatch to updatedSlots
@@ -672,12 +672,12 @@ class MultiplayerService(
                 val oldSlotMods = slot.mods
                 slot.mods = Mods.toBitmask(newSlotMods)
 
-                multiplayerRepository.updateSlot(matchId, slotIndex, slot)
+                multiplayerRepository.persistSlot(matchId, slotIndex, slot)
 
                 val affectedMods = oldSlotMods xor Mods.toBitmask(newSlotMods)
                 val reloadStats = affectedMods.hasAny(Mods.RELAX.value or Mods.AUTOPILOT.value)
                 if (reloadStats) {
-                    updateMatchMembersPresences(listOf(user.userId), matchMode)
+                    applyMatchMembersPresences(listOf(user.userId), matchMode)
                 }
             }
                 ?: run {
@@ -695,14 +695,14 @@ class MultiplayerService(
                             }
                         }
 
-                    updateMatchMembersPresences(updateUsers, matchMode)
-                    multiplayerRepository.updateAllSlots(matchId, slots)
+                    applyMatchMembersPresences(updateUsers, matchMode)
+                    multiplayerRepository.persistAllSlots(matchId, slots)
                 }
         } else {
             mpMatch.mods = Mods.toBitmask(mods)
 
             val userIds = slots.mapNotNull { it.user?.userId }
-            updateMatchMembersPresences(userIds, matchMode)
+            applyMatchMembersPresences(userIds, matchMode)
         }
 
         multiplayerRepository.update(mpMatch, false)
@@ -799,7 +799,7 @@ class MultiplayerService(
         )
         mpMatch.lastGameId = game.id
         multiplayerRepository.update(mpMatch, false)
-        multiplayerRepository.updateAllSlots(matchId, slots)
+        multiplayerRepository.persistAllSlots(matchId, slots)
 
         mpMatch to slots
     }
@@ -815,7 +815,7 @@ class MultiplayerService(
         slots.resetToNotReady()
 
         multiplayerRepository.update(mpMatch, false)
-        multiplayerRepository.updateAllSlots(matchId, slots)
+        multiplayerRepository.persistAllSlots(matchId, slots)
 
         mpMatch to slots
     }
@@ -828,7 +828,7 @@ class MultiplayerService(
                 slot.status = SlotStatus.LOCKED
             }
         }
-        multiplayerRepository.updateAllSlots(matchId, slots)
+        multiplayerRepository.persistAllSlots(matchId, slots)
         broadcastUpdate(mpMatch, slots)
     }
 
@@ -840,7 +840,7 @@ class MultiplayerService(
                 slot.status = SlotStatus.OPEN
             }
         }
-        multiplayerRepository.updateAllSlots(matchId, slots)
+        multiplayerRepository.persistAllSlots(matchId, slots)
         broadcastUpdate(mpMatch, slots)
     }
 
@@ -860,7 +860,7 @@ class MultiplayerService(
 
         players.take(newSize).forEachIndexed { i, playerSlot -> slots[i] = playerSlot }
 
-        multiplayerRepository.updateAllSlots(matchId, slots)
+        multiplayerRepository.persistAllSlots(matchId, slots)
         broadcastUpdate(mpMatch, slots)
     }
 
@@ -933,7 +933,7 @@ class MultiplayerService(
         }
     }
 
-    fun updateMatchMembersPresences(
+    fun applyMatchMembersPresences(
         userIds: List<Int>,
         newMode: Mode,
     ): Result<Unit, DomainMessage> = binding {
@@ -976,7 +976,7 @@ class MultiplayerService(
 
         val finalId = playerSlotIndex ?: Err(NotInMatch).bind()
 
-        multiplayerRepository.updateSlot(matchId, finalId, slots[finalId])
+        multiplayerRepository.persistSlot(matchId, finalId, slots[finalId])
 
         val allCompleted =
             slots

@@ -33,8 +33,8 @@ class MessageHandler(
         responseStream: ByteArrayOutputStream,
     ) {
         binding<Unit, DomainMessage> {
-                val channelName = channelService.getChannelName(session, packet.target).bind()
-                val messageStream = channelName.getMessageStream()
+                val channelName = channelService.resolveChannelName(session, packet.target).bind()
+                val messageStream = channelName.resolveMessageStream()
 
                 val result =
                     chatService.sendChannelMessage(packet.content, packet.target, session).bind()

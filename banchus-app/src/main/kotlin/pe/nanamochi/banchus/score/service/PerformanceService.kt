@@ -32,7 +32,7 @@ class PerformanceService(
         expectedMd5: String,
         score: Score,
     ): Result<Double, DomainMessage> = binding {
-        val beatmapData = beatmapService.getOrDownloadOsuFile(beatmapId, expectedMd5).bind()
+        val beatmapData = beatmapService.fetchOrDownloadOsuFile(beatmapId, expectedMd5).bind()
         calculate(beatmapData, score).bind()
     }
 

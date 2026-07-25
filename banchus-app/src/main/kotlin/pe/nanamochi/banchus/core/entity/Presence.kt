@@ -31,7 +31,7 @@ data class Presence(
         const val BOT_ID = 1
         const val BOT_NAME = "BanchoBot"
 
-        fun botPresence(): Presence =
+        fun buildBotPresence(): Presence =
             Presence(
                 userId = BOT_ID,
                 username = BOT_NAME,

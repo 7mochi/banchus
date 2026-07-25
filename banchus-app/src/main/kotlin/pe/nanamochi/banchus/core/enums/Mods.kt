@@ -168,7 +168,7 @@ enum class Mods(val value: UInt, val displayName: String, val initial: String) {
             return fromBitmask(cleanBitmask)
         }
 
-        fun getManiaKeyCount(mods: List<Mods>): Mods {
+        fun calculateManiaKeyCount(mods: List<Mods>): Mods {
             val keyPriority = listOf(KEY9, KEY8, KEY7, KEY6, KEY5, KEY4, KEY3, KEY2)
             return keyPriority.find { it in mods } ?: KEY1
         }

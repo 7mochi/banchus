@@ -26,7 +26,7 @@ data class DecryptedScoreData(
     val mode: Int,
 ) {
     companion object {
-        fun fromTokens(tokens: List<String>): Result<DecryptedScoreData, DomainMessage> {
+        fun buildFromTokens(tokens: List<String>): Result<DecryptedScoreData, DomainMessage> {
             if (tokens.size < 16) {
                 return Err(InternalError)
             }

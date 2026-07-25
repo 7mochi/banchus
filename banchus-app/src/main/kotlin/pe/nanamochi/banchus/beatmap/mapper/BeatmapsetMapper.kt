@@ -28,5 +28,5 @@ interface BeatmapsetMapper {
     @Mapping(target = "titleUnicode", ignore = true)
     @Mapping(target = "artistUnicode", ignore = true)
     @Mapping(target = "sourceUnicode", ignore = true)
-    fun fromApi(apiBeatmap: OsuApiBeatmap): Beatmapset
+    fun buildFromApi(apiBeatmap: OsuApiBeatmap): Beatmapset
 }

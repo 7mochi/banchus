@@ -28,7 +28,7 @@ class RelationshipService(private val relationshipRepository: RelationshipReposi
                 )
         }
 
-    fun removeFriend(followerId: Int, toRemoveId: Int): Result<Unit, DomainMessage> =
+    fun deleteFriend(followerId: Int, toRemoveId: Int): Result<Unit, DomainMessage> =
         relationshipRepository.deleteByFollowerIdAndFriendId(followerId, toRemoveId).toResultOr {
             RelationshipNotFound
         }

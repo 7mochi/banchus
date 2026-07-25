@@ -19,7 +19,7 @@ class AvatarController(private val storageService: StorageService) {
     fun getAvatar(@PathVariable userId: String): ResponseEntity<ByteArray> {
         val bytes =
             storageService
-                .getAvatar(userId)
+                .fetchAvatar(userId)
                 .mapError { ResponseStatusException(HttpStatus.NOT_FOUND) }
                 .getOrThrow { it }
 

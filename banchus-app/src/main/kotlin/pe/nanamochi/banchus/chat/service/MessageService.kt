@@ -67,7 +67,7 @@ class MessageService(
         messageRepository.softDeleteRecent(senderId, cutoff)
     }
 
-    fun checkSpam(session: Session): Result<Unit, DomainMessage> = binding {
+    fun validateSpam(session: Session): Result<Unit, DomainMessage> = binding {
         val messageCount = messageCount(session.userId, CHAT_SPAM_RATE_INTERVAL).bind()
         if (messageCount < CHAT_SPAM_RATE) {
             return@binding
@@ -90,8 +90,8 @@ class MessageService(
         if (messageContent.isEmpty() || messageContent.length > 500)
             Err(MessageInvalidLength).bind()
 
-        checkSpam(session).bind()
-        val targetInfo = getTargetInfo(session, target).bind()
+        validateSpam(session).bind()
+        val targetInfo = resolveTargetInfo(session, target).bind()
         val message =
             messageRepository.save(
                 Message(
@@ -111,7 +111,7 @@ class MessageService(
         MessageSendResult(message = message, response = response)
     }
 
-    fun getTargetInfo(sender: Session, target: Target): Result<TargetInfo, DomainMessage> =
+    internal fun resolveTargetInfo(sender: Session, target: Target): Result<TargetInfo, DomainMessage> =
         binding {
             when (target) {
                 is Target.Channel -> {

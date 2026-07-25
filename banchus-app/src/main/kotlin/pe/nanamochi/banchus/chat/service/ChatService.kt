@@ -18,7 +18,7 @@ class ChatService(
         target: String,
         session: Session,
     ): Result<MessageSendResult, DomainMessage> = binding {
-        val channelName = channelService.getChannelName(session, target).bind()
+        val channelName = channelService.resolveChannelName(session, target).bind()
         val targetObj = Target.Channel(channelName)
         messageService.send(session, targetObj, content).bind()
     }

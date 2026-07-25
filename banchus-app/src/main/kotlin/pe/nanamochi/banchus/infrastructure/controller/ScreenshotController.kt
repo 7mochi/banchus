@@ -22,7 +22,7 @@ class ScreenshotController(private val storageService: StorageService) {
     fun getScreenshot(@PathVariable screenshotId: String): ResponseEntity<ByteArray> {
         val data =
             storageService
-                .getScreenshot(screenshotId)
+                .fetchScreenshot(screenshotId)
                 .mapError { ResponseStatusException(HttpStatus.NOT_FOUND, "Screenshot not found.") }
                 .getOrThrow { it }
 
@@ -65,7 +65,7 @@ class ScreenshotController(private val storageService: StorageService) {
                         HttpStatus.INTERNAL_SERVER_ERROR
                     }
                     .andThen { bytes ->
-                        storageService.saveScreenshot(bytes).mapError {
+                        storageService.persistScreenshot(bytes).mapError {
                             HttpStatus.INTERNAL_SERVER_ERROR
                         }
                     }

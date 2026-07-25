@@ -16,7 +16,7 @@ class SpectatorRepository(
         return redisTemplate.opsForHash<String, UUID>().get(SPECTATING_KEY, sessionId.toString())
     }
 
-    fun removeSpectating(sessionId: UUID) {
+    fun deleteSpectating(sessionId: UUID) {
         redisTemplate.opsForHash<String, UUID>().delete(SPECTATING_KEY, sessionId.toString())
     }
 
@@ -29,14 +29,14 @@ class SpectatorRepository(
         return redisIdentityTemplate.opsForSet().size(key) ?: 0L
     }
 
-    fun removeMember(hostSessionId: UUID, member: SessionIdentity): Long {
+    fun deleteMember(hostSessionId: UUID, member: SessionIdentity): Long {
         val key = makeKey(hostSessionId)
         redisTemplate.opsForHash<String, UUID>().delete(SPECTATING_KEY, member.sessionId.toString())
         redisIdentityTemplate.opsForSet().remove(key, member)
         return redisIdentityTemplate.opsForSet().size(key) ?: 0L
     }
 
-    fun removeMembers(hostSessionId: UUID) {
+    fun deleteMembers(hostSessionId: UUID) {
         redisIdentityTemplate.delete(makeKey(hostSessionId))
     }
 

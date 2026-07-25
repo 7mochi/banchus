@@ -47,13 +47,13 @@ class BeatmapService(
     fun fetchOneByMd5(md5: String): Result<Beatmap, BeatmapNotFound> =
         beatmapRepository.findByMd5(md5).toResultOr { BeatmapNotFound }
 
-    fun getOrCreateBeatmap(beatmapMd5: String): Result<Beatmap, DomainMessage> = binding {
+    fun fetchOrCreateBeatmap(beatmapMd5: String): Result<Beatmap, DomainMessage> = binding {
         val localBeatmap =
             fetchOneByMd5(beatmapMd5).getOrElse { _ ->
                 log.debug("Beatmap {} not found local. Querying osu!api...", beatmapMd5)
 
                 val apiBeatmap =
-                    osuApiClient.getBeatmap(beatmapMd5).toResultOr { BeatmapNotFound }.bind()
+                    osuApiClient.fetchBeatmapByMd5(beatmapMd5).toResultOr { BeatmapNotFound }.bind()
                 val beatmapsetId = apiBeatmap.beatmapsetId.toResultOr { InternalError }.bind()
 
                 val beatmapset =
@@ -63,41 +63,41 @@ class BeatmapService(
                         .bind()
 
                 val newBeatmap =
-                    create(beatmapMapper.fromApi(apiBeatmap).apply { this.beatmapset = beatmapset })
+                    create(beatmapMapper.buildFromApi(apiBeatmap).apply { this.beatmapset = beatmapset })
                         .bind()
-                getOrDownloadOsuFile(newBeatmap.id, beatmapMd5).bind()
+                fetchOrDownloadOsuFile(newBeatmap.id, beatmapMd5).bind()
 
                 newBeatmap
             }
 
         log.debug("Found local beatmap for MD5 {}: {}", beatmapMd5, localBeatmap.id)
 
-        updateBeatmapIfOutdated(localBeatmap, beatmapMd5).bind()
+        applyBeatmapRefreshIfOutdated(localBeatmap, beatmapMd5).bind()
     }
 
-    fun getOrDownloadOsuFile(
+    fun fetchOrDownloadOsuFile(
         beatmapId: Int,
         expectedMd5: String?,
     ): Result<ByteArray, DomainMessage> = binding {
-        storageService.getBeatmap(beatmapId).onSuccess { data ->
+        storageService.fetchBeatmap(beatmapId).onSuccess { data ->
             val isValid =
                 expectedMd5?.let { md5 -> data.toMd5().equals(md5, ignoreCase = true) } ?: true
             if (isValid) return@binding data
             log.debug("Local .osu file for {} does not match MD5. Redownloading...", beatmapId)
         }
 
-        val downloaded = osuApiClient.getOsuFile(beatmapId).toResultOr { BeatmapNotFound }.bind()
-        storageService.saveBeatmap(beatmapId, downloaded).bind()
+        val downloaded = osuApiClient.fetchOsuFile(beatmapId).toResultOr { BeatmapNotFound }.bind()
+        storageService.persistBeatmap(beatmapId, downloaded).bind()
         downloaded
     }
 
-    private fun updateBeatmapIfOutdated(
+    private fun applyBeatmapRefreshIfOutdated(
         beatmap: Beatmap,
         currentMd5: String,
     ): Result<Beatmap, DomainMessage> = binding {
         val beatmapset = beatmap.beatmapset ?: return@binding beatmap
 
-        val osuApiBeatmaps = osuApiClient.getBeatmaps(beatmapset.id)
+        val osuApiBeatmaps = osuApiClient.fetchBeatmaps(beatmapset.id)
         if (osuApiBeatmaps.isEmpty()) return@binding beatmap
 
         val remoteLastUpdate =
@@ -116,7 +116,7 @@ class BeatmapService(
                 val apiId = apiMap.beatmapId ?: continue
 
                 if (apiMd5.equals(currentMd5, ignoreCase = true)) {
-                    getOrDownloadOsuFile(apiId, apiMd5).bind()
+                    fetchOrDownloadOsuFile(apiId, apiMd5).bind()
                 }
 
                 fetchOneByMd5(apiMd5).onSuccess { local ->

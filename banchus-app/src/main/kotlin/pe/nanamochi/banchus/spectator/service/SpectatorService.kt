@@ -67,7 +67,7 @@ class SpectatorService(
     fun leave(session: Session, hostSessionId: UUID?): Result<Long, DomainMessage> = binding {
         val hostId = hostSessionId ?: fetchSpectating(session.sessionId) ?: return@binding 0L
 
-        val memberCount = spectatorRepository.removeMember(hostId, session.identity())
+        val memberCount = spectatorRepository.deleteMember(hostId, session.identity())
 
         val channelName = ChannelName.Spectator(hostId)
         val streamName = StreamName.Spectator(hostId)
@@ -97,11 +97,11 @@ class SpectatorService(
             val channelName = ChannelName.Spectator(sessionId)
             val streamName = StreamName.Spectator(sessionId)
             spectators.forEach { spectator ->
-                spectatorRepository.removeSpectating(spectator.sessionId)
+                spectatorRepository.deleteSpectating(spectator.sessionId)
                 channelService.leave(spectator.sessionId, channelName).bind()
                 streamService.leave(spectator.sessionId, streamName)
             }
-            spectatorRepository.removeMembers(sessionId)
+            spectatorRepository.deleteMembers(sessionId)
             streamService.clearStream(streamName)
         }
     }

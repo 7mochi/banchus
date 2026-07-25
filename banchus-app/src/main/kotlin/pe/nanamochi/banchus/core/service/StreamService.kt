@@ -63,9 +63,9 @@ class StreamService(private val streamRepository: StreamRepository) {
         return streamRepository.fetchAll()
     }
 
-    fun getLatestMessageTimestamp(stream: StreamName): Instant? {
+    fun fetchLatestMessageTimestamp(stream: StreamName): Instant? {
         val streamKey = stream.resolve()
-        val messageId = streamRepository.getLatestMessageId(streamKey) ?: return null
+        val messageId = streamRepository.fetchLatestMessageId(streamKey) ?: return null
 
         val timestamp = messageId.split("-").firstOrNull()?.toLongOrNull() ?: return null
         return runCatching { Instant.ofEpochMilli(timestamp) }.getOrNull()

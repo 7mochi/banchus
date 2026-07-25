@@ -38,7 +38,7 @@ class ChannelService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun getChannelName(session: Session, channelName: String): Result<ChannelName, DomainMessage> =
+    fun resolveChannelName(session: Session, channelName: String): Result<ChannelName, DomainMessage> =
         binding {
             when (channelName) {
                 "#spectator" -> {
@@ -55,14 +55,14 @@ class ChannelService(
 
                     ChannelName.Multiplayer(matchId)
                 }
-                else -> ChannelName.from(channelName)
+                else -> ChannelName.buildFromName(channelName)
             }
         }
 
     fun fetchOne(channelName: ChannelName): Result<Channel, DomainMessage> =
         when (channelName) {
-            is ChannelName.Spectator -> Ok(Channel.spectator())
-            is ChannelName.Multiplayer -> Ok(Channel.multiplayer())
+            is ChannelName.Spectator -> Ok(Channel.buildSpectatorChannel())
+            is ChannelName.Multiplayer -> Ok(Channel.buildMultiplayerChannel())
             is ChannelName.Chat -> {
                 channelRepository.findByName(channelName.name).toResultOr { ChannelNotFound }
             }
@@ -86,7 +86,7 @@ class ChannelService(
             Err(ChannelUserAlreadyIn).bind()
         }
 
-        streamService.join(session.sessionId, channelName.getMessageStream())
+        streamService.join(session.sessionId, channelName.resolveMessageStream())
         val memberCount = channelRedisRepository.join(session.sessionId, channelName)
 
         log.info(
@@ -106,7 +106,7 @@ class ChannelService(
         channelName: ChannelName,
     ): Result<Pair<Channel, Long>, DomainMessage> = binding {
         val channel = fetchOne(channelName).bind()
-        streamService.leave(sessionId, channelName.getMessageStream())
+        streamService.leave(sessionId, channelName.resolveMessageStream())
 
         val memberCount = channelRedisRepository.leave(sessionId, channelName)
         log.info(
@@ -123,7 +123,7 @@ class ChannelService(
 
     fun leaveAll(sessionId: UUID): Result<Unit, DomainMessage> = binding {
         val channels = channelRedisRepository.fetchSessionChannels(sessionId)
-        channels.forEach { channel -> leave(sessionId, ChannelName.from(channel)).bind() }
+        channels.forEach { channel -> leave(sessionId, ChannelName.buildFromName(channel)).bind() }
     }
 
     fun memberCount(channelName: ChannelName): Long =
@@ -135,7 +135,7 @@ class ChannelService(
     }
 
     fun broadcastChannelInfoUpdate(channelName: ChannelName, channel: Channel, memberCount: Int) {
-        val updateStream = channelName.getUpdateStream()
+        val updateStream = channelName.resolveUpdateStream()
         val privRule =
             when (updateStream) {
                 StreamName.Main -> channel.readPrivileges

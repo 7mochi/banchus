@@ -33,5 +33,5 @@ interface BeatmapMapper {
     @Mapping(target = "playcount", constant = "0L")
     @Mapping(target = "passcount", constant = "0L")
     @Mapping(target = "beatmapset", ignore = true)
-    fun fromApi(apiBeatmap: OsuApiBeatmap): Beatmap
+    fun buildFromApi(apiBeatmap: OsuApiBeatmap): Beatmap
 }
