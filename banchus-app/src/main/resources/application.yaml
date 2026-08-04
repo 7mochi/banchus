@@ -34,6 +34,34 @@ spring:
     user: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
 
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 1
+    instances:
+      osuApi:
+        base-config: default
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 2s
+    instances:
+      osuApi:
+        base-config: default
+  ratelimiter:
+    configs:
+      default:
+        limit-for-period: 600
+        limit-refresh-period: 1m
+    instances:
+      osuApi:
+        base-config: default
+
 logging:
   level:
     root: ${LOG_LEVEL_ROOT:INFO}
@@ -58,4 +86,4 @@ banchus:
       secret-key: ${S3_SECRET_KEY:}
   osu-api:
     v1:
-      key: ${OSU_API_V1_KEY}
+      keys: ${OSU_API_V1_KEYS:}

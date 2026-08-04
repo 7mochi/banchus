@@ -120,6 +120,12 @@ sealed interface BeatmapsetError : DomainMessage
 
 data object BeatmapsetNotFound : BeatmapsetError
 
+sealed interface OsuApiError : DomainMessage
+
+data object OsuApiUnavailable : OsuApiError
+
+data object OsuApiNotFound : OsuApiError
+
 sealed interface StorageError : DomainMessage
 
 data class StorageWriteError(val cause: String?) : StorageError

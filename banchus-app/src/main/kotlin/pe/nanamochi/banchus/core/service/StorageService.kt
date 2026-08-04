@@ -54,6 +54,10 @@ class StorageService(private val provider: FileStorageProvider) {
     fun beatmapExists(beatmapId: Int): Boolean =
         provider.exists(StorageBucket.BEATMAPS, beatmapId.asOsu())
 
+    fun deleteBeatmap(beatmapId: Int): Result<Unit, StorageError> = runStorageCatching {
+        provider.delete(StorageBucket.BEATMAPS, beatmapId.asOsu())
+    }
+
     fun fetchReplay(scoreId: Long): Result<ByteArray, FileNotFound> =
         provider.read(StorageBucket.REPLAYS, scoreId.asOsr()).toResultOr { FileNotFound }
 

@@ -29,4 +29,7 @@ data class S3Properties(
 
 data class OsuApiProperties(val v1: OsuApiV1Properties = OsuApiV1Properties())
 
-data class OsuApiV1Properties(val key: String = "")
+data class OsuApiV1Properties(val keys: List<String> = emptyList()) {
+    val key: String
+        get() = if (keys.isNotEmpty()) keys.random() else ""
+}

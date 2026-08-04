@@ -10,6 +10,7 @@ import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import java.time.Duration
 import java.time.Instant
 import org.hibernate.annotations.DynamicUpdate
 import pe.nanamochi.banchus.beatmap.enums.BeatmapRankedStatus
@@ -51,4 +52,19 @@ class Beatmap(
     fun hasLeaderboard() = status == BeatmapRankedStatus.RANKED
 
     fun objectCount() = countNormal + countSlider + countSpinner
+
+    fun deservesUpdate(): Boolean {
+        val now = Instant.now()
+        val interval =
+            when (status) {
+                BeatmapRankedStatus.QUALIFIED -> Duration.ofMinutes(5)
+                BeatmapRankedStatus.PENDING -> Duration.ofMinutes(10)
+                BeatmapRankedStatus.LOVED,
+                BeatmapRankedStatus.RANKED,
+                BeatmapRankedStatus.APPROVED -> Duration.ofDays(1)
+                BeatmapRankedStatus.WIP,
+                BeatmapRankedStatus.GRAVEYARD -> Duration.ofDays(1)
+            }
+        return lastUpdated.isBefore(now.minus(interval))
+    }
 }

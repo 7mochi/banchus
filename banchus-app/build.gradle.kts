@@ -30,6 +30,7 @@ dependencies {
     implementation("io.github.7mochi:osu-native-jar:0.0.7")
     implementation("com.michael-bull.kotlin-result:kotlin-result:2.1.0")
     implementation("org.bouncycastle:bcprov-jdk18on:1.83")
+    implementation("io.github.resilience4j:resilience4j-spring-boot4:2.4.0")
 
     kapt("org.mapstruct:mapstruct-processor:1.6.3")
 
